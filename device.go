@@ -10,30 +10,6 @@ import (
 	"github.com/seqsense/aws-iot-device-sdk-go/protocols"
 )
 
-type deviceState int
-
-const (
-	inactive deviceState = iota
-	established
-	stable
-	terminating
-)
-
-func (s deviceState) String() string {
-	switch s {
-	case inactive:
-		return "inactive"
-	case established:
-		return "established"
-	case stable:
-		return "stable"
-	case terminating:
-		return "terminating"
-	default:
-		return "unknown"
-	}
-}
-
 const (
 	stateUpdaterQueue = 100
 )
@@ -88,56 +64,6 @@ func New(opt *options.Options) *DeviceClient {
 	go connectionStateHandler(d)
 
 	return d
-}
-
-func connectionStateHandler(c *DeviceClient) {
-	state := inactive
-	for {
-		statePrev := state
-
-		select {
-		case <-c.stableTimer:
-			log.Print("Stable timer reached\n")
-			c.stateUpdater <- stable
-
-		case state = <-c.stateUpdater:
-			log.Printf("State updated to %s\n", state.String())
-
-			switch state {
-			case inactive:
-				c.stableTimer = make(chan bool)
-				c.reconnectPeriod = c.reconnectPeriod * 2
-				if c.reconnectPeriod > c.opt.MaximumReconnectTime {
-					c.reconnectPeriod = c.opt.MaximumReconnectTime
-				}
-				log.Printf("Trying to reconnect (%d ms)\n", c.reconnectPeriod/time.Millisecond)
-
-				time.Sleep(c.reconnectPeriod)
-				c.connect()
-
-			case established:
-				log.Print("Processing queued operations\n")
-				go func() {
-					time.Sleep(c.opt.MinimumConnectionTime)
-					c.stableTimer <- true
-				}()
-
-			case stable:
-				if statePrev == established {
-					log.Print("Connection is stable\n")
-					c.reconnectPeriod = c.opt.BaseReconnectTime
-				}
-
-			case terminating:
-				log.Print("Terminating connection\n")
-				c.cli.Disconnect(250)
-				return
-
-			default:
-				panic("Invalid internal state\n")
-			}
-		}
-	}
 }
 
 func (s *DeviceClient) connect() {
