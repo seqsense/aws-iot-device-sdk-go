@@ -45,7 +45,7 @@ func New(opt *options.Options) *DeviceClient {
 		stateUpdater:    make(chan deviceState, stateUpdaterQueue),
 		stableTimer:     make(chan bool),
 		publish:         make(chan *pubqueue.Data, publishQueue),
-		pubQueue:        &pubqueue.Queue{},
+		pubQueue:        pubqueue.New(opt.OfflineQueueMaxSize, opt.OfflineQueueDropBehavior),
 	}
 
 	connectionLost := func(client mqtt.Client, err error) {

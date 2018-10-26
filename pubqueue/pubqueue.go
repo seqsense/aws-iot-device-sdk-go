@@ -1,15 +1,39 @@
 package pubqueue
 
+type QueueDropBehavior int
+
+const (
+	Oldest QueueDropBehavior = iota
+	Newest
+)
+
 type Data struct {
 	Topic   string
 	Payload interface{}
 }
 
 type Queue struct {
-	buf []*Data
+	buf          []*Data
+	maxSize      int
+	dropBehavior QueueDropBehavior
+}
+
+func New(maxSize int, dropBehavior QueueDropBehavior) *Queue {
+	return &Queue{
+		maxSize:      maxSize,
+		dropBehavior: dropBehavior,
+	}
 }
 
 func (s *Queue) Enqueue(d *Data) {
+	if s.maxSize > 0 && len(s.buf) >= s.maxSize {
+		switch s.dropBehavior {
+		case Newest:
+			s.buf = s.buf[:len(s.buf)-1]
+		case Oldest:
+			s.buf = s.buf[1:]
+		}
+	}
 	s.buf = append(s.buf, d)
 }
 

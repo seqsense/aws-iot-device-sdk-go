@@ -18,11 +18,15 @@ func connectionStateHandler(c *DeviceClient) {
 					token.Wait()
 					if token.Error() != nil {
 						log.Printf("Failed to publish (%s)\n", token.Error())
-						c.pubQueue.Enqueue(d)
+						if c.opt.OfflineQueueing {
+							c.pubQueue.Enqueue(d)
+						}
 					}
 				}()
 			} else {
-				c.pubQueue.Enqueue(d)
+				if c.opt.OfflineQueueing {
+					c.pubQueue.Enqueue(d)
+				}
 			}
 
 		case <-c.stableTimer:
