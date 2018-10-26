@@ -1,7 +1,7 @@
 package devicecli
 
 import (
-	"fmt"
+	"log"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -63,11 +63,11 @@ func New(opt *options.Options) *DeviceClient {
 	}
 
 	connectionLost := func(client mqtt.Client, err error) {
-		fmt.Printf("Connection lost (%s)\n", err.Error())
+		log.Printf("Connection lost (%s)\n", err.Error())
 		d.stateUpdater <- inactive
 	}
 	onConnect := func(client mqtt.Client) {
-		fmt.Printf("Connection established\n")
+		log.Printf("Connection established\n")
 		d.stateUpdater <- established
 	}
 
@@ -94,13 +94,13 @@ func connectionStateHandler(c *DeviceClient) {
 			if state != established {
 				panic("Stable timer reached but not in established state")
 			}
-			fmt.Print("Stable timer reached\n")
+			log.Print("Stable timer reached\n")
 			go func() {
 				c.stateUpdater <- stable
 			}()
 
 		case state = <-c.stateUpdater:
-			fmt.Printf("State updated to %s\n", state.String())
+			log.Printf("State updated to %s\n", state.String())
 
 			switch state {
 			case inactive:
@@ -109,24 +109,24 @@ func connectionStateHandler(c *DeviceClient) {
 				if c.reconnectPeriod > c.opt.MaximumReconnectTime {
 					c.reconnectPeriod = c.opt.MaximumReconnectTime
 				}
-				fmt.Printf("Trying to reconnect (%d ms)\n", c.reconnectPeriod/time.Millisecond)
+				log.Printf("Trying to reconnect (%d ms)\n", c.reconnectPeriod/time.Millisecond)
 
 				time.Sleep(c.reconnectPeriod)
 				c.connect()
 
 			case established:
-				fmt.Print("Processing queued operations\n")
+				log.Print("Processing queued operations\n")
 				go func() {
 					time.Sleep(c.opt.MinimumConnectionTime)
 					c.stableTimer <- true
 				}()
 
 			case stable:
-				fmt.Print("Stable\n")
+				log.Print("Stable\n")
 				c.reconnectPeriod = c.opt.BaseReconnectTime
 
 			case terminating:
-				fmt.Print("Terminating connection\n")
+				log.Print("Terminating connection\n")
 				c.cli.Disconnect(250)
 				return
 
@@ -144,7 +144,7 @@ func (s *DeviceClient) connect() {
 	go func() {
 		token.Wait()
 		if token.Error() != nil {
-			fmt.Printf("Failed to connect (%s)\n", token.Error())
+			log.Printf("Failed to connect (%s)\n", token.Error())
 			s.stateUpdater <- inactive
 		}
 	}()
@@ -164,7 +164,7 @@ func (s *DeviceClient) Subscribe(topic string, cb mqtt.MessageHandler) {
 	go func() {
 		token.Wait()
 		if token.Error() != nil {
-			fmt.Printf("Failed to subscribe (%s)\n", token.Error())
+			log.Printf("Failed to subscribe (%s)\n", token.Error())
 			s.stateUpdater <- inactive
 		}
 	}()
