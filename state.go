@@ -23,3 +23,7 @@ func (s deviceState) String() string {
 		return "unknown"
 	}
 }
+
+func (s deviceState) isActive() bool {
+	return s == established || s == stable
+}

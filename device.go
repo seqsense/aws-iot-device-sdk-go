@@ -8,10 +8,12 @@ import (
 
 	"github.com/seqsense/aws-iot-device-sdk-go/options"
 	"github.com/seqsense/aws-iot-device-sdk-go/protocols"
+	"github.com/seqsense/aws-iot-device-sdk-go/pubqueue"
 )
 
 const (
 	stateUpdaterQueue = 100
+	publishQueue      = 100
 )
 
 type DeviceClient struct {
@@ -21,6 +23,8 @@ type DeviceClient struct {
 	reconnectPeriod time.Duration
 	stateUpdater    chan deviceState
 	stableTimer     chan bool
+	publish         chan *pubqueue.Data
+	pubQueue        *pubqueue.Queue
 }
 
 func New(opt *options.Options) *DeviceClient {
@@ -40,6 +44,8 @@ func New(opt *options.Options) *DeviceClient {
 		reconnectPeriod: opt.BaseReconnectTime,
 		stateUpdater:    make(chan deviceState, stateUpdaterQueue),
 		stableTimer:     make(chan bool),
+		publish:         make(chan *pubqueue.Data, publishQueue),
+		pubQueue:        &pubqueue.Queue{},
 	}
 
 	connectionLost := func(client mqtt.Client, err error) {
@@ -83,8 +89,8 @@ func (s *DeviceClient) Disconnect() {
 	s.stateUpdater <- terminating
 }
 
-func (s *DeviceClient) Publish(topic string, message string) {
-	// TODO: publish with offline queue
+func (s *DeviceClient) Publish(topic string, payload interface{}) {
+	s.publish <- &pubqueue.Data{topic, payload}
 }
 
 func (s *DeviceClient) Subscribe(topic string, cb mqtt.MessageHandler) {
