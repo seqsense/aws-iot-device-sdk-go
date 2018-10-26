@@ -34,6 +34,10 @@ func (s deviceState) String() string {
 	}
 }
 
+const (
+	stateUpdaterQueue = 100
+)
+
 type DeviceClient struct {
 	opt             *options.Options
 	mqttOpt         *mqtt.ClientOptions
@@ -58,7 +62,7 @@ func New(opt *options.Options) *DeviceClient {
 		mqttOpt:         mqttOpt,
 		cli:             nil,
 		reconnectPeriod: opt.BaseReconnectTime,
-		stateUpdater:    make(chan deviceState),
+		stateUpdater:    make(chan deviceState, stateUpdaterQueue),
 		stableTimer:     make(chan bool),
 	}
 
@@ -89,15 +93,12 @@ func New(opt *options.Options) *DeviceClient {
 func connectionStateHandler(c *DeviceClient) {
 	state := inactive
 	for {
+		statePrev := state
+
 		select {
 		case <-c.stableTimer:
-			if state != established {
-				panic("Stable timer reached but not in established state")
-			}
 			log.Print("Stable timer reached\n")
-			go func() {
-				c.stateUpdater <- stable
-			}()
+			c.stateUpdater <- stable
 
 		case state = <-c.stateUpdater:
 			log.Printf("State updated to %s\n", state.String())
@@ -122,8 +123,10 @@ func connectionStateHandler(c *DeviceClient) {
 				}()
 
 			case stable:
-				log.Print("Stable\n")
-				c.reconnectPeriod = c.opt.BaseReconnectTime
+				if statePrev == established {
+					log.Print("Connection is stable\n")
+					c.reconnectPeriod = c.opt.BaseReconnectTime
+				}
 
 			case terminating:
 				log.Print("Terminating connection\n")
