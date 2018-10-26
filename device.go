@@ -54,12 +54,12 @@ func New(opt *options.Options) *DeviceClient {
 	}
 
 	d := &DeviceClient{
-		opt,
-		mqttOpt,
-		nil,
-		opt.BaseReconnectTime,
-		make(chan deviceState),
-		make(chan bool),
+		opt:             opt,
+		mqttOpt:         mqttOpt,
+		cli:             nil,
+		reconnectPeriod: opt.BaseReconnectTime,
+		stateUpdater:    make(chan deviceState),
+		stableTimer:     make(chan bool),
 	}
 
 	connectionLost := func(client mqtt.Client, err error) {
