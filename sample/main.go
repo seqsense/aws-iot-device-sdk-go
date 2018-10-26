@@ -53,7 +53,7 @@ func main() {
 		Debug:                 false,
 		Qos:                   1,
 		Retain:                false,
-		Will:                  &options.TopicPayload{"notification", "{\"status\", \"dead\"}"},
+		Will:                  &options.TopicPayload{"notification", "{\"status\": \"dead\"}"},
 	}
 	cli := awsiot.New(o)
 	time.Sleep(2 * time.Second)
@@ -63,10 +63,14 @@ func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 
+	tick := time.NewTicker(time.Second * 5)
+
 	for {
 		select {
 		case <-sig:
 			return
+		case <-tick.C:
+			cli.Publish("notification", "{\"status\": \"tick\"}")
 		}
 	}
 }
