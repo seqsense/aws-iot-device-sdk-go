@@ -21,9 +21,9 @@ type DeviceClient struct {
 	mqttOpt         *mqtt.ClientOptions
 	cli             mqtt.Client
 	reconnectPeriod time.Duration
-	stateUpdater    chan deviceState
-	stableTimer     chan bool
-	publish         chan *pubqueue.Data
+	stateUpdateCh   chan deviceState
+	stableTimerCh   chan bool
+	publishCh       chan *pubqueue.Data
 	pubQueue        *pubqueue.Queue
 }
 
@@ -42,19 +42,19 @@ func New(opt *options.Options) *DeviceClient {
 		mqttOpt:         mqttOpt,
 		cli:             nil,
 		reconnectPeriod: opt.BaseReconnectTime,
-		stateUpdater:    make(chan deviceState, stateUpdaterQueue),
-		stableTimer:     make(chan bool),
-		publish:         make(chan *pubqueue.Data, publishQueue),
+		stateUpdateCh:   make(chan deviceState, stateUpdaterQueue),
+		stableTimerCh:   make(chan bool),
+		publishCh:       make(chan *pubqueue.Data, publishQueue),
 		pubQueue:        pubqueue.New(opt.OfflineQueueMaxSize, opt.OfflineQueueDropBehavior),
 	}
 
 	connectionLost := func(client mqtt.Client, err error) {
 		log.Printf("Connection lost (%s)\n", err.Error())
-		d.stateUpdater <- inactive
+		d.stateUpdateCh <- inactive
 	}
 	onConnect := func(client mqtt.Client) {
 		log.Printf("Connection established\n")
-		d.stateUpdater <- established
+		d.stateUpdateCh <- established
 	}
 
 	d.mqttOpt.OnConnectionLost = connectionLost
@@ -67,7 +67,7 @@ func New(opt *options.Options) *DeviceClient {
 	d.mqttOpt.SetConnectTimeout(time.Second * 5)
 
 	d.connect()
-	go connectionStateHandler(d)
+	go connectionHandler(d)
 
 	return d
 }
@@ -80,17 +80,17 @@ func (s *DeviceClient) connect() {
 		token.Wait()
 		if token.Error() != nil {
 			log.Printf("Failed to connect (%s)\n", token.Error())
-			s.stateUpdater <- inactive
+			s.stateUpdateCh <- inactive
 		}
 	}()
 }
 
 func (s *DeviceClient) Disconnect() {
-	s.stateUpdater <- terminating
+	s.stateUpdateCh <- terminating
 }
 
 func (s *DeviceClient) Publish(topic string, payload interface{}) {
-	s.publish <- &pubqueue.Data{topic, payload}
+	s.publishCh <- &pubqueue.Data{topic, payload}
 }
 
 func (s *DeviceClient) Subscribe(topic string, cb mqtt.MessageHandler) {
@@ -100,7 +100,7 @@ func (s *DeviceClient) Subscribe(topic string, cb mqtt.MessageHandler) {
 		token.Wait()
 		if token.Error() != nil {
 			log.Printf("Failed to subscribe (%s)\n", token.Error())
-			s.stateUpdater <- inactive
+			s.stateUpdateCh <- inactive
 		}
 	}()
 }

@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-func connectionStateHandler(c *DeviceClient) {
+func connectionHandler(c *DeviceClient) {
 	state := inactive
 	for {
 		statePrev := state
 
 		select {
-		case d := <-c.publish:
+		case d := <-c.publishCh:
 			if state.isActive() {
 				token := c.cli.Publish(d.Topic, c.opt.Qos, c.opt.Retain, d.Payload)
 				go func() {
@@ -29,16 +29,16 @@ func connectionStateHandler(c *DeviceClient) {
 				}
 			}
 
-		case <-c.stableTimer:
+		case <-c.stableTimerCh:
 			log.Print("Stable timer reached\n")
-			c.stateUpdater <- stable
+			c.stateUpdateCh <- stable
 
-		case state = <-c.stateUpdater:
+		case state = <-c.stateUpdateCh:
 			log.Printf("State updated to %s\n", state.String())
 
 			switch state {
 			case inactive:
-				c.stableTimer = make(chan bool)
+				c.stableTimerCh = make(chan bool)
 				c.reconnectPeriod = c.reconnectPeriod * 2
 				if c.reconnectPeriod > c.opt.MaximumReconnectTime {
 					c.reconnectPeriod = c.opt.MaximumReconnectTime
@@ -52,7 +52,7 @@ func connectionStateHandler(c *DeviceClient) {
 				log.Print("Processing queued operations\n")
 				go func() {
 					time.Sleep(c.opt.MinimumConnectionTime)
-					c.stableTimer <- true
+					c.stableTimerCh <- true
 				}()
 				for c.pubQueue.Len() > 0 {
 					d := c.pubQueue.Pop()
