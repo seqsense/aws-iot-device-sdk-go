@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	stateUpdaterQueue = 100
-	publishQueue      = 100
+	stateUpdaterChCap = 100
+	publishChCap      = 100
 )
 
 type DeviceClient struct {
@@ -42,9 +42,9 @@ func New(opt *options.Options) *DeviceClient {
 		mqttOpt:         mqttOpt,
 		cli:             nil,
 		reconnectPeriod: opt.BaseReconnectTime,
-		stateUpdateCh:   make(chan deviceState, stateUpdaterQueue),
+		stateUpdateCh:   make(chan deviceState, stateUpdaterChCap),
 		stableTimerCh:   make(chan bool),
-		publishCh:       make(chan *pubqueue.Data, publishQueue),
+		publishCh:       make(chan *pubqueue.Data, publishChCap),
 		pubQueue:        pubqueue.New(opt.OfflineQueueMaxSize, opt.OfflineQueueDropBehavior),
 	}
 
