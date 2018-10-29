@@ -58,6 +58,7 @@ func main() {
 		OfflineQueueing:          true,
 		OfflineQueueMaxSize:      100,
 		OfflineQueueDropBehavior: pubqueue.Oldest,
+		AutoResubscribe:          true,
 	}
 	cli := awsiot.New(o)
 	cli.Subscribe("test", messageHandler)

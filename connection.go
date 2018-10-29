@@ -66,6 +66,9 @@ func connectionHandler(c *DeviceClient) {
 		}
 	}
 	resubscribe := func() {
+		if !c.opt.AutoResubscribe {
+			return
+		}
 		for _, d := range activeSubs {
 			delete(activeSubs, d.Topic)
 
