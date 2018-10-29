@@ -14,13 +14,81 @@ func connectionHandler(c *DeviceClient) {
 	subQueue := subqueue.New()
 	activeSubs := make(map[string]*subqueue.Subscription)
 
+	publishOrEnqueue := func(d *pubqueue.Data) {
+		token := c.cli.Publish(d.Topic, c.opt.Qos, c.opt.Retain, d.Payload)
+		go func() {
+			token.Wait()
+			if token.Error() != nil {
+				log.Printf("Failed to publish (%s)\n", token.Error())
+				// MQTT doesn't guarantee receive order; just append to the last
+				pubQueue.Enqueue(d)
+			}
+		}()
+	}
+	subscribeOrEnqueue := func(d *subqueue.Subscription) {
+		token := c.cli.Subscribe(d.Topic, c.opt.Qos, d.Cb)
+		go func() {
+			token.Wait()
+			if token.Error() != nil {
+				log.Printf("Failed to subscribe (%s)\n", token.Error())
+				subQueue.Enqueue(d)
+			} else {
+				activeSubs[d.Topic] = d
+			}
+		}()
+	}
+	unsubscribeOrEnqueue := func(d *subqueue.Subscription) {
+		token := c.cli.Unsubscribe(d.Topic)
+		go func() {
+			token.Wait()
+			if token.Error() != nil {
+				log.Printf("Failed to unsubscribe (%s)\n", token.Error())
+				subQueue.Enqueue(d)
+			} else {
+				delete(activeSubs, d.Topic)
+			}
+		}()
+	}
+	processQueuedOps := func() {
+		for pubQueue.Len() > 0 {
+			d := pubQueue.Pop()
+			publishOrEnqueue(d)
+		}
+		for subQueue.Len() > 0 {
+			d := subQueue.Pop()
+
+			switch d.Type {
+			case subqueue.Subscribe:
+				subscribeOrEnqueue(d)
+			case subqueue.Unsubscribe:
+				unsubscribeOrEnqueue(d)
+			}
+		}
+	}
+	resubscribe := func() {
+		for _, d := range activeSubs {
+			delete(activeSubs, d.Topic)
+
+			token := c.cli.Subscribe(d.Topic, c.opt.Qos, d.Cb)
+			go func() {
+				token.Wait()
+				if token.Error() != nil {
+					log.Printf("Failed to subscribe (%s)\n", token.Error())
+					subQueue.Enqueue(d)
+				} else {
+					activeSubs[d.Topic] = d
+				}
+			}()
+		}
+	}
+
 	for {
 		statePrev := state
 
 		select {
 		case d := <-c.publishCh:
 			if state.isActive() {
-				c.publishOrEnqueue(d, pubQueue)
+				publishOrEnqueue(d)
 			} else {
 				if c.opt.OfflineQueueing {
 					pubQueue.Enqueue(d)
@@ -31,9 +99,9 @@ func connectionHandler(c *DeviceClient) {
 			if state.isActive() {
 				switch d.Type {
 				case subqueue.Subscribe:
-					c.subscribeOrEnqueue(d, subQueue, activeSubs)
+					subscribeOrEnqueue(d)
 				case subqueue.Unsubscribe:
-					c.unsubscribeOrEnqueue(d, subQueue, activeSubs)
+					unsubscribeOrEnqueue(d)
 				}
 			} else {
 				if c.opt.OfflineQueueing {
@@ -64,7 +132,7 @@ func connectionHandler(c *DeviceClient) {
 
 			case reconnecting:
 				c.connect()
-				c.resubscribe(subQueue, activeSubs)
+				resubscribe()
 
 			case established:
 				log.Print("Processing queued operations\n")
@@ -72,7 +140,7 @@ func connectionHandler(c *DeviceClient) {
 					time.Sleep(c.opt.MinimumConnectionTime)
 					c.stableTimerCh <- true
 				}()
-				c.processQueuedOps(pubQueue, subQueue, activeSubs)
+				processQueuedOps()
 
 			case stable:
 				if statePrev == established {
@@ -89,73 +157,5 @@ func connectionHandler(c *DeviceClient) {
 				panic("Invalid internal state\n")
 			}
 		}
-	}
-}
-
-func (c *DeviceClient) publishOrEnqueue(d *pubqueue.Data, pq *pubqueue.Queue) {
-	token := c.cli.Publish(d.Topic, c.opt.Qos, c.opt.Retain, d.Payload)
-	go func() {
-		token.Wait()
-		if token.Error() != nil {
-			log.Printf("Failed to publish (%s)\n", token.Error())
-			// MQTT doesn't guarantee receive order; just append to the last
-			pq.Enqueue(d)
-		}
-	}()
-}
-func (c *DeviceClient) subscribeOrEnqueue(d *subqueue.Subscription, sq *subqueue.Queue, as map[string]*subqueue.Subscription) {
-	token := c.cli.Subscribe(d.Topic, c.opt.Qos, d.Cb)
-	go func() {
-		token.Wait()
-		if token.Error() != nil {
-			log.Printf("Failed to subscribe (%s)\n", token.Error())
-			sq.Enqueue(d)
-		} else {
-			as[d.Topic] = d
-		}
-	}()
-}
-func (c *DeviceClient) unsubscribeOrEnqueue(d *subqueue.Subscription, sq *subqueue.Queue, as map[string]*subqueue.Subscription) {
-	token := c.cli.Unsubscribe(d.Topic)
-	go func() {
-		token.Wait()
-		if token.Error() != nil {
-			log.Printf("Failed to unsubscribe (%s)\n", token.Error())
-			sq.Enqueue(d)
-		} else {
-			delete(as, d.Topic)
-		}
-	}()
-}
-func (c *DeviceClient) processQueuedOps(pq *pubqueue.Queue, sq *subqueue.Queue, as map[string]*subqueue.Subscription) {
-	for pq.Len() > 0 {
-		d := pq.Pop()
-		c.publishOrEnqueue(d, pq)
-	}
-	for sq.Len() > 0 {
-		d := sq.Pop()
-
-		switch d.Type {
-		case subqueue.Subscribe:
-			c.subscribeOrEnqueue(d, sq, as)
-		case subqueue.Unsubscribe:
-			c.unsubscribeOrEnqueue(d, sq, as)
-		}
-	}
-}
-func (c *DeviceClient) resubscribe(sq *subqueue.Queue, as map[string]*subqueue.Subscription) {
-	for _, d := range as {
-		delete(as, d.Topic)
-
-		token := c.cli.Subscribe(d.Topic, c.opt.Qos, d.Cb)
-		go func() {
-			token.Wait()
-			if token.Error() != nil {
-				log.Printf("Failed to subscribe (%s)\n", token.Error())
-				sq.Enqueue(d)
-			} else {
-				as[d.Topic] = d
-			}
-		}()
 	}
 }
