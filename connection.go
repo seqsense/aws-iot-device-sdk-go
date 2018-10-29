@@ -21,7 +21,7 @@ func connectionHandler(c *DeviceClient) {
 			if token.Error() != nil {
 				log.Printf("Failed to publish (%s)\n", token.Error())
 				// MQTT doesn't guarantee receive order; just append to the last
-				pubQueue.Enqueue(d)
+				c.publishCh <- d
 			}
 		}()
 	}
@@ -31,7 +31,7 @@ func connectionHandler(c *DeviceClient) {
 			token.Wait()
 			if token.Error() != nil {
 				log.Printf("Failed to subscribe (%s)\n", token.Error())
-				subQueue.Enqueue(d)
+				c.subscribeCh <- d
 			} else {
 				activeSubs[d.Topic] = d
 			}
@@ -43,7 +43,7 @@ func connectionHandler(c *DeviceClient) {
 			token.Wait()
 			if token.Error() != nil {
 				log.Printf("Failed to unsubscribe (%s)\n", token.Error())
-				subQueue.Enqueue(d)
+				c.subscribeCh <- d
 			} else {
 				delete(activeSubs, d.Topic)
 			}
