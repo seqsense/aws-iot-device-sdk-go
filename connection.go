@@ -49,7 +49,12 @@ func connectionHandler(c *DeviceClient) {
 				}
 				log.Printf("Trying to reconnect (%d ms)\n", c.reconnectPeriod/time.Millisecond)
 
-				time.Sleep(c.reconnectPeriod)
+				go func() {
+					time.Sleep(c.reconnectPeriod)
+					c.stateUpdateCh <- reconnecting
+				}()
+
+			case reconnecting:
 				c.connect()
 
 			case established:
