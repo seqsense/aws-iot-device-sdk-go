@@ -54,19 +54,7 @@ func connectionHandler(c *DeviceClient) {
 					time.Sleep(c.opt.MinimumConnectionTime)
 					c.stableTimerCh <- true
 				}()
-				for c.pubQueue.Len() > 0 {
-					d := c.pubQueue.Pop()
-
-					token := c.cli.Publish(d.Topic, c.opt.Qos, c.opt.Retain, d.Payload)
-					go func() {
-						token.Wait()
-						if token.Error() != nil {
-							log.Printf("Failed to publish (%s)\n", token.Error())
-							// MQTT doesn't guarantee receive order; just append to the last
-							c.pubQueue.Enqueue(d)
-						}
-					}()
-				}
+				c.processQueuedOps()
 
 			case stable:
 				if statePrev == established {
@@ -83,5 +71,21 @@ func connectionHandler(c *DeviceClient) {
 				panic("Invalid internal state\n")
 			}
 		}
+	}
+}
+
+func (c *DeviceClient) processQueuedOps() {
+	for c.pubQueue.Len() > 0 {
+		d := c.pubQueue.Pop()
+
+		token := c.cli.Publish(d.Topic, c.opt.Qos, c.opt.Retain, d.Payload)
+		go func() {
+			token.Wait()
+			if token.Error() != nil {
+				log.Printf("Failed to publish (%s)\n", token.Error())
+				// MQTT doesn't guarantee receive order; just append to the last
+				c.pubQueue.Enqueue(d)
+			}
+		}()
 	}
 }
