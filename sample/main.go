@@ -60,8 +60,6 @@ func main() {
 		OfflineQueueDropBehavior: pubqueue.Oldest,
 	}
 	cli := awsiot.New(o)
-	time.Sleep(2 * time.Second)
-
 	cli.Subscribe("test", messageHandler)
 
 	sig := make(chan os.Signal, 1)
