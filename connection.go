@@ -8,81 +8,21 @@ import (
 	"github.com/seqsense/aws-iot-device-sdk-go/subqueue"
 )
 
+type pubSubQueues struct {
+	cli        *DeviceClient
+	pubQueue   *pubqueue.Queue
+	subQueue   *subqueue.Queue
+	activeSubs map[string]*subqueue.Subscription
+}
+
 func connectionHandler(c *DeviceClient) {
 	state := inactive
-	pubQueue := pubqueue.New(c.opt.OfflineQueueMaxSize, c.opt.OfflineQueueDropBehavior)
-	subQueue := subqueue.New()
-	activeSubs := make(map[string]*subqueue.Subscription)
 
-	publishOrEnqueue := func(d *pubqueue.Data) {
-		token := c.cli.Publish(d.Topic, c.opt.Qos, c.opt.Retain, d.Payload)
-		go func() {
-			token.Wait()
-			if token.Error() != nil {
-				log.Printf("Failed to publish (%s)\n", token.Error())
-				// MQTT doesn't guarantee receive order; just append to the last
-				c.publishCh <- d
-			}
-		}()
-	}
-	subscribeOrEnqueue := func(d *subqueue.Subscription) {
-		token := c.cli.Subscribe(d.Topic, c.opt.Qos, d.Cb)
-		go func() {
-			token.Wait()
-			if token.Error() != nil {
-				log.Printf("Failed to subscribe (%s)\n", token.Error())
-				c.subscribeCh <- d
-			} else {
-				activeSubs[d.Topic] = d
-			}
-		}()
-	}
-	unsubscribeOrEnqueue := func(d *subqueue.Subscription) {
-		token := c.cli.Unsubscribe(d.Topic)
-		go func() {
-			token.Wait()
-			if token.Error() != nil {
-				log.Printf("Failed to unsubscribe (%s)\n", token.Error())
-				c.subscribeCh <- d
-			} else {
-				delete(activeSubs, d.Topic)
-			}
-		}()
-	}
-	processQueuedOps := func() {
-		for pubQueue.Len() > 0 {
-			d := pubQueue.Pop()
-			publishOrEnqueue(d)
-		}
-		for subQueue.Len() > 0 {
-			d := subQueue.Pop()
-
-			switch d.Type {
-			case subqueue.Subscribe:
-				subscribeOrEnqueue(d)
-			case subqueue.Unsubscribe:
-				unsubscribeOrEnqueue(d)
-			}
-		}
-	}
-	resubscribe := func() {
-		if !c.opt.AutoResubscribe {
-			return
-		}
-		for _, d := range activeSubs {
-			delete(activeSubs, d.Topic)
-
-			token := c.cli.Subscribe(d.Topic, c.opt.Qos, d.Cb)
-			go func() {
-				token.Wait()
-				if token.Error() != nil {
-					log.Printf("Failed to subscribe (%s)\n", token.Error())
-					subQueue.Enqueue(d)
-				} else {
-					activeSubs[d.Topic] = d
-				}
-			}()
-		}
+	psq := &pubSubQueues{
+		c,
+		pubqueue.New(c.opt.OfflineQueueMaxSize, c.opt.OfflineQueueDropBehavior),
+		subqueue.New(),
+		make(map[string]*subqueue.Subscription),
 	}
 
 	for {
@@ -91,10 +31,10 @@ func connectionHandler(c *DeviceClient) {
 		select {
 		case d := <-c.publishCh:
 			if state.isActive() {
-				publishOrEnqueue(d)
+				psq.publishOrEnqueue(d)
 			} else {
 				if c.opt.OfflineQueueing {
-					pubQueue.Enqueue(d)
+					psq.pubQueue.Enqueue(d)
 				}
 			}
 
@@ -102,13 +42,13 @@ func connectionHandler(c *DeviceClient) {
 			if state.isActive() {
 				switch d.Type {
 				case subqueue.Subscribe:
-					subscribeOrEnqueue(d)
+					psq.subscribeOrEnqueue(d)
 				case subqueue.Unsubscribe:
-					unsubscribeOrEnqueue(d)
+					psq.unsubscribeOrEnqueue(d)
 				}
 			} else {
 				if c.opt.OfflineQueueing {
-					subQueue.Enqueue(d)
+					psq.subQueue.Enqueue(d)
 				}
 			}
 
@@ -135,7 +75,7 @@ func connectionHandler(c *DeviceClient) {
 
 			case reconnecting:
 				c.connect()
-				resubscribe()
+				psq.resubscribe()
 
 			case established:
 				log.Print("Processing queued operations\n")
@@ -143,7 +83,7 @@ func connectionHandler(c *DeviceClient) {
 					time.Sleep(c.opt.MinimumConnectionTime)
 					c.stableTimerCh <- true
 				}()
-				processQueuedOps()
+				psq.processQueuedOps()
 
 			case stable:
 				if statePrev == established {
@@ -160,5 +100,77 @@ func connectionHandler(c *DeviceClient) {
 				panic("Invalid internal state\n")
 			}
 		}
+	}
+}
+
+func (s *pubSubQueues) publishOrEnqueue(d *pubqueue.Data) {
+	token := s.cli.cli.Publish(d.Topic, s.cli.opt.Qos, s.cli.opt.Retain, d.Payload)
+	go func() {
+		token.Wait()
+		if token.Error() != nil {
+			log.Printf("Failed to publish (%s)\n", token.Error())
+			// MQTT doesn't guarantee receive order; just append to the last
+			s.cli.publishCh <- d
+		}
+	}()
+}
+func (s *pubSubQueues) subscribeOrEnqueue(d *subqueue.Subscription) {
+	token := s.cli.cli.Subscribe(d.Topic, s.cli.opt.Qos, d.Cb)
+	go func() {
+		token.Wait()
+		if token.Error() != nil {
+			log.Printf("Failed to subscribe (%s)\n", token.Error())
+			s.cli.subscribeCh <- d
+		} else {
+			s.activeSubs[d.Topic] = d
+		}
+	}()
+}
+func (s *pubSubQueues) unsubscribeOrEnqueue(d *subqueue.Subscription) {
+	token := s.cli.cli.Unsubscribe(d.Topic)
+	go func() {
+		token.Wait()
+		if token.Error() != nil {
+			log.Printf("Failed to unsubscribe (%s)\n", token.Error())
+			s.cli.subscribeCh <- d
+		} else {
+			delete(s.activeSubs, d.Topic)
+		}
+	}()
+}
+
+func (s *pubSubQueues) processQueuedOps() {
+	for s.pubQueue.Len() > 0 {
+		d := s.pubQueue.Pop()
+		s.publishOrEnqueue(d)
+	}
+	for s.subQueue.Len() > 0 {
+		d := s.subQueue.Pop()
+
+		switch d.Type {
+		case subqueue.Subscribe:
+			s.subscribeOrEnqueue(d)
+		case subqueue.Unsubscribe:
+			s.unsubscribeOrEnqueue(d)
+		}
+	}
+}
+func (s *pubSubQueues) resubscribe() {
+	if !s.cli.opt.AutoResubscribe {
+		return
+	}
+	for _, d := range s.activeSubs {
+		delete(s.activeSubs, d.Topic)
+
+		token := s.cli.cli.Subscribe(d.Topic, s.cli.opt.Qos, d.Cb)
+		go func() {
+			token.Wait()
+			if token.Error() != nil {
+				log.Printf("Failed to subscribe (%s)\n", token.Error())
+				s.cli.subscribeCh <- d
+			} else {
+				s.activeSubs[d.Topic] = d
+			}
+		}()
 	}
 }
