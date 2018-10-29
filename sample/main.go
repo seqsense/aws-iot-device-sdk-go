@@ -12,6 +12,7 @@ import (
 
 	awsiot "github.com/seqsense/aws-iot-device-sdk-go"
 	"github.com/seqsense/aws-iot-device-sdk-go/options"
+	"github.com/seqsense/aws-iot-device-sdk-go/pubqueue"
 )
 
 var message mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
@@ -39,21 +40,24 @@ func main() {
 	flag.Parse()
 
 	o := &options.Options{
-		KeyPath:               *privatePath,
-		CertPath:              *certPath,
-		CaPath:                *caPath,
-		ClientId:              *thingName,
-		Region:                *region,
-		BaseReconnectTime:     time.Millisecond * 50,
-		MaximumReconnectTime:  time.Second * 2,
-		MinimumConnectionTime: time.Second * 2,
-		Keepalive:             time.Second * 2,
-		Protocol:              "mqtts",
-		Host:                  *host,
-		Debug:                 false,
-		Qos:                   1,
-		Retain:                false,
-		Will:                  &options.TopicPayload{"notification", "{\"status\", \"dead\"}"},
+		KeyPath:                  *privatePath,
+		CertPath:                 *certPath,
+		CaPath:                   *caPath,
+		ClientId:                 *thingName,
+		Region:                   *region,
+		BaseReconnectTime:        time.Millisecond * 50,
+		MaximumReconnectTime:     time.Second * 2,
+		MinimumConnectionTime:    time.Second * 2,
+		Keepalive:                time.Second * 2,
+		Protocol:                 "mqtts",
+		Host:                     *host,
+		Debug:                    false,
+		Qos:                      1,
+		Retain:                   false,
+		Will:                     &options.TopicPayload{"notification", "{\"status\": \"dead\"}"},
+		OfflineQueueing:          true,
+		OfflineQueueMaxSize:      100,
+		OfflineQueueDropBehavior: pubqueue.Oldest,
 	}
 	cli := awsiot.New(o)
 	time.Sleep(2 * time.Second)
@@ -63,10 +67,14 @@ func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 
+	tick := time.NewTicker(time.Second * 5)
+
 	for {
 		select {
 		case <-sig:
 			return
+		case <-tick.C:
+			cli.Publish("notification", "{\"status\": \"tick\"}")
 		}
 	}
 }
