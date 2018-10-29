@@ -9,11 +9,13 @@ import (
 	"github.com/seqsense/aws-iot-device-sdk-go/options"
 	"github.com/seqsense/aws-iot-device-sdk-go/protocols"
 	"github.com/seqsense/aws-iot-device-sdk-go/pubqueue"
+	"github.com/seqsense/aws-iot-device-sdk-go/subqueue"
 )
 
 const (
 	stateUpdaterChCap = 100
 	publishChCap      = 100
+	subscribeChCap    = 100
 )
 
 type DeviceClient struct {
@@ -24,6 +26,7 @@ type DeviceClient struct {
 	stateUpdateCh   chan deviceState
 	stableTimerCh   chan bool
 	publishCh       chan *pubqueue.Data
+	subscribeCh     chan *subqueue.Subscription
 }
 
 func New(opt *options.Options) *DeviceClient {
@@ -44,6 +47,7 @@ func New(opt *options.Options) *DeviceClient {
 		stateUpdateCh:   make(chan deviceState, stateUpdaterChCap),
 		stableTimerCh:   make(chan bool),
 		publishCh:       make(chan *pubqueue.Data, publishChCap),
+		subscribeCh:     make(chan *subqueue.Subscription, subscribeChCap),
 	}
 
 	connectionLost := func(client mqtt.Client, err error) {
@@ -92,13 +96,8 @@ func (s *DeviceClient) Publish(topic string, payload interface{}) {
 }
 
 func (s *DeviceClient) Subscribe(topic string, cb mqtt.MessageHandler) {
-	// TODO: keep subscription and re-subscribe on connect
-	token := s.cli.Subscribe(topic, s.opt.Qos, cb)
-	go func() {
-		token.Wait()
-		if token.Error() != nil {
-			log.Printf("Failed to subscribe (%s)\n", token.Error())
-			s.stateUpdateCh <- inactive
-		}
-	}()
+	s.subscribeCh <- &subqueue.Subscription{subqueue.Subscribe, topic, cb}
+}
+func (s *DeviceClient) Unsubscribe(topic string) {
+	s.subscribeCh <- &subqueue.Subscription{subqueue.Unsubscribe, topic, nil}
 }
