@@ -3,10 +3,14 @@ package devicecli
 import (
 	"log"
 	"time"
+
+	"github.com/seqsense/aws-iot-device-sdk-go/pubqueue"
 )
 
 func connectionHandler(c *DeviceClient) {
 	state := inactive
+	pubQueue := pubqueue.New(c.opt.OfflineQueueMaxSize, c.opt.OfflineQueueDropBehavior)
+
 	for {
 		statePrev := state
 
@@ -19,13 +23,13 @@ func connectionHandler(c *DeviceClient) {
 					if token.Error() != nil {
 						log.Printf("Failed to publish (%s)\n", token.Error())
 						if c.opt.OfflineQueueing {
-							c.pubQueue.Enqueue(d)
+							pubQueue.Enqueue(d)
 						}
 					}
 				}()
 			} else {
 				if c.opt.OfflineQueueing {
-					c.pubQueue.Enqueue(d)
+					pubQueue.Enqueue(d)
 				}
 			}
 
@@ -54,7 +58,7 @@ func connectionHandler(c *DeviceClient) {
 					time.Sleep(c.opt.MinimumConnectionTime)
 					c.stableTimerCh <- true
 				}()
-				c.processQueuedOps()
+				c.processQueuedOps(pubQueue)
 
 			case stable:
 				if statePrev == established {
@@ -74,9 +78,9 @@ func connectionHandler(c *DeviceClient) {
 	}
 }
 
-func (c *DeviceClient) processQueuedOps() {
-	for c.pubQueue.Len() > 0 {
-		d := c.pubQueue.Pop()
+func (c *DeviceClient) processQueuedOps(q *pubqueue.Queue) {
+	for q.Len() > 0 {
+		d := q.Pop()
 
 		token := c.cli.Publish(d.Topic, c.opt.Qos, c.opt.Retain, d.Payload)
 		go func() {
@@ -84,7 +88,7 @@ func (c *DeviceClient) processQueuedOps() {
 			if token.Error() != nil {
 				log.Printf("Failed to publish (%s)\n", token.Error())
 				// MQTT doesn't guarantee receive order; just append to the last
-				c.pubQueue.Enqueue(d)
+				q.Enqueue(d)
 			}
 		}()
 	}

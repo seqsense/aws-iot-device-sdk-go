@@ -24,7 +24,6 @@ type DeviceClient struct {
 	stateUpdateCh   chan deviceState
 	stableTimerCh   chan bool
 	publishCh       chan *pubqueue.Data
-	pubQueue        *pubqueue.Queue
 }
 
 func New(opt *options.Options) *DeviceClient {
@@ -45,7 +44,6 @@ func New(opt *options.Options) *DeviceClient {
 		stateUpdateCh:   make(chan deviceState, stateUpdaterChCap),
 		stableTimerCh:   make(chan bool),
 		publishCh:       make(chan *pubqueue.Data, publishChCap),
-		pubQueue:        pubqueue.New(opt.OfflineQueueMaxSize, opt.OfflineQueueDropBehavior),
 	}
 
 	connectionLost := func(client mqtt.Client, err error) {
