@@ -54,7 +54,7 @@ func main() {
 		Debug:                    false,
 		Qos:                      1,
 		Retain:                   false,
-		Will:                     &options.TopicPayload{"notification", "{\"status\": \"dead\"}"},
+		Will:                     &options.TopicPayload{Topic: "notification", Payload: "{\"status\": \"dead\"}"},
 		OfflineQueueing:          true,
 		OfflineQueueMaxSize:      100,
 		OfflineQueueDropBehavior: pubqueue.Oldest,

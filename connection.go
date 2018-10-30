@@ -163,7 +163,7 @@ func (s *pubSubQueues) resubscribe() {
 		delete(s.activeSubs, d.Topic)
 
 		token := s.cli.cli.Subscribe(d.Topic, s.cli.opt.Qos, d.Cb)
-		go func() {
+		go func(d *subqueue.Subscription) {
 			token.Wait()
 			if token.Error() != nil {
 				log.Printf("Failed to subscribe (%s)\n", token.Error())
@@ -171,6 +171,6 @@ func (s *pubSubQueues) resubscribe() {
 			} else {
 				s.activeSubs[d.Topic] = d
 			}
-		}()
+		}(d)
 	}
 }

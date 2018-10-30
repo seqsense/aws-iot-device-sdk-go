@@ -92,12 +92,12 @@ func (s *DeviceClient) Disconnect() {
 }
 
 func (s *DeviceClient) Publish(topic string, payload interface{}) {
-	s.publishCh <- &pubqueue.Data{topic, payload}
+	s.publishCh <- &pubqueue.Data{Topic: topic, Payload: payload}
 }
 
 func (s *DeviceClient) Subscribe(topic string, cb mqtt.MessageHandler) {
-	s.subscribeCh <- &subqueue.Subscription{subqueue.Subscribe, topic, cb}
+	s.subscribeCh <- &subqueue.Subscription{Type: subqueue.Subscribe, Topic: topic, Cb: cb}
 }
 func (s *DeviceClient) Unsubscribe(topic string) {
-	s.subscribeCh <- &subqueue.Subscription{subqueue.Unsubscribe, topic, nil}
+	s.subscribeCh <- &subqueue.Subscription{Type: subqueue.Unsubscribe, Topic: topic, Cb: nil}
 }
