@@ -54,14 +54,13 @@ func main() {
 		Debug:                    false,
 		Qos:                      1,
 		Retain:                   false,
-		Will:                     &options.TopicPayload{"notification", "{\"status\": \"dead\"}"},
+		Will:                     &options.TopicPayload{Topic: "notification", Payload: "{\"status\": \"dead\"}"},
 		OfflineQueueing:          true,
 		OfflineQueueMaxSize:      100,
 		OfflineQueueDropBehavior: pubqueue.Oldest,
+		AutoResubscribe:          true,
 	}
 	cli := awsiot.New(o)
-	time.Sleep(2 * time.Second)
-
 	cli.Subscribe("test", messageHandler)
 
 	sig := make(chan os.Signal, 1)

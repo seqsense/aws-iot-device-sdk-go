@@ -30,4 +30,5 @@ type Options struct {
 	OfflineQueueing          bool
 	OfflineQueueMaxSize      int
 	OfflineQueueDropBehavior pubqueue.QueueDropBehavior
+	AutoResubscribe          bool
 }
