@@ -1,4 +1,4 @@
-package devicecli
+package awsiotdev
 
 import (
 	"time"

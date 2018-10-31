@@ -1,4 +1,4 @@
-package devicecli
+package awsiotdev
 
 type deviceState int
 
