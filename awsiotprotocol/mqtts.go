@@ -1,4 +1,4 @@
-package mqtts
+package awsiotprotocol
 
 import (
 	"crypto/tls"
@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/seqsense/aws-iot-device-sdk-go/options"
 )
 
 type Mqtts struct {
@@ -17,7 +16,7 @@ func (s Mqtts) Name() string {
 	return "mqtts"
 }
 
-func (s Mqtts) NewClientOptions(opt *options.Options) (*mqtt.ClientOptions, error) {
+func (s Mqtts) NewClientOptions(opt *Config) (*mqtt.ClientOptions, error) {
 
 	tlsconfig, err := newTLSConfig(opt.Host, opt.CaPath, opt.CertPath, opt.KeyPath)
 	if err != nil {

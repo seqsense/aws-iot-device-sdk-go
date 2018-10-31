@@ -11,8 +11,6 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	awsiot "github.com/seqsense/aws-iot-device-sdk-go"
-	"github.com/seqsense/aws-iot-device-sdk-go/options"
-	"github.com/seqsense/aws-iot-device-sdk-go/pubqueue"
 )
 
 var message mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
@@ -39,7 +37,7 @@ var (
 func main() {
 	flag.Parse()
 
-	o := &options.Options{
+	o := &awsiot.Options{
 		KeyPath:                  *privatePath,
 		CertPath:                 *certPath,
 		CaPath:                   *caPath,
@@ -54,10 +52,10 @@ func main() {
 		Debug:                    false,
 		Qos:                      1,
 		Retain:                   false,
-		Will:                     &options.TopicPayload{Topic: "notification", Payload: "{\"status\": \"dead\"}"},
+		Will:                     &awsiot.TopicPayload{Topic: "notification", Payload: "{\"status\": \"dead\"}"},
 		OfflineQueueing:          true,
 		OfflineQueueMaxSize:      100,
-		OfflineQueueDropBehavior: pubqueue.Oldest,
+		OfflineQueueDropBehavior: "oldest",
 		AutoResubscribe:          true,
 	}
 	cli := awsiot.New(o)

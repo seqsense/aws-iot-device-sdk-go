@@ -18,9 +18,13 @@ type pubSubQueues struct {
 func connectionHandler(c *DeviceClient) {
 	state := inactive
 
+	drop, err := pubqueue.NewDropBehavior(c.opt.OfflineQueueDropBehavior)
+	if err != nil {
+		panic(err)
+	}
 	psq := &pubSubQueues{
 		c,
-		pubqueue.New(c.opt.OfflineQueueMaxSize, c.opt.OfflineQueueDropBehavior),
+		pubqueue.New(c.opt.OfflineQueueMaxSize, drop),
 		subqueue.New(),
 		make(map[string]*subqueue.Subscription),
 	}
