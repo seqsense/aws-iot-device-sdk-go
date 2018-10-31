@@ -1,12 +1,9 @@
-package protocols
+package awsiotprotocol
 
 import (
 	"fmt"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-
-	"github.com/seqsense/aws-iot-device-sdk-go/options"
-	"github.com/seqsense/aws-iot-device-sdk-go/protocols/mqtts"
 )
 
 var (
@@ -15,11 +12,11 @@ var (
 
 type Protocol interface {
 	Name() string
-	NewClientOptions(opt *options.Options) (*mqtt.ClientOptions, error)
+	NewClientOptions(opt *Config) (*mqtt.ClientOptions, error)
 }
 
 func init() {
-	registerProtocol(mqtts.Mqtts{})
+	registerProtocol(Mqtts{})
 }
 
 func ByName(name string) (Protocol, error) {

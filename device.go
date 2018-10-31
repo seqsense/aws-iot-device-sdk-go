@@ -1,4 +1,4 @@
-package devicecli
+package awsiotdev
 
 import (
 	"log"
@@ -6,8 +6,7 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/options"
-	"github.com/seqsense/aws-iot-device-sdk-go/protocols"
+	"github.com/seqsense/aws-iot-device-sdk-go/awsiotprotocol"
 	"github.com/seqsense/aws-iot-device-sdk-go/pubqueue"
 	"github.com/seqsense/aws-iot-device-sdk-go/subqueue"
 )
@@ -19,7 +18,7 @@ const (
 )
 
 type DeviceClient struct {
-	opt             *options.Options
+	opt             *Options
 	mqttOpt         *mqtt.ClientOptions
 	cli             mqtt.Client
 	reconnectPeriod time.Duration
@@ -29,12 +28,20 @@ type DeviceClient struct {
 	subscribeCh     chan *subqueue.Subscription
 }
 
-func New(opt *options.Options) *DeviceClient {
-	p, err := protocols.ByName(opt.Protocol)
+func New(opt *Options) *DeviceClient {
+	p, err := awsiotprotocol.ByName(opt.Protocol)
 	if err != nil {
 		panic(err)
 	}
-	mqttOpt, err := p.NewClientOptions(opt)
+	mqttOpt, err := p.NewClientOptions(
+		&awsiotprotocol.Config{
+			KeyPath:  opt.KeyPath,
+			CertPath: opt.CertPath,
+			CaPath:   opt.CaPath,
+			ClientId: opt.ClientId,
+			Host:     opt.Host,
+		},
+	)
 	if err != nil {
 		panic(err)
 	}

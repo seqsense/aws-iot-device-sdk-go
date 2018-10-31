@@ -1,12 +1,5 @@
 package pubqueue
 
-type QueueDropBehavior int
-
-const (
-	Oldest QueueDropBehavior = iota
-	Newest
-)
-
 type Data struct {
 	Topic   string
 	Payload interface{}
@@ -15,10 +8,10 @@ type Data struct {
 type Queue struct {
 	buf          []*Data
 	maxSize      int
-	dropBehavior QueueDropBehavior
+	dropBehavior DropBehavior
 }
 
-func New(maxSize int, dropBehavior QueueDropBehavior) *Queue {
+func New(maxSize int, dropBehavior DropBehavior) *Queue {
 	return &Queue{
 		maxSize:      maxSize,
 		dropBehavior: dropBehavior,

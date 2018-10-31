@@ -1,9 +1,7 @@
-package options
+package awsiotdev
 
 import (
 	"time"
-
-	"github.com/seqsense/aws-iot-device-sdk-go/pubqueue"
 )
 
 type TopicPayload struct {
@@ -29,6 +27,6 @@ type Options struct {
 	Will                     *TopicPayload
 	OfflineQueueing          bool
 	OfflineQueueMaxSize      int
-	OfflineQueueDropBehavior pubqueue.QueueDropBehavior
+	OfflineQueueDropBehavior string
 	AutoResubscribe          bool
 }
