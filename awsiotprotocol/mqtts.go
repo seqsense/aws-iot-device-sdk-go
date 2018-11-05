@@ -17,8 +17,11 @@ package awsiotprotocol
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
+	"strconv"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -31,15 +34,32 @@ func (s Mqtts) Name() string {
 }
 
 func (s Mqtts) NewClientOptions(opt *Config) (*mqtt.ClientOptions, error) {
+	url, err := url.Parse(opt.Url)
+	if err != nil {
+		return nil, err
+	}
+	host := url.Hostname()
+	if host == "" {
+		return nil, errors.New("Hostname is not provided in the URL")
+	}
+	var port int
+	if url.Port() != "" {
+		port, err = strconv.Atoi(url.Port())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		port = 8883
+	}
 
-	tlsconfig, err := newTLSConfig(opt.Host, opt.CaPath, opt.CertPath, opt.KeyPath)
+	tlsconfig, err := newTLSConfig(host, opt.CaPath, opt.CertPath, opt.KeyPath)
 	if err != nil {
 		return nil, err
 	}
 
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(
-		fmt.Sprintf("ssl://%s:8883", opt.Host))
+		fmt.Sprintf("ssl://%s:%d", host, port))
 	opts.SetClientID(opt.ClientId)
 	opts.SetTLSConfig(tlsconfig)
 

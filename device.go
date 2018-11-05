@@ -50,7 +50,11 @@ type DeviceClient struct {
 }
 
 func New(opt *Options) *DeviceClient {
-	p, err := awsiotprotocol.ByName(opt.Protocol)
+	if opt.Protocol != "" || opt.Host != "" {
+		log.Printf("Options.Protocol and Options.Host is deprecated. Use Options.URL instead.")
+		opt.Url = opt.Protocol + "://" + opt.Host
+	}
+	p, err := awsiotprotocol.ByUrl(opt.Url)
 	if err != nil {
 		panic(err)
 	}
@@ -60,7 +64,7 @@ func New(opt *Options) *DeviceClient {
 			CertPath: opt.CertPath,
 			CaPath:   opt.CaPath,
 			ClientId: opt.ClientId,
-			Host:     opt.Host,
+			Url:      opt.Url,
 		},
 	)
 	if err != nil {
