@@ -34,6 +34,10 @@ const (
 	subscribeChCap    = 100
 )
 
+// DeviceClient inplements mqtt.Client interface.
+// Publishing messages and subscribing topics are queued in the DeviceClient if
+// the network connection is lost. They are re-tried after the connection is
+// resumed.
 type DeviceClient struct {
 	opt             *Options
 	mqttOpt         *mqtt.ClientOptions
@@ -92,10 +96,13 @@ func New(opt *Options) *DeviceClient {
 	d.mqttOpt.SetAutoReconnect(false) // MQTT AutoReconnect doesn't work well for mqtts
 	d.mqttOpt.SetConnectTimeout(time.Second * 5)
 
-	d.connect()
-	go connectionHandler(d)
-
 	return d
+}
+
+func (s *DeviceClient) Connect() mqtt.Token {
+	s.connect()
+	go connectionHandler(s)
+	return &mqtt.DummyToken{}
 }
 
 func (s *DeviceClient) connect() {
@@ -111,17 +118,46 @@ func (s *DeviceClient) connect() {
 	}()
 }
 
-func (s *DeviceClient) Disconnect() {
+func (s *DeviceClient) Disconnect(quiesce uint) {
 	s.stateUpdateCh <- terminating
 }
 
-func (s *DeviceClient) Publish(topic string, payload interface{}) {
+func (s *DeviceClient) Publish(topic string, qos byte, retained bool, payload interface{}) mqtt.Token {
 	s.publishCh <- &pubqueue.Data{Topic: topic, Payload: payload}
+	return &mqtt.DummyToken{}
 }
 
-func (s *DeviceClient) Subscribe(topic string, cb mqtt.MessageHandler) {
+func (s *DeviceClient) Subscribe(topic string, qos byte, cb mqtt.MessageHandler) mqtt.Token {
 	s.subscribeCh <- &subqueue.Subscription{Type: subqueue.Subscribe, Topic: topic, Cb: cb}
+	return &mqtt.DummyToken{}
 }
-func (s *DeviceClient) Unsubscribe(topic string) {
-	s.subscribeCh <- &subqueue.Subscription{Type: subqueue.Unsubscribe, Topic: topic, Cb: nil}
+
+func (s *DeviceClient) SubscribeMultiple(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+	for topic, qos := range filters {
+		s.Subscribe(topic, qos, callback)
+	}
+	return &mqtt.DummyToken{}
+}
+
+func (s *DeviceClient) Unsubscribe(topics ...string) mqtt.Token {
+	for _, topic := range topics {
+		s.subscribeCh <- &subqueue.Subscription{Type: subqueue.Unsubscribe, Topic: topic, Cb: nil}
+	}
+	return &mqtt.DummyToken{}
+}
+
+func (s *DeviceClient) AddRoute(topic string, callback mqtt.MessageHandler) {
+	panic("awsiotdev doesn't support AddRoute")
+}
+
+func (s *DeviceClient) IsConnected() bool {
+	return s.cli.IsConnected()
+}
+func (s *DeviceClient) IsConnectionOpen() bool {
+	// paho.mqtt.golang v1.1.1 don't have it.
+	// this will be added in the next version.
+	return true // since offline queued
+}
+func (s *DeviceClient) OptionsReader() mqtt.ClientOptionsReader {
+	return s.cli.OptionsReader()
 }

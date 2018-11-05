@@ -73,7 +73,8 @@ func main() {
 		AutoResubscribe:          true,
 	}
 	cli := awsiot.New(o)
-	cli.Subscribe("test", messageHandler)
+	cli.Connect()
+	cli.Subscribe("test", 1, messageHandler)
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
@@ -85,7 +86,7 @@ func main() {
 		case <-sig:
 			return
 		case <-tick.C:
-			cli.Publish("notification", "{\"status\": \"tick\"}")
+			cli.Publish("notification", 1, false, "{\"status\": \"tick\"}")
 		}
 	}
 }
