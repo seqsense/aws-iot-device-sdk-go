@@ -45,7 +45,7 @@ var (
 	caPath      = flag.String("ca-path", "CAfile.pem", "Path to CA certificate pem file")
 	thingName   = flag.String("thing-name", "sample", "Thing name")
 	region      = flag.String("region", "ap-northeast-1", "AWS region")
-	host        = flag.String("host", "hoge.iot.ap-northeast-1.amazonaws.com", "AWS IoT host")
+	url         = flag.String("url", "mqtts://hoge.iot.ap-northeast-1.amazonaws.com", "AWS IoT endpoint")
 )
 
 func main() {
@@ -61,8 +61,7 @@ func main() {
 		MaximumReconnectTime:     time.Second * 2,
 		MinimumConnectionTime:    time.Second * 2,
 		Keepalive:                time.Second * 2,
-		Protocol:                 "mqtts",
-		Host:                     *host,
+		Url:                      *url,
 		Debug:                    false,
 		Qos:                      1,
 		Retain:                   false,

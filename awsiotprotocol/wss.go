@@ -15,40 +15,21 @@
 package awsiotprotocol
 
 import (
-	"fmt"
-	"net/url"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-var (
-	protocols = make(map[string]Protocol)
-)
-
-type Protocol interface {
-	Name() string
-	NewClientOptions(opt *Config) (*mqtt.ClientOptions, error)
+type Wss struct {
 }
 
-func init() {
-	registerProtocol(Mqtts{})
-	registerProtocol(Wss{})
+func (s Wss) Name() string {
+	return "wss"
 }
 
-func ByUrl(u string) (Protocol, error) {
-	url, err := url.Parse(u)
-	if err != nil {
-		return nil, err
-	}
+func (s Wss) NewClientOptions(opt *Config) (*mqtt.ClientOptions, error) {
+	opts := mqtt.NewClientOptions()
+	opts.AddBroker(opt.Url)
+	opts.SetClientID(opt.ClientId)
+	opts.SetAutoReconnect(false) // use custom reconnection algorithm with offline queueing
 
-	p, ok := protocols[url.Scheme]
-	if !ok {
-		return nil, fmt.Errorf("Protocol \"%s\" is not supported", url.Scheme)
-	}
-	return p, nil
-}
-
-func registerProtocol(p Protocol) {
-	n := p.Name()
-	protocols[n] = p
+	return opts, nil
 }
