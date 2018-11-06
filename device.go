@@ -109,8 +109,12 @@ func (s *DeviceClient) Connect() mqtt.Token {
 	return &mqtt.DummyToken{}
 }
 
+var newClient = func(opt *mqtt.ClientOptions) mqtt.Client {
+	return mqtt.NewClient(opt)
+}
+
 func (s *DeviceClient) connect() {
-	s.cli = mqtt.NewClient(s.mqttOpt)
+	s.cli = newClient(s.mqttOpt)
 
 	token := s.cli.Connect()
 	go func() {
