@@ -31,7 +31,6 @@ type pubSubQueues struct {
 
 func connectionHandler(c *DeviceClient) {
 	state := inactive
-
 	drop, err := pubqueue.NewDropBehavior(c.opt.OfflineQueueDropBehavior)
 	if err != nil {
 		panic(err)

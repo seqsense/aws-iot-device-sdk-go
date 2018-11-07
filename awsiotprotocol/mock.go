@@ -15,41 +15,15 @@
 package awsiotprotocol
 
 import (
-	"fmt"
-	"net/url"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-var (
-	protocols = make(map[string]Protocol)
-)
-
-type Protocol interface {
-	Name() string
-	NewClientOptions(opt *Config) (*mqtt.ClientOptions, error)
+type MockProtocol struct {
 }
 
-func init() {
-	registerProtocol(Mqtts{})
-	registerProtocol(Wss{})
-	registerProtocol(MockProtocol{})
+func (s MockProtocol) Name() string {
+	return "mock"
 }
-
-func ByUrl(u string) (Protocol, error) {
-	url, err := url.Parse(u)
-	if err != nil {
-		return nil, err
-	}
-
-	p, ok := protocols[url.Scheme]
-	if !ok {
-		return nil, fmt.Errorf("Protocol \"%s\" is not supported", url.Scheme)
-	}
-	return p, nil
-}
-
-func registerProtocol(p Protocol) {
-	n := p.Name()
-	protocols[n] = p
+func (s MockProtocol) NewClientOptions(opt *Config) (*mqtt.ClientOptions, error) {
+	return mqtt.NewClientOptions(), nil
 }
