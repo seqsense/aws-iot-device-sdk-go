@@ -50,7 +50,7 @@ func TestDeviceClient(t *testing.T) {
 		t.Fatalf("Mqtt client is not initialized")
 	}
 	if connectionNum != 1 {
-		t.Fatalf("Connected not 1 time (%d)", connectionNum)
+		t.Fatalf("Connected not once (%d)", connectionNum)
 	}
 
 	subscribedMsg := ""
@@ -63,7 +63,7 @@ func TestDeviceClient(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	// Not yet connected. Must not be published and published
+	// Not yet connected. Must not be published and subscribed
 	if cli.cli != nil && cli.cli.(*MockClient).subscribeNum != 0 {
 		t.Fatalf("Subscribed before reconnection")
 	}
@@ -92,26 +92,28 @@ func TestDeviceClient(t *testing.T) {
 		t.Fatalf("Subscribed message payload is wrong (%s)", subscribedMsg)
 	}
 
-	// Try reconnect
+	// Disconnect
 	cli.mqttOpt.OnConnectionLost(cli.cli, errors.New("Disconnect test"))
 	time.Sleep(time.Millisecond * 100)
 	if connectionNum != 2 {
-		t.Fatalf("Connected not 2 time (%d)", connectionNum)
+		t.Fatalf("Connected not twice (%d)", connectionNum)
 	}
 	cli.Publish("test", 1, false, "test message2")
 
-	// Not yet reconnected
+	// Must not published yet
 	if cli.cli.(*MockClient).publishNum != 0 {
 		t.Fatalf("Queued publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
 	}
 
-	// Establish connection
+	// Establish connection (subscribeNum and publishNum is cleared)
 	cli.mqttOpt.OnConnect(cli.cli)
 	time.Sleep(time.Millisecond * 100)
 
+	// Subscription must be back
 	if cli.cli.(*MockClient).subscribeNum != 1 {
-		t.Fatalf("Queued subscription is not processed (%d)", cli.cli.(*MockClient).subscribeNum)
+		t.Fatalf("Re-subscribe is not processed (%d)", cli.cli.(*MockClient).subscribeNum)
 	}
+	// Message requested during connection lost must be published
 	if cli.cli.(*MockClient).publishNum != 1 {
 		t.Fatalf("Queued publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
 	}
@@ -126,7 +128,7 @@ func TestDeviceClient(t *testing.T) {
 		t.Fatalf("Subscribed message payload is wrong (%s)", subscribedMsg)
 	}
 
-	// Another subscribe and publish
+	// Another subscribe and publish request
 	subscribedMsg2 := ""
 	cli.Subscribe("test2", 1,
 		func(client mqtt.Client, msg mqtt.Message) {
