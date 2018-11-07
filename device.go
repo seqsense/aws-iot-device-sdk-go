@@ -18,7 +18,6 @@ Package awsiotdev implements offline queueing and reconnecting features of MQTT 
 package awsiotdev
 
 import (
-	"log"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -51,7 +50,7 @@ type DeviceClient struct {
 
 func New(opt *Options) *DeviceClient {
 	if opt.Protocol != "" || opt.Host != "" {
-		log.Printf("Options.Protocol and Options.Host is deprecated. Use Options.URL instead.")
+		(&DeviceClient{opt: opt}).debugPrint("Options.Protocol and Options.Host are deprecated. Use Options.URL instead.")
 		opt.Url = opt.Protocol + "://" + opt.Host
 	}
 	p, err := awsiotprotocol.ByUrl(opt.Url)
@@ -83,11 +82,11 @@ func New(opt *Options) *DeviceClient {
 	}
 
 	connectionLost := func(client mqtt.Client, err error) {
-		log.Printf("Connection lost (%s)\n", err.Error())
+		d.debugPrintf("Connection lost (%s)\n", err.Error())
 		d.stateUpdateCh <- inactive
 	}
 	onConnect := func(client mqtt.Client) {
-		log.Printf("Connection established\n")
+		d.debugPrintf("Connection established\n")
 		d.stateUpdateCh <- established
 	}
 
@@ -120,7 +119,7 @@ func (s *DeviceClient) connect() {
 	go func() {
 		token.Wait()
 		if token.Error() != nil {
-			log.Printf("Failed to connect (%s)\n", token.Error())
+			s.debugPrintf("Failed to connect (%s)\n", token.Error())
 			s.stateUpdateCh <- inactive
 		}
 	}()

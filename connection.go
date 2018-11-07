@@ -15,7 +15,6 @@
 package awsiotdev
 
 import (
-	"log"
 	"time"
 
 	"github.com/seqsense/aws-iot-device-sdk-go/pubqueue"
@@ -70,11 +69,11 @@ func connectionHandler(c *DeviceClient) {
 			}
 
 		case <-c.stableTimerCh:
-			log.Print("Stable timer reached\n")
+			c.debugPrint("Stable timer reached\n")
 			c.stateUpdateCh <- stable
 
 		case state = <-c.stateUpdateCh:
-			log.Printf("State updated to %s\n", state.String())
+			c.debugPrintf("State updated to %s\n", state.String())
 
 			switch state {
 			case inactive:
@@ -83,7 +82,7 @@ func connectionHandler(c *DeviceClient) {
 				if c.reconnectPeriod > c.opt.MaximumReconnectTime {
 					c.reconnectPeriod = c.opt.MaximumReconnectTime
 				}
-				log.Printf("Trying to reconnect (%d ms)\n", c.reconnectPeriod/time.Millisecond)
+				c.debugPrintf("Trying to reconnect (%d ms)\n", c.reconnectPeriod/time.Millisecond)
 
 				go func() {
 					time.Sleep(c.reconnectPeriod)
@@ -95,7 +94,7 @@ func connectionHandler(c *DeviceClient) {
 				psq.resubscribe()
 
 			case established:
-				log.Print("Processing queued operations\n")
+				c.debugPrint("Processing queued operations\n")
 				go func() {
 					time.Sleep(c.opt.MinimumConnectionTime)
 					c.stableTimerCh <- true
@@ -104,12 +103,12 @@ func connectionHandler(c *DeviceClient) {
 
 			case stable:
 				if statePrev == established {
-					log.Print("Connection is stable\n")
+					c.debugPrint("Connection is stable\n")
 					c.reconnectPeriod = c.opt.BaseReconnectTime
 				}
 
 			case terminating:
-				log.Print("Terminating connection\n")
+				c.debugPrint("Terminating connection\n")
 				c.cli.Disconnect(250)
 				return
 
@@ -125,7 +124,7 @@ func (s *pubSubQueues) publishOrEnqueue(d *pubqueue.Data) {
 	go func() {
 		token.Wait()
 		if token.Error() != nil {
-			log.Printf("Failed to publish (%s)\n", token.Error())
+			s.cli.debugPrintf("Failed to publish (%s)\n", token.Error())
 			// MQTT doesn't guarantee receive order; just append to the last
 			s.cli.publishCh <- d
 		}
@@ -136,7 +135,7 @@ func (s *pubSubQueues) subscribeOrEnqueue(d *subqueue.Subscription) {
 	go func() {
 		token.Wait()
 		if token.Error() != nil {
-			log.Printf("Failed to subscribe (%s)\n", token.Error())
+			s.cli.debugPrintf("Failed to subscribe (%s)\n", token.Error())
 			s.cli.subscribeCh <- d
 		} else {
 			s.activeSubs[d.Topic] = d
@@ -148,7 +147,7 @@ func (s *pubSubQueues) unsubscribeOrEnqueue(d *subqueue.Subscription) {
 	go func() {
 		token.Wait()
 		if token.Error() != nil {
-			log.Printf("Failed to unsubscribe (%s)\n", token.Error())
+			s.cli.debugPrintf("Failed to unsubscribe (%s)\n", token.Error())
 			s.cli.subscribeCh <- d
 		} else {
 			delete(s.activeSubs, d.Topic)
@@ -183,7 +182,7 @@ func (s *pubSubQueues) resubscribe() {
 		go func(d *subqueue.Subscription) {
 			token.Wait()
 			if token.Error() != nil {
-				log.Printf("Failed to subscribe (%s)\n", token.Error())
+				s.cli.debugPrintf("Failed to subscribe (%s)\n", token.Error())
 				s.cli.subscribeCh <- d
 			} else {
 				s.activeSubs[d.Topic] = d
