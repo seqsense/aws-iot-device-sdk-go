@@ -23,6 +23,8 @@ type TopicPayload struct {
 	Payload string
 }
 
+type ConnectionLostHandler func(*Options)
+
 type Options struct {
 	KeyPath                  string
 	CertPath                 string
@@ -44,4 +46,8 @@ type Options struct {
 	OfflineQueueMaxSize      int
 	OfflineQueueDropBehavior string
 	AutoResubscribe          bool
+
+	// OnConnectionLost is called if the MQTT connection is lost.
+	// Pointer to the Options passed as the argument can be modified for the next reconnect.
+	OnConnectionLost ConnectionLostHandler
 }
