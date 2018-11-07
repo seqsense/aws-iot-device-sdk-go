@@ -164,6 +164,49 @@ func TestDeviceClient(t *testing.T) {
 	}
 }
 
+func TestConnectionLostHandler(t *testing.T) {
+	newClient = func(opt *mqtt.ClientOptions) mqtt.Client {
+		return &MockClient{}
+	}
+	connectionLostHandled := false
+	o := &Options{
+		BaseReconnectTime:        time.Millisecond * 10,
+		MaximumReconnectTime:     time.Millisecond * 50,
+		MinimumConnectionTime:    time.Millisecond * 50,
+		Keepalive:                time.Second * 2,
+		Url:                      "mock://",
+		OfflineQueueing:          true,
+		OfflineQueueMaxSize:      100,
+		OfflineQueueDropBehavior: "oldest",
+		AutoResubscribe:          true,
+		OnConnectionLost: func(opt *Options) {
+			connectionLostHandled = true
+		},
+	}
+	cli := New(o)
+	cli.Connect()
+
+	// Establish connection
+	cli.mqttOpt.OnConnect(cli.cli)
+	time.Sleep(time.Millisecond * 100)
+
+	if connectionLostHandled != false {
+		t.Fatal("ConnectionLostHandler is called before connection lost")
+	}
+
+	// Disconnect
+	cli.mqttOpt.OnConnectionLost(cli.cli, errors.New("Disconnect test"))
+	time.Sleep(time.Millisecond * 100)
+
+	// Establish connection
+	cli.mqttOpt.OnConnect(cli.cli)
+	time.Sleep(time.Millisecond * 100)
+
+	if connectionLostHandled != true {
+		t.Fatal("ConnectionLostHandler was not called on connection lost")
+	}
+}
+
 type MockMessage struct {
 	topic   string
 	payload []byte
