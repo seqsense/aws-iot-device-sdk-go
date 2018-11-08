@@ -70,6 +70,9 @@ func main() {
 		OfflineQueueMaxSize:      100,
 		OfflineQueueDropBehavior: "oldest",
 		AutoResubscribe:          true,
+		OnConnectionLost: func(opt *awsiot.Options) {
+			fmt.Printf("Connection lost handler function called\n")
+		},
 	}
 	cli := awsiot.New(o)
 	cli.Connect()

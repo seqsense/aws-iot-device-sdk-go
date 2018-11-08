@@ -83,6 +83,9 @@ func connectionHandler(c *DeviceClient) {
 					c.reconnectPeriod = c.opt.MaximumReconnectTime
 				}
 				c.debugPrintf("Trying to reconnect (%d ms)\n", c.reconnectPeriod/time.Millisecond)
+				if c.opt.OnConnectionLost != nil {
+					c.opt.OnConnectionLost(c.opt)
+				}
 
 				go func() {
 					time.Sleep(c.reconnectPeriod)
