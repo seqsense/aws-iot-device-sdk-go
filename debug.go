@@ -13,18 +13,22 @@ var (
 	DebugPrintlnBackend func(...interface{}) = log.Println
 )
 
-func (s *DeviceClient) debugPrint(a ...interface{}) {
-	if s.opt.Debug {
+type debugOut struct {
+	enable bool
+}
+
+func (s *debugOut) print(a ...interface{}) {
+	if s.enable {
 		DebugPrintBackend(a...)
 	}
 }
-func (s *DeviceClient) debugPrintf(format string, a ...interface{}) {
-	if s.opt.Debug {
+func (s *debugOut) printf(format string, a ...interface{}) {
+	if s.enable {
 		DebugPrintfBackend(format, a...)
 	}
 }
-func (s *DeviceClient) debugPrintln(a ...interface{}) {
-	if s.opt.Debug {
+func (s *debugOut) println(a ...interface{}) {
+	if s.enable {
 		DebugPrintlnBackend(a...)
 	}
 }

@@ -6,15 +6,15 @@ import (
 	"log"
 )
 
-func Example_debugPrint() {
+func Example_debugOut_print() {
 	DebugPrintBackend = func(a ...interface{}) {
 		fmt.Print(a...)
 	}
 
-	s := &DeviceClient{opt: &Options{Debug: true}}
-	s.debugPrint("Test1:", true)
-	s = &DeviceClient{opt: &Options{Debug: false}}
-	s.debugPrint("Test2:", false)
+	s := &debugOut{true}
+	s.print("Test1:", true)
+	s = &debugOut{false}
+	s.print("Test2:", false)
 
 	DebugPrintBackend = log.Print
 
@@ -22,15 +22,15 @@ func Example_debugPrint() {
 	// Test1:true
 }
 
-func Example_debugPrintf() {
+func Example_debugOut_printf() {
 	DebugPrintfBackend = func(format string, a ...interface{}) {
 		fmt.Printf(format, a...)
 	}
 
-	s := &DeviceClient{opt: &Options{Debug: true}}
-	s.debugPrintf("Formatted value 1 (%d)", 10)
-	s = &DeviceClient{opt: &Options{Debug: false}}
-	s.debugPrintf("Formatted value 2 (%d)", 11)
+	s := &debugOut{true}
+	s.printf("Formatted value 1 (%d)", 10)
+	s = &debugOut{false}
+	s.printf("Formatted value 2 (%d)", 11)
 
 	DebugPrintfBackend = log.Printf
 
@@ -38,15 +38,15 @@ func Example_debugPrintf() {
 	// Formatted value 1 (10)
 }
 
-func Example_debugPrintln() {
+func Example_debugOut_println() {
 	DebugPrintlnBackend = func(a ...interface{}) {
 		fmt.Println(a...)
 	}
 
-	s := &DeviceClient{opt: &Options{Debug: true}}
-	s.debugPrintln(errors.New("Error string 1"))
-	s = &DeviceClient{opt: &Options{Debug: false}}
-	s.debugPrintln(errors.New("Error string 2"))
+	s := &debugOut{true}
+	s.println(errors.New("Error string 1"))
+	s = &debugOut{false}
+	s.println(errors.New("Error string 2"))
 
 	DebugPrintlnBackend = log.Println
 

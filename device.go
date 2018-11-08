@@ -46,11 +46,12 @@ type DeviceClient struct {
 	stableTimerCh   chan bool
 	publishCh       chan *pubqueue.Data
 	subscribeCh     chan *subqueue.Subscription
+	dbg             *debugOut
 }
 
 func New(opt *Options) *DeviceClient {
 	if opt.Protocol != "" || opt.Host != "" {
-		(&DeviceClient{opt: opt}).debugPrint("Options.Protocol and Options.Host are deprecated. Use Options.URL instead.")
+		(&debugOut{opt.Debug}).print("Options.Protocol and Options.Host are deprecated. Use Options.URL instead.")
 		opt.Url = opt.Protocol + "://" + opt.Host
 	}
 	p, err := awsiotprotocol.ByUrl(opt.Url)
@@ -79,14 +80,15 @@ func New(opt *Options) *DeviceClient {
 		stableTimerCh:   make(chan bool),
 		publishCh:       make(chan *pubqueue.Data, publishChCap),
 		subscribeCh:     make(chan *subqueue.Subscription, subscribeChCap),
+		dbg:             &debugOut{opt.Debug},
 	}
 
 	connectionLost := func(client mqtt.Client, err error) {
-		d.debugPrintf("Connection lost (%s)\n", err.Error())
+		d.dbg.printf("Connection lost (%s)\n", err.Error())
 		d.stateUpdateCh <- inactive
 	}
 	onConnect := func(client mqtt.Client) {
-		d.debugPrintf("Connection established\n")
+		d.dbg.printf("Connection established\n")
 		d.stateUpdateCh <- established
 	}
 
@@ -119,7 +121,7 @@ func (s *DeviceClient) connect() {
 	go func() {
 		token.Wait()
 		if token.Error() != nil {
-			s.debugPrintf("Failed to connect (%s)\n", token.Error())
+			s.dbg.printf("Failed to connect (%s)\n", token.Error())
 			s.stateUpdateCh <- inactive
 		}
 	}()
