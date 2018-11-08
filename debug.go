@@ -6,18 +6,12 @@ import (
 
 var (
 	// Backend function of debug print output. This can be replaced by custom logger.
-	DebugPrintBackend func(...interface{})
+	DebugPrintBackend func(...interface{}) = log.Print
 	// Backend function of debug printf output. This can be replaced by custom logger.
-	DebugPrintfBackend func(string, ...interface{})
+	DebugPrintfBackend func(string, ...interface{}) = log.Printf
 	// Backend function of debug println output. This can be replaced by custom logger.
-	DebugPrintlnBackend func(...interface{})
+	DebugPrintlnBackend func(...interface{}) = log.Println
 )
-
-func init() {
-	DebugPrintBackend = log.Print
-	DebugPrintfBackend = log.Printf
-	DebugPrintlnBackend = log.Println
-}
 
 func (s *DeviceClient) debugPrint(a ...interface{}) {
 	if s.opt.Debug {
