@@ -62,7 +62,7 @@ func main() {
 		MinimumConnectionTime:    time.Second * 2,
 		Keepalive:                time.Second * 2,
 		Url:                      *url,
-		Debug:                    false,
+		Debug:                    true,
 		Qos:                      1,
 		Retain:                   false,
 		Will:                     &awsiot.TopicPayload{Topic: "notification", Payload: "{\"status\": \"dead\"}"},
