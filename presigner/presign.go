@@ -87,5 +87,9 @@ func (a *Presigner) PresignWss(endpoint string, expire time.Duration, from time.
 		return "", err
 	}
 
-	return req.URL.String() + "&X-Amz-Security-Token=" + url.QueryEscape(sessionToken), nil
+	ret := req.URL.String()
+	if sessionToken != "" {
+		ret = ret + "&X-Amz-Security-Token=" + url.QueryEscape(sessionToken)
+	}
+	return ret, nil
 }
