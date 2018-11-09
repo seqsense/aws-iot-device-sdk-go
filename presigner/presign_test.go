@@ -17,46 +17,53 @@ package presigner
 import (
 	"fmt"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
-func ExamplePresigner_PresignWss() {
+func TestPresignWss(t *testing.T) {
 	os.Clearenv()
 	os.Setenv("AWS_ACCESS_KEY_ID", "AKAAAAAAAAAAAAAAAAAA")
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "1111111111111111111111111111111111111111")
 	os.Setenv("AWS_SESSION_TOKEN", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 	os.Setenv("AWS_REGION", "world-1")
 
+	const expected = "wss://test.iot.world-1.amazonaws.com/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKAAAAAAAAAAAAAAAAAA%2F19700101%2Fworld-1%2Fiotdevicegateway%2Faws4_request&X-Amz-Date=19700101T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=4cfbc8acc899f7aac3153cd17c94204d6989f86d8cb1173e46143512270c89c2&X-Amz-Security-Token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
 	sess := session.Must(session.NewSession())
 	ps := New(sess)
 	wssURL, err := ps.PresignWss("test.iot.world-1.amazonaws.com", time.Hour*24, time.Unix(0, 0))
 	if err != nil {
-		panic(err)
+		t.Error(err)
 	}
-	fmt.Printf("%s\n", wssURL)
 
-	// Output:
-	// wss://test.iot.world-1.amazonaws.com/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKAAAAAAAAAAAAAAAAAA%2F19700101%2Fworld-1%2Fiotdevicegateway%2Faws4_request&X-Amz-Date=19700101T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=4cfbc8acc899f7aac3153cd17c94204d6989f86d8cb1173e46143512270c89c2&X-Amz-Security-Token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+	if wssURL != expected {
+		t.Errorf("Presigned URL is wrong if session token is provided.\nactual:   %s\nexpected: %s",
+			wssURL, expected)
+	}
 }
 
-func ExamplePresigner_PresignWss_withoutSessionToken() {
+func TestPresignWss_WithoutSessionToken(t *testing.T) {
 	os.Clearenv()
 	os.Setenv("AWS_ACCESS_KEY_ID", "AKAAAAAAAAAAAAAAAAAA")
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "1111111111111111111111111111111111111111")
 	os.Setenv("AWS_REGION", "world-1")
 
+	const expected = "wss://test.iot.world-1.amazonaws.com/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKAAAAAAAAAAAAAAAAAA%2F19700101%2Fworld-1%2Fiotdevicegateway%2Faws4_request&X-Amz-Date=19700101T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=4cfbc8acc899f7aac3153cd17c94204d6989f86d8cb1173e46143512270c89c2"
+
 	sess := session.Must(session.NewSession())
 	ps := New(sess)
 	wssURL, err := ps.PresignWss("test.iot.world-1.amazonaws.com", time.Hour*24, time.Unix(0, 0))
 	if err != nil {
-		panic(err)
+		t.Error(err)
 	}
-	fmt.Printf("%s\n", wssURL)
 
-	// Output:
-	// wss://test.iot.world-1.amazonaws.com/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKAAAAAAAAAAAAAAAAAA%2F19700101%2Fworld-1%2Fiotdevicegateway%2Faws4_request&X-Amz-Date=19700101T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=4cfbc8acc899f7aac3153cd17c94204d6989f86d8cb1173e46143512270c89c2
+	if wssURL != expected {
+		t.Errorf("Presigned URL is wrong if session token is provided.\nactual:   %s\nexpected: %s",
+			wssURL, expected)
+	}
 }
 
 func ExamplePresigner_PresignWssNow() {
