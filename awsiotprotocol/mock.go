@@ -18,12 +18,17 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+// MockProtocol implements Protocol interface without actual connection.
+// This is for testing.
 type MockProtocol struct {
 }
 
+// Name returns the protocol name.
 func (s MockProtocol) Name() string {
 	return "mock"
 }
+
+// NewClientOptions returns MQTT connection options.
 func (s MockProtocol) NewClientOptions(opt *Config) (*mqtt.ClientOptions, error) {
 	return mqtt.NewClientOptions(), nil
 }

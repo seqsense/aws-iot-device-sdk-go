@@ -14,6 +14,7 @@
 
 package awsiotprotocol
 
+// Config stores internal MQTT connection configuration.
 type Config struct {
 	KeyPath  string
 	CertPath string

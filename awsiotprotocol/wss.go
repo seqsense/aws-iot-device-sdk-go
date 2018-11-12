@@ -18,13 +18,16 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+// Wss implements Protocol interface for MQTT over Websocket.
 type Wss struct {
 }
 
+// Name returns the protocol name.
 func (s Wss) Name() string {
 	return "wss"
 }
 
+// NewClientOptions returns MQTT connection options.
 func (s Wss) NewClientOptions(opt *Config) (*mqtt.ClientOptions, error) {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(opt.Url)
