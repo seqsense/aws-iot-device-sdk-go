@@ -19,14 +19,19 @@ import (
 	"strings"
 )
 
+// DropBehavior represents dropping mode when the queue is full.
 type DropBehavior int
 
 const (
+	// Oldest drops oldest message in the queue.
 	Oldest DropBehavior = iota
+	// Newest drops latest message in the queue.
 	Newest
+	// Unknown should never be used.
 	Unknown
 )
 
+// String returns a string representation of DropBehavior.
 func (x DropBehavior) String() string {
 	switch x {
 	case Oldest:
@@ -38,6 +43,7 @@ func (x DropBehavior) String() string {
 	}
 }
 
+// NewDropBehavior returns DropBehavior from string.
 func NewDropBehavior(b string) (DropBehavior, error) {
 	switch strings.ToLower(b) {
 	case "oldest":
