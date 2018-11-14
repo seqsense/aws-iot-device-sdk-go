@@ -33,7 +33,7 @@ const (
 	subscribeChCap    = 100
 )
 
-// This DeviceClient inplements mqtt.Client interface.
+// DeviceClient inplements mqtt.Client interface.
 // Publishing messages and subscribing topics are queued in the DeviceClient if
 // the network connection is lost. They are re-tried after the connection is
 // resumed.
