@@ -7,11 +7,23 @@ go:
   - "1.11"
   - master
 
+env:
+  global:
+    - REVIEW_DOG_ON=1.11
+    - REVIEW_DOG_VERSION=0.9.11
+
 branches:
   only:
     - master
 
 install:
+  - |
+    if [ ${TRAVIS_GO_VERSION} == ${REVIEW_DOG_ON} ]; then
+      mkdir -p ${GOPATH}/bin
+      go get -u golang.org/x/lint/golint
+      curl -s -L https://github.com/haya14busa/reviewdog/releases/download/${REVIEW_DOG_VERSION}/reviewdog_linux_amd64 > ${GOPATH}/bin/reviewdog
+      chmod +x ${GOPATH}/bin/reviewdog
+    fi
   - go get -t ./...
 script:
   - go build
@@ -24,6 +36,10 @@ script:
     fi
   - go test ${TEST_ARG} ./...
   - go vet ./...
+  - |
+    if [ ${TRAVIS_GO_VERSION} == ${REVIEW_DOG_ON} ]; then
+      golint ./... | reviewdog -f=golint -reporter=github-pr-review
+    fi
 after_success:
   - |
     if [[ ${REPORT_COVERAGE} == 1 ]]
