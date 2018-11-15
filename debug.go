@@ -5,11 +5,14 @@ import (
 )
 
 var (
-	// Backend function of debug print output. This can be replaced by custom logger.
+	// DebugPrintBackend stores backend function of debug print output.
+	// This can be replaced by custom logger.
 	DebugPrintBackend func(...interface{}) = log.Print
-	// Backend function of debug printf output. This can be replaced by custom logger.
+	// DebugPrintfBackend stores backend function of debug printf output.
+	// This can be replaced by custom logger.
 	DebugPrintfBackend func(string, ...interface{}) = log.Printf
-	// Backend function of debug println output. This can be replaced by custom logger.
+	// DebugPrintlnBackend stores backend function of debug println output.
+	// This can be replaced by custom logger.
 	DebugPrintlnBackend func(...interface{}) = log.Println
 )
 

@@ -49,6 +49,8 @@ type DeviceClient struct {
 	dbg             *debugOut
 }
 
+// New returns new MQTT client with offline queueing and reconnecting.
+// Returned client is not connected to the broaker until calling Connect().
 func New(opt *Options) *DeviceClient {
 	if opt.Protocol != "" || opt.Host != "" {
 		(&debugOut{opt.Debug}).print("Options.Protocol and Options.Host are deprecated. Use Options.URL instead.")
@@ -104,6 +106,9 @@ func New(opt *Options) *DeviceClient {
 	return d
 }
 
+// Connect create a connection to the broker.
+// Returned token indicates success immediately.
+// Subscription requests and published messages are queued until actual connection establish.
 func (s *DeviceClient) Connect() mqtt.Token {
 	s.connect()
 	go connectionHandler(s)
@@ -127,20 +132,28 @@ func (s *DeviceClient) connect() {
 	}()
 }
 
+// Disconnect ends the connection to the broker.
+// Currently, it disconnects immediately and quiesce argument is ignored.
 func (s *DeviceClient) Disconnect(quiesce uint) {
 	s.stateUpdateCh <- terminating
 }
 
+// Publish publishes a message.
+// Currently, qos and retained arguments are ignored and ones specified in the options are used.
 func (s *DeviceClient) Publish(topic string, qos byte, retained bool, payload interface{}) mqtt.Token {
 	s.publishCh <- &pubqueue.Data{Topic: topic, Payload: payload}
 	return &mqtt.DummyToken{}
 }
 
+// Subscribe requests a new subscription for the specified topic.
+// Currently, qos argument is ignored and one specified in the options is used.
 func (s *DeviceClient) Subscribe(topic string, qos byte, cb mqtt.MessageHandler) mqtt.Token {
 	s.subscribeCh <- &subqueue.Subscription{Type: subqueue.Subscribe, Topic: topic, Cb: cb}
 	return &mqtt.DummyToken{}
 }
 
+// SubscribeMultiple requests new subscription for multiple topics.
+// Currently, specified qos is ignored and one specified in the options is used.
 func (s *DeviceClient) SubscribeMultiple(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
 	for topic, qos := range filters {
 		s.Subscribe(topic, qos, callback)
@@ -148,6 +161,7 @@ func (s *DeviceClient) SubscribeMultiple(filters map[string]byte, callback mqtt.
 	return &mqtt.DummyToken{}
 }
 
+// Unsubscribe ends the subscriptions for the specified topics.
 func (s *DeviceClient) Unsubscribe(topics ...string) mqtt.Token {
 	for _, topic := range topics {
 		s.subscribeCh <- &subqueue.Subscription{Type: subqueue.Unsubscribe, Topic: topic, Cb: nil}
@@ -155,18 +169,25 @@ func (s *DeviceClient) Unsubscribe(topics ...string) mqtt.Token {
 	return &mqtt.DummyToken{}
 }
 
+// AddRoute is not supported in this package at now.
 func (s *DeviceClient) AddRoute(topic string, callback mqtt.MessageHandler) {
 	panic("awsiotdev doesn't support AddRoute")
 }
 
+// IsConnected returns a bool whether the client is connected to the broker or not.
 func (s *DeviceClient) IsConnected() bool {
 	return s.cli.IsConnected()
 }
+
+// IsConnectionOpen returns a bool whether the client has an active connection to the broker.
+// It is not supported in the latest paho.mqtt.golang release, but will be supported in the future release.
 func (s *DeviceClient) IsConnectionOpen() bool {
 	// paho.mqtt.golang v1.1.1 don't have it.
 	// this will be added in the next version.
 	return true // since offline queued
 }
+
+// OptionsReader returns a ClientOptionsReader of the internal MQTT client.
 func (s *DeviceClient) OptionsReader() mqtt.ClientOptionsReader {
 	return s.cli.OptionsReader()
 }

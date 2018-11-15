@@ -18,13 +18,16 @@ import (
 	"time"
 )
 
+// TopicPayload stores a pair of topic name and payload string.
 type TopicPayload struct {
 	Topic   string
 	Payload string
 }
 
+// ConnectionLostHandler is the function type for connection lost callback.
 type ConnectionLostHandler func(*Options)
 
+// Options stores configuration of the MQTT connection.
 type Options struct {
 	KeyPath                  string
 	CertPath                 string

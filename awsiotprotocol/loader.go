@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package awsiotprotocol is internal implementation of awsiotdev package.
+// It implements MQTT connection type loader.
 package awsiotprotocol
 
 import (
@@ -25,6 +27,7 @@ var (
 	protocols = make(map[string]Protocol)
 )
 
+// Protocol is the interface to describe MQTT connection type.
 type Protocol interface {
 	Name() string
 	NewClientOptions(opt *Config) (*mqtt.ClientOptions, error)
@@ -36,6 +39,7 @@ func init() {
 	registerProtocol(MockProtocol{})
 }
 
+// ByUrl selects MQTT connection type by URL string.
 func ByUrl(u string) (Protocol, error) {
 	url, err := url.Parse(u)
 	if err != nil {

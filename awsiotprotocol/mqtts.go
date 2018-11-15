@@ -26,13 +26,16 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+// Mqtts implements Protocol interface for MQTT over TLS using x.509 certifications.
 type Mqtts struct {
 }
 
+// Name returns the protocol name.
 func (s Mqtts) Name() string {
 	return "mqtts"
 }
 
+// NewClientOptions returns MQTT connection options.
 func (s Mqtts) NewClientOptions(opt *Config) (*mqtt.ClientOptions, error) {
 	url, err := url.Parse(opt.Url)
 	if err != nil {
