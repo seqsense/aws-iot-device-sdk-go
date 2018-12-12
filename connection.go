@@ -84,7 +84,7 @@ func connectionHandler(c *DeviceClient) {
 				}
 				c.dbg.printf("Trying to reconnect (%d ms)\n", c.reconnectPeriod/time.Millisecond)
 				if c.opt.OnConnectionLost != nil {
-					c.opt.OnConnectionLost(c.opt)
+					c.opt.OnConnectionLost(c.mqttOpt)
 				}
 
 				go func() {

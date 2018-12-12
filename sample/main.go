@@ -70,7 +70,7 @@ func main() {
 		OfflineQueueMaxSize:      100,
 		OfflineQueueDropBehavior: "oldest",
 		AutoResubscribe:          true,
-		OnConnectionLost: func(opt *awsiot.Options) {
+		OnConnectionLost: func(mqttOpt *mqtt.ClientOptions) {
 			fmt.Printf("Connection lost handler function called\n")
 		},
 	}
