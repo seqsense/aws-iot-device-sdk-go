@@ -16,6 +16,8 @@ package awsiotdev
 
 import (
 	"errors"
+	"net/url"
+	"reflect"
 	"testing"
 	"time"
 
@@ -169,6 +171,8 @@ func TestConnectionLostHandler(t *testing.T) {
 		return &MockClient{}
 	}
 	connectionLostHandled := false
+	var connectionLostError error
+	newBrokerURL, _ := url.Parse("mock://newbrokerurl")
 	o := &Options{
 		BaseReconnectTime:        time.Millisecond * 10,
 		MaximumReconnectTime:     time.Millisecond * 50,
@@ -179,8 +183,12 @@ func TestConnectionLostHandler(t *testing.T) {
 		OfflineQueueMaxSize:      100,
 		OfflineQueueDropBehavior: "oldest",
 		AutoResubscribe:          true,
-		OnConnectionLost: func(opt *Options) {
+		Debug:                    false,
+		OnConnectionLost: func(opt *Options, mqttOpt *mqtt.ClientOptions, err error) {
 			connectionLostHandled = true
+			connectionLostError = err
+			opt.Debug = true
+			mqttOpt.Servers = []*url.URL{newBrokerURL}
 		},
 	}
 	cli := New(o)
@@ -195,7 +203,8 @@ func TestConnectionLostHandler(t *testing.T) {
 	}
 
 	// Disconnect
-	cli.mqttOpt.OnConnectionLost(cli.cli, errors.New("Disconnect test"))
+	disconnectedError := errors.New("Disconnect test")
+	cli.mqttOpt.OnConnectionLost(cli.cli, disconnectedError)
 	time.Sleep(time.Millisecond * 100)
 
 	// Establish connection
@@ -204,6 +213,18 @@ func TestConnectionLostHandler(t *testing.T) {
 
 	if connectionLostHandled != true {
 		t.Fatal("ConnectionLostHandler was not called on connection lost")
+	}
+
+	if connectionLostError != disconnectedError {
+		t.Fatal("ConnectionLostHandler was not received connection lost err")
+	}
+
+	if cli.opt.Debug != true {
+		t.Fatal("awsiotdev.Options not changed")
+	}
+
+	if !reflect.DeepEqual(cli.mqttOpt.Servers, []*url.URL{newBrokerURL}) {
+		t.Fatal("mqtt.ClientOptions client options not changed")
 	}
 }
 
