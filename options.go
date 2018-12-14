@@ -34,13 +34,13 @@ type Options struct {
 	KeyPath                  string
 	CertPath                 string
 	CaPath                   string
-	ClientId                 string
+	ClientID                 string
 	Region                   string
 	BaseReconnectTime        time.Duration
 	MaximumReconnectTime     time.Duration
 	MinimumConnectionTime    time.Duration
 	Keepalive                time.Duration
-	Url                      string
+	URL                      string
 	Debug                    bool
 	Qos                      byte
 	Retain                   bool
