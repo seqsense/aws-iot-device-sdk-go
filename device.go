@@ -87,6 +87,10 @@ func New(opt *Options) *DeviceClient {
 
 	connectionLost := func(client mqtt.Client, err error) {
 		d.dbg.printf("Connection lost (%s)\n", err.Error())
+		if d.opt.OnConnectionLost != nil {
+			d.opt.OnConnectionLost(d.opt, d.mqttOpt, err)
+		}
+
 		d.stateUpdateCh <- inactive
 	}
 	onConnect := func(client mqtt.Client) {

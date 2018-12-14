@@ -27,7 +27,7 @@ type TopicPayload struct {
 }
 
 // ConnectionLostHandler is the function type for connection lost callback.
-type ConnectionLostHandler func(*Options, *mqtt.ClientOptions)
+type ConnectionLostHandler func(*Options, *mqtt.ClientOptions, error)
 
 // Options stores configuration of the MQTT connection.
 type Options struct {

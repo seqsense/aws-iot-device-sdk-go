@@ -83,10 +83,6 @@ func connectionHandler(c *DeviceClient) {
 					c.reconnectPeriod = c.opt.MaximumReconnectTime
 				}
 				c.dbg.printf("Trying to reconnect (%d ms)\n", c.reconnectPeriod/time.Millisecond)
-				if c.opt.OnConnectionLost != nil {
-					c.opt.OnConnectionLost(c.opt, c.mqttOpt)
-				}
-
 				go func() {
 					time.Sleep(c.reconnectPeriod)
 					c.stateUpdateCh <- reconnecting
