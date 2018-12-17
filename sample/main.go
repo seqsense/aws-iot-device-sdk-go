@@ -61,7 +61,7 @@ func main() {
 		MaximumReconnectTime:     time.Second * 2,
 		MinimumConnectionTime:    time.Second * 2,
 		Keepalive:                time.Second * 2,
-		Url:                      *url,
+		URL:                      *url,
 		Debug:                    true,
 		Qos:                      1,
 		Retain:                   false,

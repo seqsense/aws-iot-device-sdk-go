@@ -40,9 +40,9 @@ type Options struct {
 	MaximumReconnectTime     time.Duration
 	MinimumConnectionTime    time.Duration
 	Keepalive                time.Duration
-	Url                      string
-	Protocol                 string // [deprecated] use Url
-	Host                     string // [deprecated] use Url
+	URL                      string
+	Protocol                 string // [deprecated] use URL
+	Host                     string // [deprecated] use URL
 	Debug                    bool
 	Qos                      byte
 	Retain                   bool

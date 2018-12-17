@@ -20,5 +20,5 @@ type Config struct {
 	CertPath string
 	CaPath   string
 	ClientId string
-	Url      string
+	URL      string
 }
