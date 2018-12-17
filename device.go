@@ -52,10 +52,6 @@ type DeviceClient struct {
 // New returns new MQTT client with offline queueing and reconnecting.
 // Returned client is not connected to the broaker until calling Connect().
 func New(opt *Options) *DeviceClient {
-	if opt.Protocol != "" || opt.Host != "" {
-		(&debugOut{opt.Debug}).print("Options.Protocol and Options.Host are deprecated. Use Options.URL instead.")
-		opt.URL = opt.Protocol + "://" + opt.Host
-	}
 	p, err := awsiotprotocol.ByURL(opt.URL)
 	if err != nil {
 		panic(err)

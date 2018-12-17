@@ -41,8 +41,6 @@ type Options struct {
 	MinimumConnectionTime    time.Duration
 	Keepalive                time.Duration
 	URL                      string
-	Protocol                 string // [deprecated] use URL
-	Host                     string // [deprecated] use URL
 	Debug                    bool
 	Qos                      byte
 	Retain                   bool
