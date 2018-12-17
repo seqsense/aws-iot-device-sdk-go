@@ -34,7 +34,7 @@ type Options struct {
 	KeyPath                  string
 	CertPath                 string
 	CaPath                   string
-	ClientId                 string
+	ClientID                 string
 	Region                   string
 	BaseReconnectTime        time.Duration
 	MaximumReconnectTime     time.Duration

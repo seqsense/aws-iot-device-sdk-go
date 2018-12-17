@@ -63,7 +63,7 @@ func (s Mqtts) NewClientOptions(opt *Config) (*mqtt.ClientOptions, error) {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(
 		fmt.Sprintf("ssl://%s:%d", host, port))
-	opts.SetClientID(opt.ClientId)
+	opts.SetClientID(opt.ClientID)
 	opts.SetTLSConfig(tlsconfig)
 
 	return opts, nil

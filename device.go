@@ -65,7 +65,7 @@ func New(opt *Options) *DeviceClient {
 			KeyPath:  opt.KeyPath,
 			CertPath: opt.CertPath,
 			CaPath:   opt.CaPath,
-			ClientId: opt.ClientId,
+			ClientID: opt.ClientID,
 			URL:      opt.URL,
 		},
 	)

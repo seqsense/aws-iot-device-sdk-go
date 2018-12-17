@@ -55,7 +55,7 @@ func main() {
 		KeyPath:                  *privatePath,
 		CertPath:                 *certPath,
 		CaPath:                   *caPath,
-		ClientId:                 *thingName,
+		ClientID:                 *thingName,
 		Region:                   *region,
 		BaseReconnectTime:        time.Millisecond * 50,
 		MaximumReconnectTime:     time.Second * 2,

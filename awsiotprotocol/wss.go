@@ -31,7 +31,7 @@ func (s Wss) Name() string {
 func (s Wss) NewClientOptions(opt *Config) (*mqtt.ClientOptions, error) {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(opt.URL)
-	opts.SetClientID(opt.ClientId)
+	opts.SetClientID(opt.ClientID)
 	opts.SetAutoReconnect(false) // use custom reconnection algorithm with offline queueing
 
 	return opts, nil
