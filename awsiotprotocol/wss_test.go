@@ -37,12 +37,12 @@ func TestWssNewClientOptions(t *testing.T) {
 		t.Fatalf("MQTT.ClientOptions is nil")
 	}
 	if mqttOpts.Servers[0].Scheme != "wss" || mqttOpts.Servers[0].Host != "example.com:443" {
-		t.Fatalf("MQTT Broker does not add correctly")
+		t.Fatalf("Broker is not added")
 	}
 	if mqttOpts.ClientID != "wssclientid" {
-		t.Fatalf("MQTT ClientID does not set correctly")
+		t.Fatalf("ClientID is not set")
 	}
 	if mqttOpts.AutoReconnect != false {
-		t.Fatalf("MQTT AutoReconnect flag does not set correctly")
+		t.Fatalf("AutoReconnect flag is not set")
 	}
 }

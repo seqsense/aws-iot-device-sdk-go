@@ -40,9 +40,9 @@ func TestMqttsNewClientOptions(t *testing.T) {
 		t.Fatalf("MQTT.ClientOptions is nil")
 	}
 	if mqttOpts.Servers[0].Scheme != "ssl" || mqttOpts.Servers[0].Host != "example.com:8882" {
-		t.Fatalf("MQTT Broker does not add correctly")
+		t.Fatalf("Broker is not added")
 	}
 	if mqttOpts.ClientID != "mqttsclientid" {
-		t.Fatalf("MQTT ClientID does not set correctly")
+		t.Fatalf("ClientID is not set")
 	}
 }
