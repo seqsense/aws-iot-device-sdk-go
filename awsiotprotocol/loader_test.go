@@ -15,24 +15,21 @@
 package awsiotprotocol
 
 import (
-	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"testing"
 )
 
-// Wss implements Protocol interface for MQTT over Websocket.
-type Wss struct {
-}
-
-// Name returns the protocol name.
-func (s Wss) Name() string {
-	return "wss"
-}
-
-// NewClientOptions returns MQTT connection options.
-func (s Wss) NewClientOptions(opt *Config) (*mqtt.ClientOptions, error) {
-	opts := mqtt.NewClientOptions()
-	opts.AddBroker(opt.URL)
-	opts.SetClientID(opt.ClientID)
-	opts.SetAutoReconnect(false) // use custom reconnection algorithm with offline queueing
-
-	return opts, nil
+func TestByURL(t *testing.T) {
+	testcase := []struct {
+		input    string
+		expected Protocol
+	}{
+		{input: "mqtts://example.com", expected: Mqtts{}},
+		{input: "wss://example.com", expected: Wss{}},
+	}
+	for _, v := range testcase {
+		actual, _ := ByURL(v.input)
+		if actual != v.expected {
+			t.Errorf("awsiotprotocol.ByURL failed.\ninput: %#v\nactual: %#v\nexpected: %#v\n", v.input, actual, v.expected)
+		}
+	}
 }

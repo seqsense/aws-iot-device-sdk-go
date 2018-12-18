@@ -52,7 +52,7 @@ type DeviceClient struct {
 // New returns new MQTT client with offline queueing and reconnecting.
 // Returned client is not connected to the broaker until calling Connect().
 func New(opt *Options) *DeviceClient {
-	p, err := awsiotprotocol.ByUrl(opt.Url)
+	p, err := awsiotprotocol.ByURL(opt.URL)
 	if err != nil {
 		panic(err)
 	}
@@ -61,8 +61,8 @@ func New(opt *Options) *DeviceClient {
 			KeyPath:  opt.KeyPath,
 			CertPath: opt.CertPath,
 			CaPath:   opt.CaPath,
-			ClientId: opt.ClientId,
-			Url:      opt.Url,
+			ClientID: opt.ClientID,
+			URL:      opt.URL,
 		},
 	)
 	if err != nil {

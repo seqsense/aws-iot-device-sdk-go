@@ -39,8 +39,8 @@ func init() {
 	registerProtocol(MockProtocol{})
 }
 
-// ByUrl selects MQTT connection type by URL string.
-func ByUrl(u string) (Protocol, error) {
+// ByURL selects MQTT connection type by URL string.
+func ByURL(u string) (Protocol, error) {
 	url, err := url.Parse(u)
 	if err != nil {
 		return nil, err
