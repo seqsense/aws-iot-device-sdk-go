@@ -15,9 +15,8 @@
 package awsiotprotocol
 
 import (
+	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestByURL(t *testing.T) {
@@ -37,11 +36,20 @@ func TestByURL(t *testing.T) {
 }
 
 func TestByURLFailure(t *testing.T) {
-	_, err := ByURL("@@://@@@/@@.@@@")
-	assert.NotNil(t, err, "Should return error when a malformed url is given")
-	assert.Contains(t, err.Error(), "parse @@://@@@/@@.@@@: ")
-
-	_, err = ByURL("https://non-supported.protocol.com")
-	assert.NotNil(t, err, "Should return error when the protocol is not supported")
-	assert.Equal(t, err.Error(), "Protocol \"https\" is not supported")
+	testcase := []struct {
+		input                string
+		expectedErrorMessage string
+	}{
+		{input: "@@://@@@/@@.@@@", expectedErrorMessage: "parse @@://@@@/@@.@@@: "},
+		{input: "https://non-supported.protocol.com", expectedErrorMessage: "Protocol \"https\" is not supported"},
+	}
+	for _, v := range testcase {
+		_, err := ByURL(v.input)
+		if err == nil {
+			t.Errorf("awsiotprotocol.ByURL should fail with invalid input.\ninput: %#v", v.input)
+		}
+		if !strings.Contains(err.Error(), v.expectedErrorMessage) {
+			t.Errorf("awsiotprotocol.ByURL should fail with error message which contains the following:\ninput: %#v\nexpected error message: %#v\nactual error message: %#v", v.input, v.expectedErrorMessage, err.Error())
+		}
+	}
 }
