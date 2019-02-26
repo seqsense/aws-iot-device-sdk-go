@@ -16,6 +16,8 @@ package awsiotprotocol
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestByURL(t *testing.T) {
@@ -32,4 +34,14 @@ func TestByURL(t *testing.T) {
 			t.Errorf("awsiotprotocol.ByURL failed.\ninput: %#v\nactual: %#v\nexpected: %#v\n", v.input, actual, v.expected)
 		}
 	}
+}
+
+func TestByURLFailure(t *testing.T) {
+	_, err := ByURL("@@://@@@/@@.@@@")
+	assert.NotNil(t, err, "Should return error when a malformed url is given")
+	assert.Contains(t, err.Error(), "parse @@://@@@/@@.@@@: ")
+
+	_, err = ByURL("https://non-supported.protocol.com")
+	assert.NotNil(t, err, "Should return error when the protocol is not supported")
+	assert.Equal(t, err.Error(), "Protocol \"https\" is not supported")
 }
