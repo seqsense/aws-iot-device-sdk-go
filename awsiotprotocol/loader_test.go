@@ -15,6 +15,7 @@
 package awsiotprotocol
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -30,6 +31,24 @@ func TestByURL(t *testing.T) {
 		actual, _ := ByURL(v.input)
 		if actual != v.expected {
 			t.Errorf("awsiotprotocol.ByURL failed.\ninput: %#v\nactual: %#v\nexpected: %#v\n", v.input, actual, v.expected)
+		}
+	}
+}
+
+func TestByURLFailure(t *testing.T) {
+	testcase := []struct {
+		input                string
+		expectedErrorMessage string
+	}{
+		{input: "@@://@@@/@@.@@@", expectedErrorMessage: "parse @@://@@@/@@.@@@: "},
+		{input: "https://non-supported.protocol.com", expectedErrorMessage: "Protocol \"https\" is not supported"},
+	}
+	for _, v := range testcase {
+		_, err := ByURL(v.input)
+		if err == nil {
+			t.Errorf("awsiotprotocol.ByURL should fail with invalid input.\ninput: %#v", v.input)
+		} else if !strings.Contains(err.Error(), v.expectedErrorMessage) {
+			t.Errorf("awsiotprotocol.ByURL should fail with error message which contains the following:\ninput: %#v\nexpected error message: %#v\nactual error message: %#v", v.input, v.expectedErrorMessage, err.Error())
 		}
 	}
 }
