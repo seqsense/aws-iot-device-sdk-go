@@ -47,8 +47,7 @@ func TestByURLFailure(t *testing.T) {
 		_, err := ByURL(v.input)
 		if err == nil {
 			t.Errorf("awsiotprotocol.ByURL should fail with invalid input.\ninput: %#v", v.input)
-		}
-		if !strings.Contains(err.Error(), v.expectedErrorMessage) {
+		} else if !strings.Contains(err.Error(), v.expectedErrorMessage) {
 			t.Errorf("awsiotprotocol.ByURL should fail with error message which contains the following:\ninput: %#v\nexpected error message: %#v\nactual error message: %#v", v.input, v.expectedErrorMessage, err.Error())
 		}
 	}
