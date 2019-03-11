@@ -1,4 +1,4 @@
-module github.com/seqsense/aws-iot-device-sdk-go
+module github.com/seqsense/aws-iot-device-sdk-go/v2
 
 require (
 	github.com/aws/aws-sdk-go v1.15.68

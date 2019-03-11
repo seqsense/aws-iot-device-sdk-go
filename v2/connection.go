@@ -17,8 +17,8 @@ package awsiotdev
 import (
 	"time"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/pubqueue"
-	"github.com/seqsense/aws-iot-device-sdk-go/subqueue"
+	"github.com/seqsense/aws-iot-device-sdk-go/v2/pubqueue"
+	"github.com/seqsense/aws-iot-device-sdk-go/v2/subqueue"
 )
 
 type pubSubQueues struct {
