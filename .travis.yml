@@ -11,14 +11,12 @@ env:
   global:
     - REVIEW_DOG_ON=1.11
     - REVIEW_DOG_VERSION=0.9.11
-    - VERSION_DIR=v2
 
 branches:
   only:
     - master
 
 install:
-  - cd ${TRAVIS_BUILD_DIR}/${VERSION_DIR}
   - |
     if [ ${TRAVIS_GO_VERSION} == ${REVIEW_DOG_ON} ]; then
       mkdir -p ${GOPATH}/bin
@@ -28,7 +26,6 @@ install:
     fi
   - go get -t ./...
 script:
-  - cd ${TRAVIS_BUILD_DIR}/${VERSION_DIR}
   - go build
   - |
     if [[ ! ${TRAVIS_GO_VERSION} =~ ^1\.(8|9)(\.[0-9]+){0,1}$ ]]
@@ -45,7 +42,6 @@ script:
       golint ./... | reviewdog -f=golint -reporter=github-pr-review
     fi
 after_success:
-  - cd ${TRAVIS_BUILD_DIR}/${VERSION_DIR}
   - |
     if [[ ${REPORT_COVERAGE} == 1 ]]
     then
