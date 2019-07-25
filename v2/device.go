@@ -145,6 +145,12 @@ func (s *DeviceClient) Publish(topic string, qos byte, retained bool, payload in
 	return &mqtt.DummyToken{}
 }
 
+// PublishSimple publishes a message without queueing to the internal queue.
+// The messages will be lost when they are published offline.
+func (s *DeviceClient) PublishSimple(topic string, qos byte, retained bool, payload interface{}) mqtt.Token {
+	return s.cli.Publish(topic, qos, retained, payload)
+}
+
 // Subscribe requests a new subscription for the specified topic.
 // Currently, qos argument is ignored and one specified in the options is used.
 func (s *DeviceClient) Subscribe(topic string, qos byte, cb mqtt.MessageHandler) mqtt.Token {
