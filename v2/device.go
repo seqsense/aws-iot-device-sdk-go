@@ -23,13 +23,11 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	"github.com/seqsense/aws-iot-device-sdk-go/v2/awsiotprotocol"
-	"github.com/seqsense/aws-iot-device-sdk-go/v2/pubqueue"
 	"github.com/seqsense/aws-iot-device-sdk-go/v2/subqueue"
 )
 
 const (
 	stateUpdaterChCap = 100
-	publishChCap      = 100
 	subscribeChCap    = 100
 )
 
@@ -44,7 +42,6 @@ type DeviceClient struct {
 	reconnectPeriod time.Duration
 	stateUpdateCh   chan deviceState
 	stableTimerCh   chan bool
-	publishCh       chan *pubqueue.Data
 	subscribeCh     chan *subqueue.Subscription
 	dbg             *debugOut
 }
@@ -76,7 +73,6 @@ func New(opt *Options) *DeviceClient {
 		reconnectPeriod: opt.BaseReconnectTime,
 		stateUpdateCh:   make(chan deviceState, stateUpdaterChCap),
 		stableTimerCh:   make(chan bool),
-		publishCh:       make(chan *pubqueue.Data, publishChCap),
 		subscribeCh:     make(chan *subqueue.Subscription, subscribeChCap),
 		dbg:             &debugOut{opt.Debug},
 	}
@@ -141,8 +137,7 @@ func (s *DeviceClient) Disconnect(quiesce uint) {
 // Publish publishes a message.
 // Currently, qos and retained arguments are ignored and ones specified in the options are used.
 func (s *DeviceClient) Publish(topic string, qos byte, retained bool, payload interface{}) mqtt.Token {
-	s.publishCh <- &pubqueue.Data{Topic: topic, Payload: payload}
-	return &mqtt.DummyToken{}
+	return s.cli.Publish(topic, qos, retained, payload)
 }
 
 // Subscribe requests a new subscription for the specified topic.

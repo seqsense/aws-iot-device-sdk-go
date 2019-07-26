@@ -18,13 +18,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v2/pubqueue"
 	"github.com/seqsense/aws-iot-device-sdk-go/v2/subqueue"
 )
 
 type pubSubQueues struct {
 	cli            *DeviceClient
-	pubQueue       *pubqueue.Queue
 	subQueue       *subqueue.Queue
 	activeSubs     map[string]*subqueue.Subscription
 	activeSubsLock sync.RWMutex
@@ -32,13 +30,8 @@ type pubSubQueues struct {
 
 func connectionHandler(c *DeviceClient) {
 	state := inactive
-	drop, err := pubqueue.NewDropBehavior(c.opt.OfflineQueueDropBehavior)
-	if err != nil {
-		panic(err)
-	}
 	psq := &pubSubQueues{
 		c,
-		pubqueue.New(c.opt.OfflineQueueMaxSize, drop),
 		subqueue.New(),
 		make(map[string]*subqueue.Subscription),
 		sync.RWMutex{},
@@ -48,15 +41,6 @@ func connectionHandler(c *DeviceClient) {
 		statePrev := state
 
 		select {
-		case d := <-c.publishCh:
-			if state.isActive() {
-				psq.publishOrEnqueue(d)
-			} else {
-				if c.opt.OfflineQueueing {
-					psq.pubQueue.Enqueue(d)
-				}
-			}
-
 		case d := <-c.subscribeCh:
 			if state.isActive() {
 				switch d.Type {
@@ -121,17 +105,6 @@ func connectionHandler(c *DeviceClient) {
 	}
 }
 
-func (s *pubSubQueues) publishOrEnqueue(d *pubqueue.Data) {
-	token := s.cli.cli.Publish(d.Topic, s.cli.opt.Qos, s.cli.opt.Retain, d.Payload)
-	go func() {
-		token.Wait()
-		if token.Error() != nil {
-			s.cli.dbg.printf("Failed to publish (%s)\n", token.Error())
-			// MQTT doesn't guarantee receive order; just append to the last
-			s.cli.publishCh <- d
-		}
-	}()
-}
 func (s *pubSubQueues) subscribeOrEnqueue(d *subqueue.Subscription) {
 	token := s.cli.cli.Subscribe(d.Topic, s.cli.opt.Qos, d.Cb)
 	go func() {
@@ -158,10 +131,6 @@ func (s *pubSubQueues) unsubscribeOrEnqueue(d *subqueue.Subscription) {
 }
 
 func (s *pubSubQueues) processQueuedOps() {
-	for s.pubQueue.Len() > 0 {
-		d := s.pubQueue.Pop()
-		s.publishOrEnqueue(d)
-	}
 	for s.subQueue.Len() > 0 {
 		d := s.subQueue.Pop()
 

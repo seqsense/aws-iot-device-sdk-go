@@ -70,8 +70,13 @@ func TestDeviceClient(t *testing.T) {
 	if cli.cli != nil && cli.cli.(*MockClient).subscribeNum != 0 {
 		t.Fatalf("Subscribed before reconnection")
 	}
-	if cli.cli != nil && cli.cli.(*MockClient).publishNum != 0 {
-		t.Fatalf("Published before reconnection")
+
+	// Already published
+	if cli.cli.(*MockClient).publishNum != 1 {
+		t.Fatalf("Queued publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
+	}
+	if cli.cli.(*MockClient).publishedMsg != "test message" {
+		t.Fatalf("Published message is wrong (%s)", cli.cli.(*MockClient).publishedMsg)
 	}
 
 	// Establish connection
@@ -80,12 +85,6 @@ func TestDeviceClient(t *testing.T) {
 
 	if cli.cli.(*MockClient).subscribeNum != 1 {
 		t.Fatalf("Queued subscription is not processed (%d)", cli.cli.(*MockClient).subscribeNum)
-	}
-	if cli.cli.(*MockClient).publishNum != 1 {
-		t.Fatalf("Queued publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
-	}
-	if cli.cli.(*MockClient).publishedMsg != "test message" {
-		t.Fatalf("Published message is wrong (%s)", cli.cli.(*MockClient).publishedMsg)
 	}
 
 	// Receive one message
@@ -101,12 +100,6 @@ func TestDeviceClient(t *testing.T) {
 	if connectionNum != 2 {
 		t.Fatalf("Connected not twice (%d)", connectionNum)
 	}
-	cli.Publish("test", 1, false, "test message2")
-
-	// Must not published yet
-	if cli.cli.(*MockClient).publishNum != 0 {
-		t.Fatalf("Queued publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
-	}
 
 	// Establish connection (subscribeNum and publishNum is cleared)
 	cli.mqttOpt.OnConnect(cli.cli)
@@ -116,13 +109,6 @@ func TestDeviceClient(t *testing.T) {
 	if cli.cli.(*MockClient).subscribeNum != 1 {
 		t.Fatalf("Re-subscribe is not processed (%d)", cli.cli.(*MockClient).subscribeNum)
 	}
-	// Message requested during connection lost must be published
-	if cli.cli.(*MockClient).publishNum != 1 {
-		t.Fatalf("Queued publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
-	}
-	if cli.cli.(*MockClient).publishedMsg != "test message2" {
-		t.Fatalf("Published message is wrong (%s)", cli.cli.(*MockClient).publishedMsg)
-	}
 
 	// Receive one message
 	cli.cli.(*MockClient).cbMessage(cli.cli, &MockMessage{topic: "to", payload: []byte("b456")})
@@ -131,25 +117,18 @@ func TestDeviceClient(t *testing.T) {
 		t.Fatalf("Subscribed message payload is wrong (%s)", subscribedMsg)
 	}
 
-	// Another subscribe and publish request
+	// Another subscribe request
 	subscribedMsg2 := ""
 	cli.Subscribe("test2", 1,
 		func(client mqtt.Client, msg mqtt.Message) {
 			subscribedMsg2 = string(msg.Payload())
 		},
 	)
-	cli.Publish("test2", 1, false, "test message3")
 
 	time.Sleep(time.Millisecond * 100)
 
 	if cli.cli.(*MockClient).subscribeNum != 2 {
 		t.Fatalf("Subscription is not processed (%d)", cli.cli.(*MockClient).subscribeNum)
-	}
-	if cli.cli.(*MockClient).publishNum != 2 {
-		t.Fatalf("Publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
-	}
-	if cli.cli.(*MockClient).publishedMsg != "test message3" {
-		t.Fatalf("Published message is wrong (%s)", cli.cli.(*MockClient).publishedMsg)
 	}
 
 	// Receive one message
