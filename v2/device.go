@@ -96,7 +96,7 @@ func New(opt *Options) *DeviceClient {
 		d.mqttOpt.SetWill(opt.Will.Topic, opt.Will.Payload, opt.Qos, opt.Retain)
 	}
 	d.mqttOpt.SetKeepAlive(opt.Keepalive)
-	d.mqttOpt.SetAutoReconnect(false) // MQTT AutoReconnect doesn't work well for mqtts
+	d.mqttOpt.SetAutoReconnect(true)
 	d.mqttOpt.SetConnectTimeout(time.Second * 5)
 
 	return d
