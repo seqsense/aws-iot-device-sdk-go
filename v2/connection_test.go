@@ -39,8 +39,6 @@ func TestDeviceClient(t *testing.T) {
 		Keepalive:                time.Second * 2,
 		URL:                      "mock://",
 		OfflineQueueing:          true,
-		OfflineQueueMaxSize:      100,
-		OfflineQueueDropBehavior: "oldest",
 		AutoResubscribe:          true,
 	}
 	cli := New(o)
@@ -73,7 +71,7 @@ func TestDeviceClient(t *testing.T) {
 
 	// Already published
 	if cli.cli.(*MockClient).publishNum != 1 {
-		t.Fatalf("Queued publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
+		t.Fatalf("Publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
 	}
 	if cli.cli.(*MockClient).publishedMsg != "test message" {
 		t.Fatalf("Published message is wrong (%s)", cli.cli.(*MockClient).publishedMsg)
@@ -160,8 +158,6 @@ func TestConnectionLostHandler(t *testing.T) {
 		Keepalive:                time.Second * 2,
 		URL:                      "mock://",
 		OfflineQueueing:          true,
-		OfflineQueueMaxSize:      100,
-		OfflineQueueDropBehavior: "oldest",
 		AutoResubscribe:          true,
 		Debug:                    false,
 		OnConnectionLost: func(opt *Options, mqttOpt *mqtt.ClientOptions, err error) {

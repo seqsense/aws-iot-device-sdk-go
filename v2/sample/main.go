@@ -67,8 +67,6 @@ func main() {
 		Retain:                   false,
 		Will:                     &awsiot.TopicPayload{Topic: "notification", Payload: "{\"status\": \"dead\"}"},
 		OfflineQueueing:          true,
-		OfflineQueueMaxSize:      100,
-		OfflineQueueDropBehavior: "oldest",
 		AutoResubscribe:          true,
 		OnConnectionLost: func(opt *awsiot.Options, mqttOpt *mqtt.ClientOptions, err error) {
 			fmt.Printf("Connection lost handler function called\n")

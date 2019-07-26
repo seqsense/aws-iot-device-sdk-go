@@ -46,8 +46,6 @@ type Options struct {
 	Retain                   bool
 	Will                     *TopicPayload
 	OfflineQueueing          bool
-	OfflineQueueMaxSize      int
-	OfflineQueueDropBehavior string
 	AutoResubscribe          bool
 
 	// OnConnectionLost is called if the MQTT connection is lost.
