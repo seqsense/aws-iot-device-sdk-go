@@ -16,6 +16,7 @@ package awsiotdev
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"reflect"
 	"testing"
@@ -225,6 +226,45 @@ func TestConnectionLostHandler(t *testing.T) {
 
 	if !reflect.DeepEqual(cli.mqttOpt.Servers, []*url.URL{newBrokerURL}) {
 		t.Fatal("mqtt.ClientOptions client options not changed")
+	}
+}
+
+func TestMultipleSubscription(t *testing.T) {
+	newClient = func(opt *mqtt.ClientOptions) mqtt.Client {
+		return &MockClient{}
+	}
+	o := &Options{
+		BaseReconnectTime:        time.Millisecond * 10,
+		MaximumReconnectTime:     time.Millisecond * 50,
+		MinimumConnectionTime:    time.Millisecond * 50,
+		Keepalive:                time.Second * 2,
+		URL:                      "mock://",
+		OfflineQueueing:          true,
+		OfflineQueueMaxSize:      100,
+		OfflineQueueDropBehavior: "oldest",
+		AutoResubscribe:          true,
+	}
+	cli := New(o)
+
+	subs := 20      // number of dummy subscriptions
+	iterations := 5 // number of state change iterations
+
+	// Subscribes to many channels
+	for i := 0; i <= subs; i++ {
+		cli.Subscribe(fmt.Sprintf("%d", i), 1, nil)
+	}
+
+	cli.Connect()
+
+	// This loop changes the state between stable and inactive multiple times,
+	// and it invokes the subscription and unsubscription multiple times.
+	// This causes `concurrent map writes` error if the subscription map isn't
+	// locked correctly.
+	for i := 0; i <= iterations; i++ {
+		cli.stateUpdateCh <- stable
+		time.Sleep(10 * time.Millisecond)
+		cli.stateUpdateCh <- inactive
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 
