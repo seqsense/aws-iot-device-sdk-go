@@ -16,7 +16,6 @@ package awsiotdev
 
 import (
 	"sync"
-	"time"
 
 	"github.com/seqsense/aws-iot-device-sdk-go/v2/subqueue"
 )
@@ -38,8 +37,6 @@ func connectionHandler(c *DeviceClient) {
 	}
 
 	for {
-		statePrev := state
-
 		select {
 		case d := <-c.subscribeCh:
 			if state.isActive() {
@@ -55,49 +52,19 @@ func connectionHandler(c *DeviceClient) {
 				}
 			}
 
-		case <-c.stableTimerCh:
-			c.dbg.print("Stable timer reached\n")
-			c.stateUpdateCh <- stable
-
 		case state = <-c.stateUpdateCh:
 			c.dbg.printf("State updated to %s\n", state.String())
 
 			switch state {
 			case inactive:
-				c.stableTimerCh = make(chan bool)
-				c.reconnectPeriod = c.reconnectPeriod * 2
-				if c.reconnectPeriod > c.opt.MaximumReconnectTime {
-					c.reconnectPeriod = c.opt.MaximumReconnectTime
-				}
-				c.dbg.printf("Trying to reconnect (%d ms)\n", c.reconnectPeriod/time.Millisecond)
-				go func() {
-					time.Sleep(c.reconnectPeriod)
-					c.stateUpdateCh <- reconnecting
-				}()
-
-			case reconnecting:
-				c.connect()
-				psq.resubscribe()
-
+				// do nothing
 			case established:
 				c.dbg.print("Processing queued operations\n")
-				go func() {
-					time.Sleep(c.opt.MinimumConnectionTime)
-					c.stableTimerCh <- true
-				}()
 				psq.processQueuedOps()
-
-			case stable:
-				if statePrev == established {
-					c.dbg.print("Connection is stable\n")
-					c.reconnectPeriod = c.opt.BaseReconnectTime
-				}
-
 			case terminating:
 				c.dbg.print("Terminating connection\n")
 				c.cli.Disconnect(250)
 				return
-
 			default:
 				panic("Invalid internal state\n")
 			}
@@ -112,8 +79,6 @@ func (s *pubSubQueues) subscribeOrEnqueue(d *subqueue.Subscription) {
 		if token.Error() != nil {
 			s.cli.dbg.printf("Failed to subscribe (%s)\n", token.Error())
 			s.cli.subscribeCh <- d
-		} else {
-			s.setSubscription(d)
 		}
 	}()
 }
@@ -124,8 +89,6 @@ func (s *pubSubQueues) unsubscribeOrEnqueue(d *subqueue.Subscription) {
 		if token.Error() != nil {
 			s.cli.dbg.printf("Failed to unsubscribe (%s)\n", token.Error())
 			s.cli.subscribeCh <- d
-		} else {
-			s.clearSubscription(d)
 		}
 	}()
 }
@@ -141,48 +104,4 @@ func (s *pubSubQueues) processQueuedOps() {
 			s.unsubscribeOrEnqueue(d)
 		}
 	}
-}
-func (s *pubSubQueues) resubscribe() {
-	if !s.cli.opt.AutoResubscribe {
-		return
-	}
-	for _, d := range s.getActiveSubs() {
-		s.clearSubscription(d)
-
-		token := s.cli.cli.Subscribe(d.Topic, s.cli.opt.Qos, d.Cb)
-		go func(d *subqueue.Subscription) {
-			token.Wait()
-			if token.Error() != nil {
-				s.cli.dbg.printf("Failed to subscribe (%s)\n", token.Error())
-				s.cli.subscribeCh <- d
-			} else {
-				s.setSubscription(d)
-			}
-		}(d)
-	}
-}
-
-func (s *pubSubQueues) getActiveSubs() []*subqueue.Subscription {
-	s.activeSubsLock.RLock()
-	defer s.activeSubsLock.RUnlock()
-
-	subs := make([]*subqueue.Subscription, 0, len(s.activeSubs))
-	for _, d := range s.activeSubs {
-		subs = append(subs, d)
-	}
-	return subs
-}
-
-func (s *pubSubQueues) setSubscription(d *subqueue.Subscription) {
-	s.activeSubsLock.Lock()
-	defer s.activeSubsLock.Unlock()
-
-	s.activeSubs[d.Topic] = d
-}
-
-func (s *pubSubQueues) clearSubscription(d *subqueue.Subscription) {
-	s.activeSubsLock.Lock()
-	defer s.activeSubsLock.Unlock()
-
-	delete(s.activeSubs, d.Topic)
 }

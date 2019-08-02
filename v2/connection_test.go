@@ -16,7 +16,6 @@ package awsiotdev
 
 import (
 	"errors"
-	"fmt"
 	"net/url"
 	"reflect"
 	"testing"
@@ -26,33 +25,21 @@ import (
 )
 
 func TestDeviceClient(t *testing.T) {
-	connectionNum := 0
-
 	newClient = func(opt *mqtt.ClientOptions) mqtt.Client {
-		connectionNum++
 		return &MockClient{}
 	}
 	o := &Options{
-		BaseReconnectTime:        time.Millisecond * 10,
-		MaximumReconnectTime:     time.Millisecond * 50,
-		MinimumConnectionTime:    time.Millisecond * 50,
-		Keepalive:                time.Second * 2,
-		URL:                      "mock://",
-		OfflineQueueing:          true,
-		AutoResubscribe:          true,
+		Keepalive:       time.Second * 2,
+		URL:             "mock://",
+		OfflineQueueing: true,
 	}
 	cli := New(o)
 
-	if connectionNum != 0 {
-		t.Fatalf("Connected before connection (%d)", connectionNum)
-	}
-	cli.Connect()
 	if cli.cli == nil {
 		t.Fatalf("Mqtt client is not initialized")
 	}
-	if connectionNum != 1 {
-		t.Fatalf("Connected not once (%d)", connectionNum)
-	}
+
+	cli.Connect()
 
 	subscribedMsg := ""
 	cli.Subscribe("test", 1,
@@ -95,9 +82,6 @@ func TestDeviceClient(t *testing.T) {
 	// Disconnect
 	cli.mqttOpt.OnConnectionLost(cli.cli, errors.New("Disconnect test"))
 	time.Sleep(time.Millisecond * 100)
-	if connectionNum != 2 {
-		t.Fatalf("Connected not twice (%d)", connectionNum)
-	}
 
 	// Establish connection (subscribeNum and publishNum is cleared)
 	cli.mqttOpt.OnConnect(cli.cli)
@@ -152,14 +136,10 @@ func TestConnectionLostHandler(t *testing.T) {
 	var connectionLostError error
 	newBrokerURL, _ := url.Parse("mock://newbrokerurl")
 	o := &Options{
-		BaseReconnectTime:        time.Millisecond * 10,
-		MaximumReconnectTime:     time.Millisecond * 50,
-		MinimumConnectionTime:    time.Millisecond * 50,
-		Keepalive:                time.Second * 2,
-		URL:                      "mock://",
-		OfflineQueueing:          true,
-		AutoResubscribe:          true,
-		Debug:                    false,
+		Keepalive:       time.Second * 2,
+		URL:             "mock://",
+		OfflineQueueing: true,
+		Debug:           false,
 		OnConnectionLost: func(opt *Options, mqttOpt *mqtt.ClientOptions, err error) {
 			connectionLostHandled = true
 			connectionLostError = err
@@ -201,45 +181,6 @@ func TestConnectionLostHandler(t *testing.T) {
 
 	if !reflect.DeepEqual(cli.mqttOpt.Servers, []*url.URL{newBrokerURL}) {
 		t.Fatal("mqtt.ClientOptions client options not changed")
-	}
-}
-
-func TestMultipleSubscription(t *testing.T) {
-	newClient = func(opt *mqtt.ClientOptions) mqtt.Client {
-		return &MockClient{}
-	}
-	o := &Options{
-		BaseReconnectTime:        time.Millisecond * 10,
-		MaximumReconnectTime:     time.Millisecond * 50,
-		MinimumConnectionTime:    time.Millisecond * 50,
-		Keepalive:                time.Second * 2,
-		URL:                      "mock://",
-		OfflineQueueing:          true,
-		OfflineQueueMaxSize:      100,
-		OfflineQueueDropBehavior: "oldest",
-		AutoResubscribe:          true,
-	}
-	cli := New(o)
-
-	subs := 20      // number of dummy subscriptions
-	iterations := 5 // number of state change iterations
-
-	// Subscribes to many channels
-	for i := 0; i <= subs; i++ {
-		cli.Subscribe(fmt.Sprintf("%d", i), 1, nil)
-	}
-
-	cli.Connect()
-
-	// This loop changes the state between stable and inactive multiple times,
-	// and it invokes the subscription and unsubscription multiple times.
-	// This causes `concurrent map writes` error if the subscription map isn't
-	// locked correctly.
-	for i := 0; i <= iterations; i++ {
-		cli.stateUpdateCh <- stable
-		time.Sleep(10 * time.Millisecond)
-		cli.stateUpdateCh <- inactive
-		time.Sleep(10 * time.Millisecond)
 	}
 }
 

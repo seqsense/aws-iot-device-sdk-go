@@ -36,18 +36,16 @@ const (
 // the network connection is lost. They are re-tried after the connection is
 // resumed.
 type DeviceClient struct {
-	opt             *Options
-	mqttOpt         *mqtt.ClientOptions
-	cli             mqtt.Client
-	reconnectPeriod time.Duration
-	stateUpdateCh   chan deviceState
-	stableTimerCh   chan bool
-	subscribeCh     chan *subqueue.Subscription
-	dbg             *debugOut
+	opt           *Options
+	mqttOpt       *mqtt.ClientOptions
+	cli           mqtt.Client
+	stateUpdateCh chan deviceState
+	subscribeCh   chan *subqueue.Subscription
+	dbg           *debugOut
 }
 
 // New returns new MQTT client with offline queueing and reconnecting.
-// Returned client is not connected to the broaker until calling Connect().
+// Returned client is not connected to the broker until calling Connect().
 func New(opt *Options) *DeviceClient {
 	p, err := awsiotprotocol.ByURL(opt.URL)
 	if err != nil {
@@ -67,14 +65,12 @@ func New(opt *Options) *DeviceClient {
 	}
 
 	d := &DeviceClient{
-		opt:             opt,
-		mqttOpt:         mqttOpt,
-		cli:             nil,
-		reconnectPeriod: opt.BaseReconnectTime,
-		stateUpdateCh:   make(chan deviceState, stateUpdaterChCap),
-		stableTimerCh:   make(chan bool),
-		subscribeCh:     make(chan *subqueue.Subscription, subscribeChCap),
-		dbg:             &debugOut{opt.Debug},
+		opt:           opt,
+		mqttOpt:       mqttOpt,
+		cli:           nil,
+		stateUpdateCh: make(chan deviceState, stateUpdaterChCap),
+		subscribeCh:   make(chan *subqueue.Subscription, subscribeChCap),
+		dbg:           &debugOut{opt.Debug},
 	}
 
 	connectionLost := func(client mqtt.Client, err error) {
@@ -97,7 +93,12 @@ func New(opt *Options) *DeviceClient {
 	}
 	d.mqttOpt.SetKeepAlive(opt.Keepalive)
 	d.mqttOpt.SetAutoReconnect(true)
+	// This enables to use persisted session feature of MQTT.
+	// cf. https://docs.aws.amazon.com/iot/latest/developerguide/mqtt-persistent-sessions.html
+	d.mqttOpt.SetCleanSession(false)
 	d.mqttOpt.SetConnectTimeout(time.Second * 5)
+
+	d.cli = newClient(d.mqttOpt)
 
 	return d
 }
@@ -106,18 +107,6 @@ func New(opt *Options) *DeviceClient {
 // Returned token indicates success immediately.
 // Subscription requests and published messages are queued until actual connection establish.
 func (s *DeviceClient) Connect() mqtt.Token {
-	s.connect()
-	go connectionHandler(s)
-	return &mqtt.DummyToken{}
-}
-
-var newClient = func(opt *mqtt.ClientOptions) mqtt.Client {
-	return mqtt.NewClient(opt)
-}
-
-func (s *DeviceClient) connect() {
-	s.cli = newClient(s.mqttOpt)
-
 	token := s.cli.Connect()
 	go func() {
 		token.Wait()
@@ -126,6 +115,12 @@ func (s *DeviceClient) connect() {
 			s.stateUpdateCh <- inactive
 		}
 	}()
+	go connectionHandler(s)
+	return token
+}
+
+var newClient = func(opt *mqtt.ClientOptions) mqtt.Client {
+	return mqtt.NewClient(opt)
 }
 
 // Disconnect ends the connection to the broker.
