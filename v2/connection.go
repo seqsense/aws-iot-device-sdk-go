@@ -15,6 +15,7 @@
 package awsiotdev
 
 import (
+	"sync"
 	"time"
 
 	"github.com/seqsense/aws-iot-device-sdk-go/v2/pubqueue"
@@ -22,10 +23,11 @@ import (
 )
 
 type pubSubQueues struct {
-	cli        *DeviceClient
-	pubQueue   *pubqueue.Queue
-	subQueue   *subqueue.Queue
-	activeSubs map[string]*subqueue.Subscription
+	cli            *DeviceClient
+	pubQueue       *pubqueue.Queue
+	subQueue       *subqueue.Queue
+	activeSubs     map[string]*subqueue.Subscription
+	activeSubsLock sync.RWMutex
 }
 
 func connectionHandler(c *DeviceClient) {
@@ -39,6 +41,7 @@ func connectionHandler(c *DeviceClient) {
 		pubqueue.New(c.opt.OfflineQueueMaxSize, drop),
 		subqueue.New(),
 		make(map[string]*subqueue.Subscription),
+		sync.RWMutex{},
 	}
 
 	for {
@@ -137,7 +140,7 @@ func (s *pubSubQueues) subscribeOrEnqueue(d *subqueue.Subscription) {
 			s.cli.dbg.printf("Failed to subscribe (%s)\n", token.Error())
 			s.cli.subscribeCh <- d
 		} else {
-			s.activeSubs[d.Topic] = d
+			s.setSubscription(d)
 		}
 	}()
 }
@@ -149,7 +152,7 @@ func (s *pubSubQueues) unsubscribeOrEnqueue(d *subqueue.Subscription) {
 			s.cli.dbg.printf("Failed to unsubscribe (%s)\n", token.Error())
 			s.cli.subscribeCh <- d
 		} else {
-			delete(s.activeSubs, d.Topic)
+			s.clearSubscription(d)
 		}
 	}()
 }
@@ -174,8 +177,8 @@ func (s *pubSubQueues) resubscribe() {
 	if !s.cli.opt.AutoResubscribe {
 		return
 	}
-	for _, d := range s.activeSubs {
-		delete(s.activeSubs, d.Topic)
+	for _, d := range s.getActiveSubs() {
+		s.clearSubscription(d)
 
 		token := s.cli.cli.Subscribe(d.Topic, s.cli.opt.Qos, d.Cb)
 		go func(d *subqueue.Subscription) {
@@ -184,8 +187,33 @@ func (s *pubSubQueues) resubscribe() {
 				s.cli.dbg.printf("Failed to subscribe (%s)\n", token.Error())
 				s.cli.subscribeCh <- d
 			} else {
-				s.activeSubs[d.Topic] = d
+				s.setSubscription(d)
 			}
 		}(d)
 	}
+}
+
+func (s *pubSubQueues) getActiveSubs() []*subqueue.Subscription {
+	s.activeSubsLock.RLock()
+	defer s.activeSubsLock.RUnlock()
+
+	subs := make([]*subqueue.Subscription, 0, len(s.activeSubs))
+	for _, d := range s.activeSubs {
+		subs = append(subs, d)
+	}
+	return subs
+}
+
+func (s *pubSubQueues) setSubscription(d *subqueue.Subscription) {
+	s.activeSubsLock.Lock()
+	defer s.activeSubsLock.Unlock()
+
+	s.activeSubs[d.Topic] = d
+}
+
+func (s *pubSubQueues) clearSubscription(d *subqueue.Subscription) {
+	s.activeSubsLock.Lock()
+	defer s.activeSubsLock.Unlock()
+
+	delete(s.activeSubs, d.Topic)
 }
