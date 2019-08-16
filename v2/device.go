@@ -136,7 +136,16 @@ func (s *DeviceClient) Disconnect(quiesce uint) {
 // Publish publishes a message.
 // Currently, qos and retained arguments are ignored and ones specified in the options are used.
 func (s *DeviceClient) Publish(topic string, qos byte, retained bool, payload interface{}) mqtt.Token {
-	return s.cli.Publish(topic, qos, retained, payload)
+	token := s.cli.Publish(topic, qos, retained, payload)
+	go func() {
+		token.Wait()
+		if token.Error() != nil {
+			s.dbg.printf("Failed to publish (%s)\n", token.Error())
+			s.dbg.printf("Retrying to publish\n")
+			s.Publish(topic, qos, retained, payload)
+		}
+	}()
+	return &mqtt.DummyToken{}
 }
 
 // Subscribe requests a new subscription for the specified topic.
