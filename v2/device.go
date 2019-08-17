@@ -111,18 +111,17 @@ func New(opt *Options) *DeviceClient {
 // Subscription requests and published messages are queued until actual connection establish.
 func (s *DeviceClient) Connect() mqtt.Token {
 	go connectionHandler(s)
-
-	tick := time.NewTicker(5 * time.Second)
-	defer tick.Stop()
-
-	for {
-		var token mqtt.Token
-		if token = s.cli.Connect(); token.Wait() && token.Error() == nil {
-			break
+	go func() {
+		for {
+			token := s.cli.Connect()
+			token.Wait()
+			if token.Error() == nil {
+				break
+			}
+			s.dbg.printf("Failed to connect (%s)\n", token.Error())
+			time.Sleep(5 * time.Second)
 		}
-		s.dbg.printf("Failed to connect (%s)\n", token.Error())
-		<-tick.C
-	}
+	}()
 	return &mqtt.DummyToken{}
 }
 
