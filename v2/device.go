@@ -97,6 +97,9 @@ func New(opt *Options) *DeviceClient {
 	// cf. https://docs.aws.amazon.com/iot/latest/developerguide/mqtt-persistent-sessions.html
 	d.mqttOpt.SetCleanSession(false)
 	d.mqttOpt.SetConnectTimeout(time.Second * 5)
+	if opt.MaximumReconnectTime > 0 {
+		d.mqttOpt.SetMaxReconnectInterval(opt.MaximumReconnectTime)
+	}
 
 	d.cli = newClient(d.mqttOpt)
 
