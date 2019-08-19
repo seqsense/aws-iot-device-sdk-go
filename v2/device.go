@@ -18,6 +18,7 @@ Package awsiotdev implements offline queueing and reconnecting features of MQTT 
 package awsiotdev
 
 import (
+	"encoding/json"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -97,7 +98,11 @@ func New(opt *Options) *DeviceClient {
 	d.mqttOpt.OnConnectionLost = connectionLost
 	d.mqttOpt.OnConnect = onConnect
 	if opt.Will != nil {
-		d.mqttOpt.SetWill(opt.Will.Topic, opt.Will.Payload, opt.Qos, opt.Retain)
+		payload, err := json.Marshal(opt.Will.Payload)
+		if err != nil {
+			panic(err)
+		}
+		d.mqttOpt.SetWill(opt.Will.Topic, string(payload), opt.Qos, opt.Retain)
 	}
 	d.mqttOpt.SetKeepAlive(opt.Keepalive)
 	d.mqttOpt.SetAutoReconnect(false) // MQTT AutoReconnect doesn't work well for mqtts
