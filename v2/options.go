@@ -31,21 +31,24 @@ type ConnectionLostHandler func(*Options, *mqtt.ClientOptions, error)
 
 // Options stores configuration of the MQTT connection.
 type Options struct {
-	KeyPath  string
-	CertPath string
-	CaPath   string
-	ClientID string
-	Region   string
-	// MaximumReconnectTime is the maximum time that will be waited between
-	// reconnection attempts when connection is lost
-	MaximumReconnectTime time.Duration
-	Keepalive            time.Duration
-	URL                  string
-	Debug                bool
-	Qos                  byte
-	Retain               bool
-	Will                 *TopicPayload
-	OfflineQueueing      bool
+	KeyPath                  string
+	CertPath                 string
+	CaPath                   string
+	ClientID                 string
+	Region                   string
+	BaseReconnectTime        time.Duration
+	MaximumReconnectTime     time.Duration
+	MinimumConnectionTime    time.Duration
+	Keepalive                time.Duration
+	URL                      string
+	Debug                    bool
+	Qos                      byte
+	Retain                   bool
+	Will                     *TopicPayload
+	OfflineQueueing          bool
+	OfflineQueueMaxSize      int
+	OfflineQueueDropBehavior string
+	AutoResubscribe          bool
 
 	// OnConnectionLost is called if the MQTT connection is lost.
 	// Pointer to the Options passed as the argument can be modified for the next reconnect.

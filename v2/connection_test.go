@@ -16,6 +16,7 @@ package awsiotdev
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"reflect"
 	"testing"
@@ -25,21 +26,35 @@ import (
 )
 
 func TestDeviceClient(t *testing.T) {
+	connectionNum := 0
+
 	newClient = func(opt *mqtt.ClientOptions) mqtt.Client {
+		connectionNum++
 		return &MockClient{}
 	}
 	o := &Options{
-		Keepalive:       time.Second * 2,
-		URL:             "mock://",
-		OfflineQueueing: true,
+		BaseReconnectTime:        time.Millisecond * 10,
+		MaximumReconnectTime:     time.Millisecond * 50,
+		MinimumConnectionTime:    time.Millisecond * 50,
+		Keepalive:                time.Second * 2,
+		URL:                      "mock://",
+		OfflineQueueing:          true,
+		OfflineQueueMaxSize:      100,
+		OfflineQueueDropBehavior: "oldest",
+		AutoResubscribe:          true,
 	}
 	cli := New(o)
 
+	if connectionNum != 0 {
+		t.Fatalf("Connected before connection (%d)", connectionNum)
+	}
+	cli.Connect()
 	if cli.cli == nil {
 		t.Fatalf("Mqtt client is not initialized")
 	}
-
-	cli.Connect()
+	if connectionNum != 1 {
+		t.Fatalf("Connected not once (%d)", connectionNum)
+	}
 
 	subscribedMsg := ""
 	cli.Subscribe("test", 1,
@@ -55,13 +70,8 @@ func TestDeviceClient(t *testing.T) {
 	if cli.cli != nil && cli.cli.(*MockClient).subscribeNum != 0 {
 		t.Fatalf("Subscribed before reconnection")
 	}
-
-	// Already published
-	if cli.cli.(*MockClient).publishNum != 1 {
-		t.Fatalf("Publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
-	}
-	if cli.cli.(*MockClient).publishedMsg != "test message" {
-		t.Fatalf("Published message is wrong (%s)", cli.cli.(*MockClient).publishedMsg)
+	if cli.cli != nil && cli.cli.(*MockClient).publishNum != 0 {
+		t.Fatalf("Published before reconnection")
 	}
 
 	// Establish connection
@@ -70,6 +80,12 @@ func TestDeviceClient(t *testing.T) {
 
 	if cli.cli.(*MockClient).subscribeNum != 1 {
 		t.Fatalf("Queued subscription is not processed (%d)", cli.cli.(*MockClient).subscribeNum)
+	}
+	if cli.cli.(*MockClient).publishNum != 1 {
+		t.Fatalf("Queued publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
+	}
+	if cli.cli.(*MockClient).publishedMsg != "test message" {
+		t.Fatalf("Published message is wrong (%s)", cli.cli.(*MockClient).publishedMsg)
 	}
 
 	// Receive one message
@@ -82,6 +98,15 @@ func TestDeviceClient(t *testing.T) {
 	// Disconnect
 	cli.mqttOpt.OnConnectionLost(cli.cli, errors.New("Disconnect test"))
 	time.Sleep(time.Millisecond * 100)
+	if connectionNum != 2 {
+		t.Fatalf("Connected not twice (%d)", connectionNum)
+	}
+	cli.Publish("test", 1, false, "test message2")
+
+	// Must not published yet
+	if cli.cli.(*MockClient).publishNum != 0 {
+		t.Fatalf("Queued publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
+	}
 
 	// Establish connection (subscribeNum and publishNum is cleared)
 	cli.mqttOpt.OnConnect(cli.cli)
@@ -91,6 +116,13 @@ func TestDeviceClient(t *testing.T) {
 	if cli.cli.(*MockClient).subscribeNum != 1 {
 		t.Fatalf("Re-subscribe is not processed (%d)", cli.cli.(*MockClient).subscribeNum)
 	}
+	// Message requested during connection lost must be published
+	if cli.cli.(*MockClient).publishNum != 1 {
+		t.Fatalf("Queued publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
+	}
+	if cli.cli.(*MockClient).publishedMsg != "test message2" {
+		t.Fatalf("Published message is wrong (%s)", cli.cli.(*MockClient).publishedMsg)
+	}
 
 	// Receive one message
 	cli.cli.(*MockClient).cbMessage(cli.cli, &MockMessage{topic: "to", payload: []byte("b456")})
@@ -99,18 +131,25 @@ func TestDeviceClient(t *testing.T) {
 		t.Fatalf("Subscribed message payload is wrong (%s)", subscribedMsg)
 	}
 
-	// Another subscribe request
+	// Another subscribe and publish request
 	subscribedMsg2 := ""
 	cli.Subscribe("test2", 1,
 		func(client mqtt.Client, msg mqtt.Message) {
 			subscribedMsg2 = string(msg.Payload())
 		},
 	)
+	cli.Publish("test2", 1, false, "test message3")
 
 	time.Sleep(time.Millisecond * 100)
 
 	if cli.cli.(*MockClient).subscribeNum != 2 {
 		t.Fatalf("Subscription is not processed (%d)", cli.cli.(*MockClient).subscribeNum)
+	}
+	if cli.cli.(*MockClient).publishNum != 2 {
+		t.Fatalf("Publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
+	}
+	if cli.cli.(*MockClient).publishedMsg != "test message3" {
+		t.Fatalf("Published message is wrong (%s)", cli.cli.(*MockClient).publishedMsg)
 	}
 
 	// Receive one message
@@ -136,10 +175,16 @@ func TestConnectionLostHandler(t *testing.T) {
 	var connectionLostError error
 	newBrokerURL, _ := url.Parse("mock://newbrokerurl")
 	o := &Options{
-		Keepalive:       time.Second * 2,
-		URL:             "mock://",
-		OfflineQueueing: true,
-		Debug:           false,
+		BaseReconnectTime:        time.Millisecond * 10,
+		MaximumReconnectTime:     time.Millisecond * 50,
+		MinimumConnectionTime:    time.Millisecond * 50,
+		Keepalive:                time.Second * 2,
+		URL:                      "mock://",
+		OfflineQueueing:          true,
+		OfflineQueueMaxSize:      100,
+		OfflineQueueDropBehavior: "oldest",
+		AutoResubscribe:          true,
+		Debug:                    false,
 		OnConnectionLost: func(opt *Options, mqttOpt *mqtt.ClientOptions, err error) {
 			connectionLostHandled = true
 			connectionLostError = err
@@ -181,6 +226,45 @@ func TestConnectionLostHandler(t *testing.T) {
 
 	if !reflect.DeepEqual(cli.mqttOpt.Servers, []*url.URL{newBrokerURL}) {
 		t.Fatal("mqtt.ClientOptions client options not changed")
+	}
+}
+
+func TestMultipleSubscription(t *testing.T) {
+	newClient = func(opt *mqtt.ClientOptions) mqtt.Client {
+		return &MockClient{}
+	}
+	o := &Options{
+		BaseReconnectTime:        time.Millisecond * 10,
+		MaximumReconnectTime:     time.Millisecond * 50,
+		MinimumConnectionTime:    time.Millisecond * 50,
+		Keepalive:                time.Second * 2,
+		URL:                      "mock://",
+		OfflineQueueing:          true,
+		OfflineQueueMaxSize:      100,
+		OfflineQueueDropBehavior: "oldest",
+		AutoResubscribe:          true,
+	}
+	cli := New(o)
+
+	subs := 20      // number of dummy subscriptions
+	iterations := 5 // number of state change iterations
+
+	// Subscribes to many channels
+	for i := 0; i <= subs; i++ {
+		cli.Subscribe(fmt.Sprintf("%d", i), 1, nil)
+	}
+
+	cli.Connect()
+
+	// This loop changes the state between stable and inactive multiple times,
+	// and it invokes the subscription and unsubscription multiple times.
+	// This causes `concurrent map writes` error if the subscription map isn't
+	// locked correctly.
+	for i := 0; i <= iterations; i++ {
+		cli.stateUpdateCh <- stable
+		time.Sleep(10 * time.Millisecond)
+		cli.stateUpdateCh <- inactive
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 
