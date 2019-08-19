@@ -15,6 +15,10 @@
 package awsiotprotocol
 
 import (
+	"fmt"
+	"net/url"
+	"strconv"
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -30,5 +34,11 @@ func (s MockProtocol) Name() string {
 
 // NewClientOptions returns MQTT connection options.
 func (s MockProtocol) NewClientOptions(opt *Config) (*mqtt.ClientOptions, error) {
-	return mqtt.NewClientOptions(), nil
+	url, _ := url.Parse(opt.URL)
+	host := url.Hostname()
+	port, _ := strconv.Atoi(url.Port())
+	opts := mqtt.NewClientOptions()
+	opts.AddBroker(fmt.Sprintf("mock://%s:%d", host, port))
+
+	return opts, nil
 }

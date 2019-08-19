@@ -17,8 +17,6 @@ package awsiotdev
 import (
 	"errors"
 	"fmt"
-	"net/url"
-	"reflect"
 	"testing"
 	"time"
 
@@ -37,7 +35,7 @@ func TestDeviceClient(t *testing.T) {
 		MaximumReconnectTime:     time.Millisecond * 50,
 		MinimumConnectionTime:    time.Millisecond * 50,
 		Keepalive:                time.Second * 2,
-		URL:                      "mock://",
+		URL:                      "mock://brokerhost:1234",
 		OfflineQueueing:          true,
 		OfflineQueueMaxSize:      100,
 		OfflineQueueDropBehavior: "oldest",
@@ -173,23 +171,23 @@ func TestConnectionLostHandler(t *testing.T) {
 	}
 	connectionLostHandled := false
 	var connectionLostError error
-	newBrokerURL, _ := url.Parse("mock://newbrokerurl")
+	newBrokerURL := "mock://newbrokerhost:1234"
 	o := &Options{
 		BaseReconnectTime:        time.Millisecond * 10,
 		MaximumReconnectTime:     time.Millisecond * 50,
 		MinimumConnectionTime:    time.Millisecond * 50,
 		Keepalive:                time.Second * 2,
-		URL:                      "mock://",
+		URL:                      "mock://brokerhost:1234",
 		OfflineQueueing:          true,
 		OfflineQueueMaxSize:      100,
 		OfflineQueueDropBehavior: "oldest",
 		AutoResubscribe:          true,
 		Debug:                    false,
-		OnConnectionLost: func(opt *Options, mqttOpt *mqtt.ClientOptions, err error) {
+		OnConnectionLost: func(opt *Options, err error) {
 			connectionLostHandled = true
 			connectionLostError = err
 			opt.Debug = true
-			mqttOpt.Servers = []*url.URL{newBrokerURL}
+			opt.URL = newBrokerURL
 		},
 	}
 	cli := New(o)
@@ -224,7 +222,7 @@ func TestConnectionLostHandler(t *testing.T) {
 		t.Fatal("awsiotdev.Options not changed")
 	}
 
-	if !reflect.DeepEqual(cli.mqttOpt.Servers, []*url.URL{newBrokerURL}) {
+	if cli.mqttOpt.Servers[0].String() != newBrokerURL {
 		t.Fatal("mqtt.ClientOptions client options not changed")
 	}
 }
@@ -238,7 +236,7 @@ func TestMultipleSubscription(t *testing.T) {
 		MaximumReconnectTime:     time.Millisecond * 50,
 		MinimumConnectionTime:    time.Millisecond * 50,
 		Keepalive:                time.Second * 2,
-		URL:                      "mock://",
+		URL:                      "mock://brokerhost:1234",
 		OfflineQueueing:          true,
 		OfflineQueueMaxSize:      100,
 		OfflineQueueDropBehavior: "oldest",
