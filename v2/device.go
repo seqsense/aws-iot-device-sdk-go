@@ -115,10 +115,7 @@ func (s *DeviceClient) connect() {
 		s.mqttOpt.SetWill(s.opt.Will.Topic, s.opt.Will.Payload, s.opt.Qos, s.opt.Retain)
 	}
 	s.mqttOpt.SetKeepAlive(s.opt.Keepalive)
-
-	// MQTT AutoReconnect doesn't work well for mqtts.
-	// Manually reconnected to allow updating connection setting on ConnectionLost.
-	s.mqttOpt.SetAutoReconnect(false)
+	s.mqttOpt.SetAutoReconnect(false) // Manually reconnected to allow updating connection setting on ConnectionLost.
 	s.mqttOpt.SetConnectTimeout(time.Second * 5)
 
 	s.cli = newClient(s.mqttOpt)
