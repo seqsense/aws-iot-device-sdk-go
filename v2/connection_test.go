@@ -53,6 +53,7 @@ func TestDeviceClient(t *testing.T) {
 		connectionNum++
 		return &MockClient{}
 	}
+	var cli *DeviceClient
 	o := &Options{
 		BaseReconnectTime:        time.Millisecond * 10,
 		MaximumReconnectTime:     time.Millisecond * 50,
@@ -68,9 +69,12 @@ func TestDeviceClient(t *testing.T) {
 		},
 		OnConnect: func(c *DeviceClient) {
 			onConnectCnt++
+			if c != cli {
+				t.Errorf("OnConnect is called with wrong DeviceClient pointer")
+			}
 		},
 	}
-	cli := New(o)
+	cli = New(o)
 
 	if connectionNum != 0 {
 		t.Fatalf("Connected before connection (%d)", connectionNum)
