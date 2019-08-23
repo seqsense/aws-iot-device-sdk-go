@@ -18,7 +18,9 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"path"
 	"reflect"
+	"runtime"
 	"testing"
 	"time"
 
@@ -27,11 +29,31 @@ import (
 
 func TestDeviceClient(t *testing.T) {
 	connectionNum := 0
+	onConnectCnt := 0
+	onConnectionLostCnt := 0
+
+	checkHandlerCnt := func(expectConnect, expectConnectionLost int) {
+		pt, file, line, ok := runtime.Caller(1)
+		if !ok {
+			t.Fatal("Failed to get stack trace")
+		}
+		stackInfo := fmt.Sprintf("%s:%d: %s", path.Base(file), line, path.Base(runtime.FuncForPC(pt).Name()))
+
+		if onConnectCnt != expectConnect {
+			t.Errorf("%s: OnConnect handler is called %d times, expected %d times",
+				stackInfo, onConnectCnt, expectConnect)
+		}
+		if onConnectionLostCnt != expectConnectionLost {
+			t.Errorf("%s: OnConnectionLost handler is called %d times, expected %d times",
+				stackInfo, onConnectionLostCnt, expectConnectionLost)
+		}
+	}
 
 	newClient = func(opt *mqtt.ClientOptions) mqtt.Client {
 		connectionNum++
 		return &MockClient{}
 	}
+	var cli *DeviceClient
 	o := &Options{
 		BaseReconnectTime:        time.Millisecond * 10,
 		MaximumReconnectTime:     time.Millisecond * 50,
@@ -42,8 +64,17 @@ func TestDeviceClient(t *testing.T) {
 		OfflineQueueMaxSize:      100,
 		OfflineQueueDropBehavior: "oldest",
 		AutoResubscribe:          true,
+		OnConnectionLost: func(opt *Options, mqttOpt *mqtt.ClientOptions, err error) {
+			onConnectionLostCnt++
+		},
+		OnConnect: func(c *DeviceClient) {
+			onConnectCnt++
+			if c != cli {
+				t.Errorf("OnConnect is called with wrong DeviceClient pointer")
+			}
+		},
 	}
-	cli := New(o)
+	cli = New(o)
 
 	if connectionNum != 0 {
 		t.Fatalf("Connected before connection (%d)", connectionNum)
@@ -73,6 +104,7 @@ func TestDeviceClient(t *testing.T) {
 	if cli.cli != nil && cli.cli.(*MockClient).publishNum != 0 {
 		t.Fatalf("Published before reconnection")
 	}
+	checkHandlerCnt(0, 0)
 
 	// Establish connection
 	cli.mqttOpt.OnConnect(cli.cli)
@@ -87,6 +119,7 @@ func TestDeviceClient(t *testing.T) {
 	if cli.cli.(*MockClient).publishedMsg != "test message" {
 		t.Fatalf("Published message is wrong (%s)", cli.cli.(*MockClient).publishedMsg)
 	}
+	checkHandlerCnt(1, 0)
 
 	// Receive one message
 	cli.cli.(*MockClient).cbMessage(cli.cli, &MockMessage{topic: "to", payload: []byte("a123")})
@@ -107,6 +140,7 @@ func TestDeviceClient(t *testing.T) {
 	if cli.cli.(*MockClient).publishNum != 0 {
 		t.Fatalf("Queued publish is not processed (%d)", cli.cli.(*MockClient).publishNum)
 	}
+	checkHandlerCnt(1, 1)
 
 	// Establish connection (subscribeNum and publishNum is cleared)
 	cli.mqttOpt.OnConnect(cli.cli)
@@ -123,6 +157,7 @@ func TestDeviceClient(t *testing.T) {
 	if cli.cli.(*MockClient).publishedMsg != "test message2" {
 		t.Fatalf("Published message is wrong (%s)", cli.cli.(*MockClient).publishedMsg)
 	}
+	checkHandlerCnt(2, 1)
 
 	// Receive one message
 	cli.cli.(*MockClient).cbMessage(cli.cli, &MockMessage{topic: "to", payload: []byte("b456")})
@@ -165,6 +200,7 @@ func TestDeviceClient(t *testing.T) {
 	if cli.cli.(*MockClient).disconnectNum != 1 {
 		t.Fatalf("Disconnect is not processed (%d)", cli.cli.(*MockClient).disconnectNum)
 	}
+	checkHandlerCnt(2, 1) // Connection was expectedly closed. OnDisconnect should not be called.
 }
 
 func TestConnectionLostHandler(t *testing.T) {

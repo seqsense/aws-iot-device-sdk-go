@@ -26,6 +26,9 @@ type TopicPayload struct {
 	Payload string
 }
 
+// ConnectHandler is the function type for connect callback.
+type ConnectHandler func(cli *DeviceClient)
+
 // ConnectionLostHandler is the function type for connection lost callback.
 type ConnectionLostHandler func(*Options, *mqtt.ClientOptions, error)
 
@@ -50,7 +53,8 @@ type Options struct {
 	OfflineQueueDropBehavior string
 	AutoResubscribe          bool
 
-	// OnConnectionLost is called if the MQTT connection is lost.
+	OnConnect ConnectHandler
+	// OnConnectionLost is called if the MQTT connection is unexpectedly lost.
 	// Pointer to the Options passed as the argument can be modified for the next reconnect.
 	OnConnectionLost ConnectionLostHandler
 }
