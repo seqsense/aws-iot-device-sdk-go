@@ -92,6 +92,9 @@ func New(opt *Options) *DeviceClient {
 	onConnect := func(client mqtt.Client) {
 		d.dbg.printf("Connection established\n")
 		d.stateUpdateCh <- established
+		if d.opt.OnConnect != nil {
+			d.opt.OnConnect()
+		}
 	}
 
 	d.mqttOpt.OnConnectionLost = connectionLost
