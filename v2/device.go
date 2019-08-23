@@ -107,8 +107,8 @@ func (s *DeviceClient) connect() {
 	onConnect := func(client mqtt.Client) {
 		s.dbg.printf("Connection established\n")
 		s.stateUpdateCh <- established
-		if d.opt.OnConnect != nil {
-			d.opt.OnConnect(d)
+		if s.opt.OnConnect != nil {
+			s.opt.OnConnect(s)
 		}
 	}
 
