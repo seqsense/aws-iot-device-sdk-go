@@ -16,8 +16,6 @@ package awsiotdev
 
 import (
 	"time"
-
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 // TopicPayload stores a pair of topic name and payload string.
@@ -30,7 +28,7 @@ type TopicPayload struct {
 type ConnectHandler func(cli *DeviceClient)
 
 // ConnectionLostHandler is the function type for connection lost callback.
-type ConnectionLostHandler func(*Options, *mqtt.ClientOptions, error)
+type ConnectionLostHandler func(*Options, error)
 
 // Options stores configuration of the MQTT connection.
 type Options struct {

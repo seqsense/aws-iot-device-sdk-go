@@ -52,27 +52,8 @@ type DeviceClient struct {
 // New returns new MQTT client with offline queueing and reconnecting.
 // Returned client is not connected to the broaker until calling Connect().
 func New(opt *Options) *DeviceClient {
-	p, err := awsiotprotocol.ByURL(opt.URL)
-	if err != nil {
-		panic(err)
-	}
-	mqttOpt, err := p.NewClientOptions(
-		&awsiotprotocol.Config{
-			KeyPath:  opt.KeyPath,
-			CertPath: opt.CertPath,
-			CaPath:   opt.CaPath,
-			ClientID: opt.ClientID,
-			URL:      opt.URL,
-		},
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	d := &DeviceClient{
+	return &DeviceClient{
 		opt:             opt,
-		mqttOpt:         mqttOpt,
-		cli:             nil,
 		reconnectPeriod: opt.BaseReconnectTime,
 		stateUpdateCh:   make(chan deviceState, stateUpdaterChCap),
 		stableTimerCh:   make(chan bool),
@@ -80,33 +61,6 @@ func New(opt *Options) *DeviceClient {
 		subscribeCh:     make(chan *subqueue.Subscription, subscribeChCap),
 		dbg:             &debugOut{opt.Debug},
 	}
-
-	connectionLost := func(client mqtt.Client, err error) {
-		d.dbg.printf("Connection lost (%s)\n", err.Error())
-		if d.opt.OnConnectionLost != nil {
-			d.opt.OnConnectionLost(d.opt, d.mqttOpt, err)
-		}
-
-		d.stateUpdateCh <- inactive
-	}
-	onConnect := func(client mqtt.Client) {
-		d.dbg.printf("Connection established\n")
-		d.stateUpdateCh <- established
-		if d.opt.OnConnect != nil {
-			d.opt.OnConnect(d)
-		}
-	}
-
-	d.mqttOpt.OnConnectionLost = connectionLost
-	d.mqttOpt.OnConnect = onConnect
-	if opt.Will != nil {
-		d.mqttOpt.SetWill(opt.Will.Topic, opt.Will.Payload, opt.Qos, opt.Retain)
-	}
-	d.mqttOpt.SetKeepAlive(opt.Keepalive)
-	d.mqttOpt.SetAutoReconnect(false) // MQTT AutoReconnect doesn't work well for mqtts
-	d.mqttOpt.SetConnectTimeout(time.Second * 5)
-
-	return d
 }
 
 // Connect create a connection to the broker.
@@ -123,8 +77,51 @@ var newClient = func(opt *mqtt.ClientOptions) mqtt.Client {
 }
 
 func (s *DeviceClient) connect() {
-	s.cli = newClient(s.mqttOpt)
+	p, err := awsiotprotocol.ByURL(s.opt.URL)
+	if err != nil {
+		panic(err)
+	}
+	mqttOpt, err := p.NewClientOptions(
+		&awsiotprotocol.Config{
+			KeyPath:  s.opt.KeyPath,
+			CertPath: s.opt.CertPath,
+			CaPath:   s.opt.CaPath,
+			ClientID: s.opt.ClientID,
+			URL:      s.opt.URL,
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
 
+	s.mqttOpt = mqttOpt
+
+	connectionLost := func(client mqtt.Client, err error) {
+		s.dbg.printf("Connection lost (%s)\n", err.Error())
+		if s.opt.OnConnectionLost != nil {
+			s.opt.OnConnectionLost(s.opt, err)
+		}
+
+		s.stateUpdateCh <- inactive
+	}
+	onConnect := func(client mqtt.Client) {
+		s.dbg.printf("Connection established\n")
+		s.stateUpdateCh <- established
+		if s.opt.OnConnect != nil {
+			s.opt.OnConnect(s)
+		}
+	}
+
+	s.mqttOpt.OnConnectionLost = connectionLost
+	s.mqttOpt.OnConnect = onConnect
+	if s.opt.Will != nil {
+		s.mqttOpt.SetWill(s.opt.Will.Topic, s.opt.Will.Payload, s.opt.Qos, s.opt.Retain)
+	}
+	s.mqttOpt.SetKeepAlive(s.opt.Keepalive)
+	s.mqttOpt.SetAutoReconnect(false) // Manually reconnected to allow updating connection setting on ConnectionLost.
+	s.mqttOpt.SetConnectTimeout(time.Second * 5)
+
+	s.cli = newClient(s.mqttOpt)
 	token := s.cli.Connect()
 	go func() {
 		token.Wait()
