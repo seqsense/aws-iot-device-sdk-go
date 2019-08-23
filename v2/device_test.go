@@ -40,7 +40,7 @@ func TestPublish(t *testing.T) {
 		go cli.Publish("test", 0, false, testMsg)
 		time.Sleep(time.Millisecond * 100)
 		if len(cli.publishCh) != 0 {
-			t.Fatal("publishCh received message")
+			t.Fatal("Message is unexpectedly offline-buffered")
 		}
 		if cli.cli.(*MockClient).publishNum != 1 {
 			t.Fatalf("Publish operation is not processed (%d)", cli.cli.(*MockClient).publishNum)
@@ -69,7 +69,7 @@ func TestPublish(t *testing.T) {
 				t.Errorf("Published message is wrong. expected: %s, actual: %s", testMsg, msg.Payload)
 			}
 		case <-time.After(time.Second):
-			t.Fatal("publishCh did not received the message")
+			t.Fatal("Message is not offline-buffered")
 		}
 	})
 }

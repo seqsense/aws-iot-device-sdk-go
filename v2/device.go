@@ -156,7 +156,7 @@ func (s *DeviceClient) Subscribe(topic string, qos byte, cb mqtt.MessageHandler)
 }
 
 // SubscribeMultiple requests new subscription for multiple topics.
-// Currently, specified qos is ignored and one specified in the options is used.
+// Currently, retained argument is ignored and specified value in the options is used.
 func (s *DeviceClient) SubscribeMultiple(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
 	for topic, qos := range filters {
 		s.Subscribe(topic, qos, callback)
