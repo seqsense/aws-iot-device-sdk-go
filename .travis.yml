@@ -9,6 +9,7 @@ env:
   global:
     - REVIEW_DOG_ON=1.11
     - REVIEW_DOG_VERSION=0.9.11
+    - GO111MODULE=on
 
 branches:
   only:
