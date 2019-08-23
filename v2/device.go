@@ -93,7 +93,7 @@ func New(opt *Options) *DeviceClient {
 		d.dbg.printf("Connection established\n")
 		d.stateUpdateCh <- established
 		if d.opt.OnConnect != nil {
-			d.opt.OnConnect()
+			d.opt.OnConnect(d)
 		}
 	}
 

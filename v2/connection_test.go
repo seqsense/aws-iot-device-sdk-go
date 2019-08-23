@@ -66,7 +66,7 @@ func TestDeviceClient(t *testing.T) {
 		OnConnectionLost: func(opt *Options, mqttOpt *mqtt.ClientOptions, err error) {
 			onConnectionLostCnt++
 		},
-		OnConnect: func() {
+		OnConnect: func(c *DeviceClient) {
 			onConnectCnt++
 		},
 	}

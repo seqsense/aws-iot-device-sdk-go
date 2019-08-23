@@ -27,7 +27,7 @@ type TopicPayload struct {
 }
 
 // ConnectHandler is the function type for connect callback.
-type ConnectHandler func()
+type ConnectHandler func(cli *DeviceClient)
 
 // ConnectionLostHandler is the function type for connection lost callback.
 type ConnectionLostHandler func(*Options, *mqtt.ClientOptions, error)
