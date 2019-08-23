@@ -107,6 +107,9 @@ func (s *DeviceClient) connect() {
 	onConnect := func(client mqtt.Client) {
 		s.dbg.printf("Connection established\n")
 		s.stateUpdateCh <- established
+		if d.opt.OnConnect != nil {
+			d.opt.OnConnect(d)
+		}
 	}
 
 	s.mqttOpt.OnConnectionLost = connectionLost
@@ -136,8 +139,11 @@ func (s *DeviceClient) Disconnect(quiesce uint) {
 }
 
 // Publish publishes a message.
-// Currently, qos and retained arguments are ignored and ones specified in the options are used.
+// Currently, retained arguments are ignored and specified in the options are used.
 func (s *DeviceClient) Publish(topic string, qos byte, retained bool, payload interface{}) mqtt.Token {
+	if qos == 0 {
+		return s.cli.Publish(topic, qos, retained, payload)
+	}
 	s.publishCh <- &pubqueue.Data{Topic: topic, Payload: payload}
 	return &mqtt.DummyToken{}
 }
@@ -150,7 +156,7 @@ func (s *DeviceClient) Subscribe(topic string, qos byte, cb mqtt.MessageHandler)
 }
 
 // SubscribeMultiple requests new subscription for multiple topics.
-// Currently, specified qos is ignored and one specified in the options is used.
+// Currently, retained argument is ignored and specified value in the options is used.
 func (s *DeviceClient) SubscribeMultiple(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
 	for topic, qos := range filters {
 		s.Subscribe(topic, qos, callback)
