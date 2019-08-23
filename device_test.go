@@ -19,7 +19,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/seqsense/aws-iot-device-sdk-go/v2/pubqueue"
+	"github.com/seqsense/aws-iot-device-sdk-go/pubqueue"
 )
 
 func TestClientInterface(t *testing.T) {
