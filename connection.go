@@ -18,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/pubqueue"
-	"github.com/seqsense/aws-iot-device-sdk-go/subqueue"
+	"github.com/seqsense/aws-iot-device-sdk-go/v2/internal/pubqueue"
+	"github.com/seqsense/aws-iot-device-sdk-go/v2/internal/subqueue"
 )
 
 type pubSubQueues struct {
