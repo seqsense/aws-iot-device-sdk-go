@@ -22,9 +22,9 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v2/internal/awsiotprotocol"
-	"github.com/seqsense/aws-iot-device-sdk-go/v2/internal/pubqueue"
-	"github.com/seqsense/aws-iot-device-sdk-go/v2/internal/subqueue"
+	"github.com/seqsense/aws-iot-device-sdk-go/v3/internal/awsiotprotocol"
+	"github.com/seqsense/aws-iot-device-sdk-go/v3/internal/pubqueue"
+	"github.com/seqsense/aws-iot-device-sdk-go/v3/internal/subqueue"
 )
 
 const (

@@ -24,7 +24,7 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
-	awsiot "github.com/seqsense/aws-iot-device-sdk-go/v2"
+	awsiot "github.com/seqsense/aws-iot-device-sdk-go/v3"
 )
 
 var message mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
