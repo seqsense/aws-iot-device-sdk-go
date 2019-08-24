@@ -23,7 +23,6 @@ install:
       curl -s -L https://github.com/haya14busa/reviewdog/releases/download/${REVIEW_DOG_VERSION}/reviewdog_linux_amd64 > ${GOPATH}/bin/reviewdog
       chmod +x ${GOPATH}/bin/reviewdog
     fi
-  - go get -t ./...
 script:
   - go build
   - |
