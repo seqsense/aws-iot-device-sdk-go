@@ -27,7 +27,6 @@ script:
   - go build
   - |
     echo "Enable coverage report"
-    REPORT_COVERAGE=1
     TEST_ARG="-coverprofile=coverage.txt -covermode=atomic -coverpkg=all"
   - go test ${TEST_ARG} ./...
   - go vet ./...
