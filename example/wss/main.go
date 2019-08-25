@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/**
+  Usage: go run . -host hoge-ats.iot.ap-northeast-1.amazonaws.com
+*/
+
 package main
 
 import (
@@ -22,16 +26,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-
 	awsiot "github.com/seqsense/aws-iot-device-sdk-go/v3"
+	presigner "github.com/seqsense/aws-iot-device-sdk-go/v3/presigner"
 )
-
-var message mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("Message received\n")
-	fmt.Printf("  topic: %s\n", msg.Topic())
-	fmt.Printf("  payload: %s\n", msg.Payload())
-}
 
 func messageHandler(client mqtt.Client, msg mqtt.Message) {
 	fmt.Printf("Message received\n")
@@ -40,28 +40,25 @@ func messageHandler(client mqtt.Client, msg mqtt.Message) {
 }
 
 var (
-	privatePath = flag.String("private-key-path", "private.pem.key", "Path to private key pem file")
-	certPath    = flag.String("certificate-path", "certificate.pem.crt", "Path to certificate pem file")
-	caPath      = flag.String("ca-path", "CAfile.pem", "Path to CA certificate pem file")
-	thingName   = flag.String("thing-name", "sample", "Thing name")
-	region      = flag.String("region", "ap-northeast-1", "AWS region")
-	url         = flag.String("url", "mqtts://hoge.iot.ap-northeast-1.amazonaws.com", "AWS IoT endpoint")
+	thingName = flag.String("thing-name", "sample", "Thing name")
+	region    = flag.String("region", "ap-northeast-1", "AWS region")
+	host      = flag.String("host", "hoge-ats.iot.ap-northeast-1.amazonaws.com", "AWS IoT endpoint")
 )
 
 func main() {
 	flag.Parse()
+	sess := session.Must(session.NewSession())
+	signer := presigner.New(sess, &aws.Config{Region: aws.String(*region)})
+	endpoint, _ := signer.PresignWssNow(*host)
 
 	o := &awsiot.Options{
-		KeyPath:                  *privatePath,
-		CertPath:                 *certPath,
-		CaPath:                   *caPath,
 		ClientID:                 *thingName,
 		Region:                   *region,
 		BaseReconnectTime:        time.Millisecond * 50,
 		MaximumReconnectTime:     time.Second * 2,
 		MinimumConnectionTime:    time.Second * 2,
 		Keepalive:                time.Second * 2,
-		URL:                      *url,
+		URL:                      endpoint,
 		Debug:                    true,
 		Qos:                      1,
 		Retain:                   false,
@@ -72,6 +69,11 @@ func main() {
 		AutoResubscribe:          true,
 		OnConnectionLost: func(opt *awsiot.Options, err error) {
 			fmt.Printf("Connection lost handler function called\n")
+			newEndpoint, err := signer.PresignWssNow(*host)
+			if err != nil {
+				panic(err)
+			}
+			opt.URL = newEndpoint
 		},
 	}
 	cli := awsiot.New(o)
