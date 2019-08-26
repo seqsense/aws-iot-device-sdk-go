@@ -30,9 +30,9 @@ func TestMqttsNewClientOptions(t *testing.T) {
 	opt := &Config{
 		URL:      "mqtts://example.com:8882",
 		ClientID: "mqttsclientid",
-		CaPath:   "../../examples/mqtt/samplecerts/cafile.pem",
-		CertPath: "../../examples/mqtt/samplecerts/client-crt.pem",
-		KeyPath:  "../../examples/mqtt/samplecerts/client-key.pem",
+		CaPath:   "testdata/cafile.pem",
+		CertPath: "testdata/client-crt.pem",
+		KeyPath:  "testdata/client-key.pem",
 	}
 	mqttOpts, _ := Mqtts{}.NewClientOptions(opt)
 
