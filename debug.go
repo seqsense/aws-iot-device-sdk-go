@@ -7,13 +7,13 @@ import (
 var (
 	// DebugPrintBackend stores backend function of debug print output.
 	// This can be replaced by custom logger.
-	DebugPrintBackend func(...interface{}) = log.Print
+	DebugPrintBackend = log.Print
 	// DebugPrintfBackend stores backend function of debug printf output.
 	// This can be replaced by custom logger.
-	DebugPrintfBackend func(string, ...interface{}) = log.Printf
+	DebugPrintfBackend = log.Printf
 	// DebugPrintlnBackend stores backend function of debug println output.
 	// This can be replaced by custom logger.
-	DebugPrintlnBackend func(...interface{}) = log.Println
+	DebugPrintlnBackend = log.Println
 )
 
 type debugOut struct {
