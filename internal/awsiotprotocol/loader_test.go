@@ -37,7 +37,7 @@ func TestByURL(t *testing.T) {
 }
 
 func TestByURLFailure(t *testing.T) {
-	t.Run("Un parsed url", func(t *testing.T) {
+	t.Run("Cannot parse url", func(t *testing.T) {
 		input := "@@://@@@/@@.@@@"
 		_, err := ByURL(input)
 		if err == nil {
@@ -46,7 +46,7 @@ func TestByURLFailure(t *testing.T) {
 			t.Errorf("awsiotprotocol.ByURL should fail with url.Error type:\ninput: %#v\nactual error: %#v", input, err)
 		}
 	})
-	t.Run("No supported protocol", func(t *testing.T) {
+	t.Run("Un supported protocol", func(t *testing.T) {
 		input := "https://non-supported.protocol.com"
 		expectedErrorMessage := "Protocol \"https\" is not supported"
 		_, err := ByURL(input)
