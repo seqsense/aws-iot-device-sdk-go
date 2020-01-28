@@ -15,5 +15,6 @@
                 "on the first day of the month"
             ]
         }
-    ]
+    ],
+    "timezone": "Asia/Tokyo"
 }
