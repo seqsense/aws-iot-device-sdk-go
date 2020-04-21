@@ -113,10 +113,5 @@ func updateState(state map[string]interface{}, update map[string]interface{}) er
 }
 
 func hasUpdate(s json.RawMessage) bool {
-	switch {
-	case len(s) == 0:
-		return false
-	default:
-		return true
-	}
+	return len(s) != 0
 }
