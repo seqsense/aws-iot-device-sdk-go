@@ -20,6 +20,8 @@ type Shadow interface {
 	Desire(ctx context.Context, state interface{}) error
 	// Document returns full thing document.
 	Document() *ThingDocument
+	// Delete thing shadow.
+	Delete(ctx context.Context) error
 	// OnDelta sets handler of state deltas.
 	OnDelta(func(delta map[string]interface{}))
 	// OnError sets handler of asynchronous errors.
@@ -86,6 +88,15 @@ func (s *shadow) updateRejected(msg *mqtt.Message) {
 	s.handleError(fmt.Errorf("%s: %s", msg.Topic, string(msg.Payload)))
 }
 
+func (s *shadow) deleteAccepted(msg *mqtt.Message) {
+	s.doc = nil
+	s.handleDelta(s.doc.State.Delta)
+}
+
+func (s *shadow) deleteRejected(msg *mqtt.Message) {
+	s.handleError(fmt.Errorf("%s: %s", msg.Topic, string(msg.Payload)))
+}
+
 // New creates Thing Shadow interface.
 func New(ctx context.Context, cli mqtt.Client, thingName string) (Shadow, error) {
 	s := &shadow{
@@ -101,6 +112,8 @@ func New(ctx context.Context, cli mqtt.Client, thingName string) (Shadow, error)
 		{s.topic("update/rejected"), mqtt.HandlerFunc(s.updateRejected)},
 		{s.topic("get/accepted"), mqtt.HandlerFunc(s.getAccepted)},
 		{s.topic("get/rejected"), mqtt.HandlerFunc(s.getRejected)},
+		{s.topic("delete/accepted"), mqtt.HandlerFunc(s.deleteAccepted)},
+		{s.topic("delete/rejected"), mqtt.HandlerFunc(s.deleteRejected)},
 	} {
 		if err := s.ServeMux.Handle(sub.topic, sub.handler); err != nil {
 			return nil, err
@@ -113,6 +126,8 @@ func New(ctx context.Context, cli mqtt.Client, thingName string) (Shadow, error)
 		mqtt.Subscription{Topic: s.topic("update/rejected"), QoS: mqtt.QoS1},
 		mqtt.Subscription{Topic: s.topic("get/accepted"), QoS: mqtt.QoS1},
 		mqtt.Subscription{Topic: s.topic("get/rejected"), QoS: mqtt.QoS1},
+		mqtt.Subscription{Topic: s.topic("delete/accepted"), QoS: mqtt.QoS1},
+		mqtt.Subscription{Topic: s.topic("delete/rejected"), QoS: mqtt.QoS1},
 	)
 	if err != nil {
 		return nil, err
@@ -167,6 +182,17 @@ func (s *shadow) Desire(ctx context.Context, state interface{}) error {
 func (s *shadow) Get(ctx context.Context) error {
 	if err := s.cli.Publish(ctx, &mqtt.Message{
 		Topic:   s.topic("get"),
+		QoS:     mqtt.QoS1,
+		Payload: []byte{},
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *shadow) Delete(ctx context.Context) error {
+	if err := s.cli.Publish(ctx, &mqtt.Message{
+		Topic:   s.topic("delete"),
 		QoS:     mqtt.QoS1,
 		Payload: []byte{},
 	}); err != nil {
