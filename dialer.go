@@ -20,7 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 
 	"github.com/at-wat/mqtt-go"
-	presigner "github.com/seqsense/aws-iot-device-sdk-go/v3/presigner"
+	presigner "github.com/seqsense/aws-iot-device-sdk-go/v4/presigner"
 )
 
 type presignDialer struct {

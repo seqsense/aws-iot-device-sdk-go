@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v3/presigner"
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/presigner"
 )
 
 type dummyConfigProvider struct{}
