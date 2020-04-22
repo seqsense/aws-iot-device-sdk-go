@@ -12,27 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package awsiotprotocol
-
-import (
-	mqtt "github.com/eclipse/paho.mqtt.golang"
-)
-
-// Wss implements Protocol interface for MQTT over Websocket.
-type Wss struct {
-}
-
-// Name returns the protocol name.
-func (s Wss) Name() string {
-	return "wss"
-}
-
-// NewClientOptions returns MQTT connection options.
-func (s Wss) NewClientOptions(opt *Config) (*mqtt.ClientOptions, error) {
-	opts := mqtt.NewClientOptions()
-	opts.AddBroker(opt.URL)
-	opts.SetClientID(opt.ClientID)
-	opts.SetAutoReconnect(false) // use custom reconnection algorithm with offline queueing
-
-	return opts, nil
-}
+// Package awsiotdev implements offline queueing and reconnecting features of MQTT protocol.
+package awsiotdev
