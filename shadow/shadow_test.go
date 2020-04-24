@@ -164,7 +164,7 @@ func TestShadow(t *testing.T) {
 	})
 
 	t.Run("Update", func(t *testing.T) {
-		t.Run("OK", func(t *testing.T) {
+		t.Run("Delta", func(t *testing.T) {
 			chErr := make(chan error, 1)
 			chDelta := make(chan map[string]interface{}, 1)
 			s := &shadow{
@@ -218,7 +218,60 @@ func TestShadow(t *testing.T) {
 				)
 			}
 		})
-		t.Run("Old", func(t *testing.T) {
+		t.Run("Accepted", func(t *testing.T) {
+			chErr := make(chan error, 1)
+			chDelta := make(chan map[string]interface{}, 1)
+			s := &shadow{
+				doc: &ThingDocument{
+					State: ThingState{
+						Reported: map[string]interface{}{"key1": "value1"},
+					},
+					Version:   2,
+					Timestamp: 12345,
+				},
+				onDelta: func(delta map[string]interface{}) {
+					chDelta <- delta
+				},
+				onError: func(err error) {
+					chErr <- err
+				},
+			}
+			expectedDoc := &ThingDocument{
+				State: ThingState{
+					Reported: map[string]interface{}{
+						"key1": "value1",
+						"key2": "value2",
+					},
+				},
+				Version:   3,
+				Timestamp: 12346,
+			}
+			s.updateAccepted(&mqtt.Message{Payload: []byte(
+				"{" +
+					"  \"state\": {" +
+					"    \"Reported\": {" +
+					"      \"key2\": \"value2\"" +
+					"    }" +
+					"  }," +
+					"  \"version\": 3," +
+					"  \"timestamp\": 12346" +
+					"}",
+			)})
+
+			select {
+			case err := <-chErr:
+				t.Error(err)
+			case <-chDelta:
+				t.Error("cbDelta must not be called on update accept")
+			default:
+			}
+			if !reflect.DeepEqual(expectedDoc, s.doc) {
+				t.Errorf("Expected state: %v, got: %v",
+					expectedDoc, s.doc,
+				)
+			}
+		})
+		t.Run("OldDelta", func(t *testing.T) {
 			s := &shadow{
 				doc: &ThingDocument{
 					State: ThingState{
