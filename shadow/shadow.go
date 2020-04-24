@@ -90,7 +90,6 @@ func (s *shadow) updateRejected(msg *mqtt.Message) {
 
 func (s *shadow) deleteAccepted(msg *mqtt.Message) {
 	s.doc = nil
-	s.handleDelta(s.doc.State.Delta)
 }
 
 func (s *shadow) deleteRejected(msg *mqtt.Message) {
