@@ -28,20 +28,31 @@ func endpointHost(region string) string {
 // Dialer is a proxy destination dialer.
 type Dialer func() (io.ReadWriteCloser, error)
 
-func proxy(ctx context.Context, dialer Dialer, notification *notification) error {
+func proxy(ctx context.Context, dialer Dialer, notification *notification, opts ...proxyOption) error {
 	if notification.ClientMode != Destination {
 		return errors.New("unsupported client mode")
 	}
 
+	opt := &proxyOpt{
+		scheme: "wss",
+	}
+	for _, o := range opts {
+		if err := o(opt); err != nil {
+			return err
+		}
+	}
+
 	host := endpointHost(notification.Region)
 	wsc, err := websocket.NewConfig(
-		fmt.Sprintf("wss://%s/tunnel?local-proxy-mode=destination", host),
+		fmt.Sprintf("%s://%s/tunnel?local-proxy-mode=destination", opt.scheme, host),
 		fmt.Sprintf("https://%s", host),
 	)
 	if err != nil {
 		return err
 	}
-	wsc.TlsConfig = &tls.Config{ServerName: host}
+	if !opt.noTLS {
+		wsc.TlsConfig = &tls.Config{ServerName: host}
+	}
 	wsc.Header = http.Header{
 		"access-token": []string{notification.ClientAccessToken},
 		"User-Agent":   []string{userAgent},
@@ -132,4 +143,11 @@ func proxy(ctx context.Context, dialer Dialer, notification *notification) error
 			}
 		}
 	}
+}
+
+type proxyOption func(*proxyOpt) error
+
+type proxyOpt struct {
+	noTLS  bool
+	scheme string
 }
