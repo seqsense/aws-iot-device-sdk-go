@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/at-wat/mqtt-go"
+	"github.com/seqsense/aws-iot-device-sdk-go/v4"
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel"
 )
 
@@ -34,7 +35,8 @@ func main() {
 		}
 	}
 
-	cli, err := mqtt.NewReconnectClient(
+	cli, err := awsiotdev.New(
+		"sample",
 		&mqtt.URLDialer{
 			URL: fmt.Sprintf("mqtts://%s:8883", host),
 			Options: []mqtt.DialOption{
@@ -61,7 +63,7 @@ func main() {
 		panic(err)
 	}
 
-	t, err := tunnel.New(ctx, cli, "sample", map[string]tunnel.Dialer{
+	t, err := tunnel.New(ctx, cli, map[string]tunnel.Dialer{
 		"ssh": func() (io.ReadWriteCloser, error) {
 			return net.Dial("tcp", "localhost:22")
 		},

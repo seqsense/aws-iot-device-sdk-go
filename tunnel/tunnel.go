@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/at-wat/mqtt-go"
+	"github.com/seqsense/aws-iot-device-sdk-go/v4"
 )
 
 // Tunnel is an interface of secure tunneling.
@@ -27,9 +28,9 @@ func (t *tunnel) topic(operation string) string {
 }
 
 // New creates new secure tunneling proxy.
-func New(ctx context.Context, cli mqtt.Client, thingName string, dialer map[string]Dialer) (Tunnel, error) {
+func New(ctx context.Context, cli awsiotdev.Device, dialer map[string]Dialer) (Tunnel, error) {
 	t := &tunnel{
-		thingName: thingName,
+		thingName: cli.ThingName(),
 		dialerMap: dialer,
 	}
 	if err := t.ServeMux.Handle(t.topic("notify"), mqtt.HandlerFunc(t.notify)); err != nil {
