@@ -52,7 +52,7 @@ func TestProxyImpl(t *testing.T) {
 	payload2 := "the payload 2"
 
 	// Check source to destination
-	msgs := []msg.Message{
+	msgs := []*msg.Message{
 		{
 			Type:     msg.Message_STREAM_START,
 			StreamId: 1,
@@ -64,7 +64,7 @@ func TestProxyImpl(t *testing.T) {
 		},
 	}
 	for _, m := range msgs {
-		b, err := proto.Marshal(&m)
+		b, err := proto.Marshal(m)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -98,7 +98,7 @@ func TestProxyImpl(t *testing.T) {
 		Payload:  []byte(payload2),
 	}
 	if !proto.Equal(msgExpected, m) {
-		t.Errorf("Payload differes, expected: %v, got: %v", *msgExpected, *m)
+		t.Errorf("Payload differes, expected: %v, got: %v", msgExpected, m)
 	}
 
 	// Check EOF
