@@ -8,6 +8,7 @@ import (
 	"github.com/at-wat/mqtt-go"
 )
 
+// Tunnel is an interface of secure tunneling.
 type Tunnel interface {
 	mqtt.Handler
 	OnError(func(error))
@@ -18,15 +19,18 @@ type tunnel struct {
 	thingName string
 	mu        sync.Mutex
 	onError   func(err error)
+	dialerMap map[string]Dialer
 }
 
 func (t *tunnel) topic(operation string) string {
 	return "$aws/things/" + t.thingName + "/tunnels/" + operation
 }
 
-func New(ctx context.Context, cli mqtt.Client, thingName string) (Tunnel, error) {
+// New creates new secure tunneling proxy.
+func New(ctx context.Context, cli mqtt.Client, thingName string, dialer map[string]Dialer) (Tunnel, error) {
 	t := &tunnel{
 		thingName: thingName,
+		dialerMap: dialer,
 	}
 	if err := t.ServeMux.Handle(t.topic("notify"), mqtt.HandlerFunc(t.notify)); err != nil {
 		return nil, err
@@ -47,6 +51,13 @@ func (t *tunnel) notify(msg *mqtt.Message) {
 		t.handleError(err)
 		return
 	}
+	for _, srv := range n.Services {
+		if d, ok := t.dialerMap[srv]; ok {
+			go func() {
+				_ = proxy(context.Background(), d, n)
+			}()
+		}
+	}
 }
 
 func (t *tunnel) OnError(cb func(err error)) {
@@ -62,18 +73,4 @@ func (t *tunnel) handleError(err error) {
 	if cb != nil {
 		cb(err)
 	}
-}
-
-type ClientMode string
-
-const (
-	Source      ClientMode = "source"
-	Destination ClientMode = "destination"
-)
-
-type notification struct {
-	ClientAccessToken string   `json:"clientAccessToken"`
-	ClientMode        string   `json:"clientMode"`
-	Region            string   `json:"region"`
-	Services          []string `json:"services"`
 }
