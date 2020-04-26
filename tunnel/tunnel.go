@@ -54,7 +54,10 @@ func (t *tunnel) notify(msg *mqtt.Message) {
 	for _, srv := range n.Services {
 		if d, ok := t.dialerMap[srv]; ok {
 			go func() {
-				_ = proxy(context.Background(), d, n)
+				err := t.proxy(context.Background(), d, n)
+				if err != nil {
+					t.handleError(err)
+				}
 			}()
 		}
 	}

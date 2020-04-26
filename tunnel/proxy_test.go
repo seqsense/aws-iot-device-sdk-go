@@ -23,7 +23,8 @@ func TestProxyImpl(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		err := proxyImpl(nil,
+		tn := &tunnel{}
+		err := tn.proxyImpl(nil,
 			&mockCodec{
 				send: func(ws *websocket.Conn, v interface{}) error {
 					chWsSend <- v.([]byte)

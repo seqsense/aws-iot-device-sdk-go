@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
 	"golang.org/x/net/websocket"
@@ -33,7 +32,7 @@ type websocketCodec interface {
 	Receive(*websocket.Conn, interface{}) error
 }
 
-func proxy(ctx context.Context, dialer Dialer, notification *notification, opts ...proxyOption) error {
+func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *notification, opts ...proxyOption) error {
 	if notification.ClientMode != Destination {
 		return errors.New("unsupported client mode")
 	}
@@ -69,10 +68,10 @@ func proxy(ctx context.Context, dialer Dialer, notification *notification, opts 
 	}
 	ws.PayloadType = websocket.BinaryFrame
 
-	return proxyImpl(ws, websocket.Message, dialer)
+	return t.proxyImpl(ws, websocket.Message, dialer)
 }
 
-func proxyImpl(ws *websocket.Conn, codec websocketCodec, dialer Dialer) error {
+func (t *tunnel) proxyImpl(ws *websocket.Conn, codec websocketCodec, dialer Dialer) error {
 	conns := make(map[int32]io.ReadWriteCloser)
 	for {
 		var b []byte
@@ -84,19 +83,19 @@ func proxyImpl(ws *websocket.Conn, codec websocketCodec, dialer Dialer) error {
 			return err
 		}
 		if len(b) < 2 {
-			log.Printf("discarded short packet")
+			t.handleError(errors.New("discarded short packet"))
 			continue
 		}
 		m := &msg.Message{}
 		if err := proto.Unmarshal(b[2:], m); err != nil {
-			log.Printf("unmarshal failed: %v", err)
+			t.handleError(fmt.Errorf("unmarshal failed: %v", err))
 			continue
 		}
 		switch m.Type {
 		case msg.Message_STREAM_START:
 			conn, err := dialer()
 			if err != nil {
-				log.Printf("dial failed: %v", err)
+				t.handleError(fmt.Errorf("dial failed: %v", err))
 				continue
 			}
 
@@ -109,7 +108,7 @@ func proxyImpl(ws *websocket.Conn, codec websocketCodec, dialer Dialer) error {
 						if err == io.EOF {
 							return
 						}
-						log.Printf("connection closed: %v", err)
+						t.handleError(fmt.Errorf("connection closed: %v", err))
 						return
 					}
 					ms := &msg.Message{
@@ -119,7 +118,7 @@ func proxyImpl(ws *websocket.Conn, codec websocketCodec, dialer Dialer) error {
 					}
 					bs, err := proto.Marshal(ms)
 					if err != nil {
-						log.Printf("marshal failed: %v", err)
+						t.handleError(fmt.Errorf("marshal failed: %v", err))
 						continue
 					}
 					l := len(bs)
@@ -128,7 +127,7 @@ func proxyImpl(ws *websocket.Conn, codec websocketCodec, dialer Dialer) error {
 							byte(l >> 8), byte(l),
 						}, bs...),
 					); err != nil {
-						log.Printf("send failed: %v", err)
+						t.handleError(fmt.Errorf("send failed: %v", err))
 						return
 					}
 				}
@@ -150,7 +149,7 @@ func proxyImpl(ws *websocket.Conn, codec websocketCodec, dialer Dialer) error {
 		case msg.Message_DATA:
 			if conn, ok := conns[m.StreamId]; ok {
 				if _, err := conn.Write(m.Payload); err != nil {
-					log.Printf("write failed: %v", err)
+					t.handleError(fmt.Errorf("write failed: %v", err))
 				}
 			}
 		}
