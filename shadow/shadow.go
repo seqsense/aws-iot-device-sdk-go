@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/at-wat/mqtt-go"
+	"github.com/seqsense/aws-iot-device-sdk-go/v4"
 )
 
 // Shadow is an interface of Thing Shadow.
@@ -97,10 +98,10 @@ func (s *shadow) deleteRejected(msg *mqtt.Message) {
 }
 
 // New creates Thing Shadow interface.
-func New(ctx context.Context, cli mqtt.Client, thingName string) (Shadow, error) {
+func New(ctx context.Context, cli awsiotdev.Device) (Shadow, error) {
 	s := &shadow{
 		cli:       cli,
-		thingName: thingName,
+		thingName: cli.ThingName(),
 	}
 	for _, sub := range []struct {
 		topic   string
