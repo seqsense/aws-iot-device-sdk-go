@@ -28,6 +28,11 @@ func endpointHost(region string) string {
 // Dialer is a proxy destination dialer.
 type Dialer func() (io.ReadWriteCloser, error)
 
+type websocketCodec interface {
+	Send(*websocket.Conn, interface{}) error
+	Receive(*websocket.Conn, interface{}) error
+}
+
 func proxy(ctx context.Context, dialer Dialer, notification *notification, opts ...proxyOption) error {
 	if notification.ClientMode != Destination {
 		return errors.New("unsupported client mode")
@@ -64,16 +69,23 @@ func proxy(ctx context.Context, dialer Dialer, notification *notification, opts 
 	}
 	ws.PayloadType = websocket.BinaryFrame
 
-	conns := make(map[int32]io.ReadWriteCloser)
+	return proxyImpl(ws, websocket.Message, dialer)
+}
 
+func proxyImpl(ws *websocket.Conn, codec websocketCodec, dialer Dialer) error {
+	conns := make(map[int32]io.ReadWriteCloser)
 	for {
 		var b []byte
-		err := websocket.Message.Receive(ws, &b)
+		err := codec.Receive(ws, &b)
 		if err != nil {
 			if err == io.EOF {
 				return nil
 			}
 			return err
+		}
+		if len(b) < 2 {
+			log.Printf("discarded short packet")
+			continue
 		}
 		m := &msg.Message{}
 		if err := proto.Unmarshal(b[2:], m); err != nil {
@@ -111,7 +123,7 @@ func proxy(ctx context.Context, dialer Dialer, notification *notification, opts 
 						continue
 					}
 					l := len(bs)
-					if err := websocket.Message.Send(ws,
+					if err := codec.Send(ws,
 						append([]byte{
 							byte(l >> 8), byte(l),
 						}, bs...),
