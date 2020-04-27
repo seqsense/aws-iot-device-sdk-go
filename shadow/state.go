@@ -56,15 +56,15 @@ func (s *ThingDocument) update(state *thingDocumentRaw) error {
 	return nil
 }
 
-func (s *ThingDocument) updateDelta(state *thingDelta) (bool, error) {
+func (s *ThingDocument) updateDelta(state *thingDelta) bool {
 	if s.Version > state.Version {
 		// Received an old version; just ignore it.
-		return false, nil
+		return false
 	}
 	s.Version = state.Version
 	s.Timestamp = state.Timestamp
 	s.State.Delta = state.State
-	return true, nil
+	return true
 }
 
 func updateStateRaw(state map[string]interface{}, update json.RawMessage) error {

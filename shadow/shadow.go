@@ -75,11 +75,7 @@ func (s *shadow) updateDelta(msg *mqtt.Message) {
 		s.handleError(err)
 		return
 	}
-	ok, err := s.doc.updateDelta(state)
-	if err != nil {
-		s.handleError(err)
-		return
-	}
+	ok := s.doc.updateDelta(state)
 	if ok {
 		s.handleDelta(s.doc.State.Delta)
 	}
