@@ -12,36 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package awsiotdev implements offline queueing and reconnecting features of MQTT protocol.
 package awsiotdev
 
 import (
+	"testing"
+
 	"github.com/at-wat/mqtt-go"
 )
 
-// Device is an AWS IoT device.
-type Device interface {
-	mqtt.Client
-	ThingName() string
-}
-
-type device struct {
-	mqtt.Client
-	thingName string
-}
-
-// New creates AWS IoT device interface.
-func New(thingName string, dialer mqtt.Dialer, opts ...mqtt.ReconnectOption) (Device, error) {
-	cli, err := mqtt.NewReconnectClient(dialer, opts...)
+func TestNew(t *testing.T) {
+	const name = "thing_name1"
+	d, err := New(name, mqtt.DialerFunc(func() (mqtt.ClientCloser, error) {
+		return &mqtt.BaseClient{}, nil
+	}))
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
-	return &device{
-		Client:    cli,
-		thingName: thingName,
-	}, nil
-}
 
-func (d *device) ThingName() string {
-	return d.thingName
+	if d.ThingName() != name {
+		t.Errorf("ThingName differs, expected: %s, got: %s", name, d.ThingName())
+	}
 }
