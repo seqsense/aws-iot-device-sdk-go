@@ -1,0 +1,19 @@
+syntax = "proto3";
+option go_package = ".;msg";
+
+package msg;
+
+message Message {
+  Type  type      = 1;
+  int32 streamId  = 2;
+  bool  ignorable = 3;
+  bytes payload   = 4;
+
+  enum Type {
+    UNKNOWN       = 0;
+    DATA          = 1;
+    STREAM_START  = 2;
+    STREAM_RESET  = 3;
+    SESSION_RESET = 4;
+  }
+}

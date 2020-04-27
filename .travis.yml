@@ -28,7 +28,7 @@ script:
   - |
     echo "Enable coverage report"
     TEST_ARG="-coverprofile=coverage.txt -covermode=atomic -coverpkg=all"
-  - go test ${TEST_ARG} $(go list ./... | grep -v "/examples/")
+  - go test -v ${TEST_ARG} $(go list ./... | grep -v "/examples/")
   - go vet ./...
   - |
     if [ ${TRAVIS_GO_VERSION} == ${REVIEW_DOG_ON} ]; then
