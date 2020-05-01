@@ -38,7 +38,8 @@ func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *notific
 	}
 
 	opt := &proxyOpt{
-		scheme: "wss",
+		scheme:           "wss",
+		endpointHostFunc: endpointHost,
 	}
 	for _, o := range opts {
 		if err := o(opt); err != nil {
@@ -46,7 +47,7 @@ func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *notific
 		}
 	}
 
-	host := endpointHost(notification.Region)
+	host := opt.endpointHostFunc(notification.Region)
 	wsc, err := websocket.NewConfig(
 		fmt.Sprintf("%s://%s/tunnel?local-proxy-mode=destination", opt.scheme, host),
 		fmt.Sprintf("https://%s", host),
@@ -159,6 +160,14 @@ func (t *tunnel) proxyImpl(ws *websocket.Conn, codec websocketCodec, dialer Dial
 type proxyOption func(*proxyOpt) error
 
 type proxyOpt struct {
-	noTLS  bool
-	scheme string
+	noTLS            bool
+	scheme           string
+	endpointHostFunc func(string) string
+}
+
+func withEndpointHostFunc(f func(region string) string) proxyOption {
+	return func(opt *proxyOpt) error {
+		opt.endpointHostFunc = f
+		return nil
+	}
 }
