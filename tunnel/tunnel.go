@@ -21,31 +21,31 @@ type tunnel struct {
 	mu        sync.Mutex
 	onError   func(err error)
 	dialerMap map[string]Dialer
-	opts      *TunnelOptions
+	opts      *Options
 }
 
-// TunnelOptions stores options of the tunnel.
-type TunnelOptions struct {
+// Options stores options of the tunnel.
+type Options struct {
 	// EndpointHostFunc is a function returns secure proxy endpoint.
 	EndpointHostFunc func(region string) string
 	// TopicFunc is a function returns MQTT topic for the operation.
 	TopicFunc func(operation string) string
 }
 
-// TunnelOption is a type of functional options.
-type TunnelOption func(*TunnelOptions) error
+// Option is a type of functional options.
+type Option func(*Options) error
 
 func (t *tunnel) topic(operation string) string {
 	return "$aws/things/" + t.thingName + "/tunnels/" + operation
 }
 
 // New creates new secure tunneling proxy.
-func New(ctx context.Context, cli awsiotdev.Device, dialer map[string]Dialer, opts ...TunnelOption) (Tunnel, error) {
+func New(ctx context.Context, cli awsiotdev.Device, dialer map[string]Dialer, opts ...Option) (Tunnel, error) {
 	t := &tunnel{
 		thingName: cli.ThingName(),
 		dialerMap: dialer,
 	}
-	t.opts = &TunnelOptions{
+	t.opts = &Options{
 		TopicFunc:        t.topic,
 		EndpointHostFunc: endpointHost,
 	}
