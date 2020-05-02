@@ -69,7 +69,6 @@ func TestAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("%v", out)
-	select {}
 }
 
 func endpointForFunc(service, region string, opts ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
