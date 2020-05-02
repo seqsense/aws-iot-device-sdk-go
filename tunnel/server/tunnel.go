@@ -43,6 +43,7 @@ func (h *tunnelHandler) remove(id string) error {
 		return errors.New("tunnel not found")
 	}
 
+	ti.cancel()
 	delete(h.destToken, ti.destAccessToken)
 	delete(h.srcToken, ti.srcAccessToken)
 	delete(h.tunnels, id)
@@ -122,7 +123,7 @@ func (h *tunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 					select {
-					case <-ti.chClosed:
+					case <-ti.chDone:
 						return
 					case chWrite <- b:
 					}
@@ -130,7 +131,7 @@ func (h *tunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}()
 			for {
 				select {
-				case <-ti.chClosed:
+				case <-ti.chDone:
 					return
 				case b := <-chRead:
 					for p := 0; p < len(b); {

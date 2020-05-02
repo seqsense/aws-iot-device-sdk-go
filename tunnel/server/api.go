@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -37,12 +38,14 @@ func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput,
 		return nil, err
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), lifetime)
+
 	ti := &tunnelInfo{
 		thingName:       *in.DestinationConfig.ThingName,
 		destAccessToken: r1.String(),
 		srcAccessToken:  r2.String(),
-		expireAt:        time.Now().Add(lifetime),
-		chClosed:        make(chan struct{}),
+		chDone:          ctx.Done(),
+		cancel:          cancel,
 		chDestSrc:       make(chan []byte),
 		chSrcDest:       make(chan []byte),
 	}

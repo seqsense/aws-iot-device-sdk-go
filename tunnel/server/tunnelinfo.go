@@ -1,16 +1,12 @@
 package proxy
 
-import (
-	"time"
-)
-
 type tunnelInfo struct {
 	thingName       string
 	services        []string
 	destAccessToken string
 	srcAccessToken  string
-	expireAt        time.Time
-	chClosed        chan struct{}
+	chDone          <-chan struct{}
+	cancel          func()
 	chDestSrc       chan []byte
 	chSrcDest       chan []byte
 }
