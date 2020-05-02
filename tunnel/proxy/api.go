@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/private/protocol/json/jsonutil"
 	ist "github.com/aws/aws-sdk-go/service/iotsecuretunneling"
@@ -24,10 +26,21 @@ func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput,
 	if in.TimeoutConfig != nil && in.TimeoutConfig.MaxLifetimeTimeoutMinutes != nil {
 		lifetime = time.Minute * time.Duration(*in.TimeoutConfig.MaxLifetimeTimeoutMinutes)
 	}
+
+	r1, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+
+	r2, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+
 	ti := &tunnelInfo{
 		thingName:       *in.DestinationConfig.ThingName,
-		destAccessToken: "destAccessToken",
-		srcAccessToken:  "srcAccessToken",
+		destAccessToken: r1.String(),
+		srcAccessToken:  r2.String(),
 		expireAt:        time.Now().Add(lifetime),
 		chClosed:        make(chan struct{}),
 		chDestSrc:       make(chan []byte),
