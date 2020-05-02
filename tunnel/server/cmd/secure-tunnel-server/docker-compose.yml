@@ -1,0 +1,10 @@
+version: "2"
+services:
+  secure-tunnel-server:
+    build:
+      context: ../../../../
+      dockerfile: tunnel/server/cmd/secure-tunnel-server/Dockerfile
+  tlsoffloading:
+    build: tlsoffloading
+    ports:
+      - "443:443"
