@@ -29,6 +29,9 @@ func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput,
 		destAccessToken: "destAccessToken",
 		srcAccessToken:  "srcAccessToken",
 		expireAt:        time.Now().Add(lifetime),
+		chClosed:        make(chan struct{}),
+		chDestSrc:       make(chan []byte),
+		chSrcDest:       make(chan []byte),
 	}
 	for _, srv := range in.DestinationConfig.Services {
 		ti.services = append(ti.services, *srv)
