@@ -1,4 +1,4 @@
-package proxy
+package server
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 
 // apiHandler handles iotsecuretunneling API requests.
 type apiHandler struct {
-	tunnelHandler *tunnelHandler
+	tunnelHandler *TunnelHandler
 }
 
 func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput, error) {
@@ -126,7 +126,7 @@ func (h *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func newAPIHandler(tunnelHandler *tunnelHandler) http.Handler {
+func NewAPIHandler(tunnelHandler *TunnelHandler) http.Handler {
 	return &apiHandler{
 		tunnelHandler: tunnelHandler,
 	}

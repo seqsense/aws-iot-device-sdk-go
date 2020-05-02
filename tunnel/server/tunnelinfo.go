@@ -1,4 +1,4 @@
-package proxy
+package server
 
 type tunnelInfo struct {
 	thingName       string
