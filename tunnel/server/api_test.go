@@ -51,7 +51,7 @@ func TestAPI(t *testing.T) {
 		EndpointResolver: endpoints.ResolverFunc(endpointForFunc),
 		Credentials: credentials.NewStaticCredentials(
 			"ASIAZZZZZZZZZZZZZZZZ",
-			"55555/99999999999999999999999/g/2222/yyy",
+			"0000000000000000000000000000000000000000",
 			"",
 		),
 	}))
