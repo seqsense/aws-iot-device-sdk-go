@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -18,13 +19,14 @@ type tunnelHandler struct {
 	destToken map[string]*tunnelInfo
 	srcToken  map[string]*tunnelInfo
 	mu        sync.Mutex
+	id        uint32
 }
 
 func (h *tunnelHandler) add(ti *tunnelInfo) (string, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	id := "id"
+	id := fmt.Sprintf("%08x", h.id)
 	h.tunnels[id] = ti
 	h.destToken[ti.destAccessToken] = ti
 	h.srcToken[ti.srcAccessToken] = ti
