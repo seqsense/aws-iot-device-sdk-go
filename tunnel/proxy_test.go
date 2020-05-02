@@ -13,8 +13,7 @@ import (
 )
 
 func TestProxyImpl(t *testing.T) {
-	chWsSend := make(chan []byte)
-	chWsReceive := make(chan []byte)
+	tca, tcb := net.Pipe()
 	ca, cb := net.Pipe()
 
 	var wg sync.WaitGroup
@@ -24,21 +23,7 @@ func TestProxyImpl(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		tn := &tunnel{}
-		err := tn.proxyImpl(nil,
-			&mockCodec{
-				send: func(ws *websocket.Conn, v interface{}) error {
-					chWsSend <- v.([]byte)
-					return nil
-				},
-				receive: func(ws *websocket.Conn, v interface{}) error {
-					var ok bool
-					*(v.(*[]byte)), ok = <-chWsReceive
-					if !ok {
-						return io.EOF
-					}
-					return nil
-				},
-			},
+		err := tn.proxyImpl(tca,
 			func() (io.ReadWriteCloser, error) {
 				return cb, nil
 			},
@@ -69,10 +54,13 @@ func TestProxyImpl(t *testing.T) {
 			t.Fatal(err)
 		}
 		l := len(b)
-		chWsReceive <- append(
+		_, err = tcb.Write(append(
 			[]byte{byte(l >> 8), byte(l)},
 			b...,
-		)
+		))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	bRecv := make([]byte, 100)
 	n, err := ca.Read(bRecv)
@@ -87,9 +75,16 @@ func TestProxyImpl(t *testing.T) {
 	if _, err := ca.Write([]byte(payload2)); err != nil {
 		t.Fatal(err)
 	}
-	bSent := <-chWsSend
+	sz := make([]byte, 2)
+	if _, err := io.ReadFull(tcb, sz); err != nil {
+		t.Fatal(err)
+	}
+	bSent := make([]byte, int(sz[0])<<8|int(sz[1]))
+	if _, err := io.ReadFull(tcb, bSent); err != nil {
+		t.Fatal(err)
+	}
 	m := &msg.Message{}
-	if err := proto.Unmarshal(bSent[2:], m); err != nil {
+	if err := proto.Unmarshal(bSent, m); err != nil {
 		t.Fatalf("unmarshal failed: %v", err)
 	}
 	msgExpected := &msg.Message{
@@ -102,7 +97,9 @@ func TestProxyImpl(t *testing.T) {
 	}
 
 	// Check EOF
-	close(chWsReceive)
+	if err := tcb.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 type mockCodec struct {
