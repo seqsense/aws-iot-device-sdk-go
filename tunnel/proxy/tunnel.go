@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -94,10 +93,22 @@ func (h *tunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}()
 
 			go func() {
-				b := make([]byte, 8192)
 				for {
-					n, err := ws.Read(b)
-					if err != nil {
+					b := make([]byte, 8192)
+					if _, err := io.ReadFull(ws, b[:2]); err != nil {
+						if err == io.EOF {
+							return
+						}
+						log.Print(err)
+						return
+					}
+					l := int(b[0])<<8 | int(b[1])
+					if cap(b) < l+2 {
+						b = make([]byte, l+2)
+						b[0], b[1] = byte(l>>8), byte(l)
+					}
+					b = b[:l+2]
+					if _, err := io.ReadFull(ws, b[2:]); err != nil {
 						if err == io.EOF {
 							return
 						}
@@ -107,7 +118,7 @@ func (h *tunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					select {
 					case <-ti.chClosed:
 						return
-					case chWrite <- b[:n]:
+					case chWrite <- b:
 					}
 				}
 			}()
@@ -116,9 +127,13 @@ func (h *tunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				case <-ti.chClosed:
 					return
 				case b := <-chRead:
-					if _, err := ws.Write(b); err != nil {
-						log.Print(err)
-						return
+					for p := 0; p < len(b); {
+						n, err := ws.Write(b[p:])
+						if err != nil {
+							log.Print(err)
+							return
+						}
+						p += n
 					}
 				}
 			}
