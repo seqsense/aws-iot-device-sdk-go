@@ -20,13 +20,15 @@ func TestAPI(t *testing.T) {
 
 	tunnelHandler := newTunnelHandler()
 	apiHandler := newAPIHandler(tunnelHandler)
+	mux := http.NewServeMux()
+	mux.Handle("/", apiHandler)
+	mux.Handle("/tunnel", tunnelHandler)
 
 	s := &http.Server{
-		Addr:           ":8080",
-		Handler:        apiHandler,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
+		Addr:         ":8080",
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 	defer func() {
 		if err := s.Close(); err != nil {
@@ -67,6 +69,7 @@ func TestAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("%v", out)
+	select {}
 }
 
 func endpointForFunc(service, region string, opts ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
@@ -79,5 +82,3 @@ func endpointForFunc(service, region string, opts ...func(*endpoints.Options)) (
 		SigningMethod:      "v4",
 	}, nil
 }
-
-//default ep: {URL:http://api.tunneling.iot.nothing.amazonaws.com PartitionID:aws SigningRegion:nothing SigningName:api.tunneling.iot SigningNameDerived:true SigningMethod:v4}
