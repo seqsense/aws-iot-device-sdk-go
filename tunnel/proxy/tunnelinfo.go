@@ -10,4 +10,7 @@ type tunnelInfo struct {
 	destAccessToken string
 	srcAccessToken  string
 	expireAt        time.Time
+	chClosed        chan struct{}
+	chDestSrc       chan []byte
+	chSrcDest       chan []byte
 }
