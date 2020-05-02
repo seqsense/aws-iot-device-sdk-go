@@ -69,26 +69,33 @@ func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *notific
 	}
 	ws.PayloadType = websocket.BinaryFrame
 
-	return t.proxyImpl(ws, websocket.Message, dialer)
+	return t.proxyImpl(ws, dialer)
 }
 
-func (t *tunnel) proxyImpl(ws *websocket.Conn, codec websocketCodec, dialer Dialer) error {
+func (t *tunnel) proxyImpl(ws io.ReadWriter, dialer Dialer) error {
 	conns := make(map[int32]io.ReadWriteCloser)
+	sz := make([]byte, 2)
+	b := make([]byte, 8192)
 	for {
-		var b []byte
-		err := codec.Receive(ws, &b)
-		if err != nil {
+		if _, err := io.ReadFull(ws, sz); err != nil {
 			if err == io.EOF {
 				return nil
 			}
 			return err
 		}
-		if len(b) < 2 {
-			t.handleError(errors.New("discarded short packet"))
-			continue
+		l := int(sz[0])<<8 | int(sz[1])
+		if cap(b) < l {
+			b = make([]byte, l)
+		}
+		b = b[:l]
+		if _, err := io.ReadFull(ws, b); err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
 		}
 		m := &msg.Message{}
-		if err := proto.Unmarshal(b[2:], m); err != nil {
+		if err := proto.Unmarshal(b, m); err != nil {
 			t.handleError(fmt.Errorf("unmarshal failed: %v", err))
 			continue
 		}
@@ -123,7 +130,7 @@ func (t *tunnel) proxyImpl(ws *websocket.Conn, codec websocketCodec, dialer Dial
 						continue
 					}
 					l := len(bs)
-					if err := codec.Send(ws,
+					if _, err := ws.Write(
 						append([]byte{
 							byte(l >> 8), byte(l),
 						}, bs...),
