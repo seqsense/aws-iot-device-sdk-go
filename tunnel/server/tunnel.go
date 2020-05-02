@@ -1,4 +1,4 @@
-package proxy
+package server
 
 import (
 	"errors"
@@ -13,8 +13,8 @@ import (
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel"
 )
 
-// tunnelHandler handles websocket based secure tunneling sessions.
-type tunnelHandler struct {
+// TunnelHandler handles websocket based secure tunneling sessions.
+type TunnelHandler struct {
 	tunnels   map[string]*tunnelInfo
 	destToken map[string]*tunnelInfo
 	srcToken  map[string]*tunnelInfo
@@ -22,7 +22,7 @@ type tunnelHandler struct {
 	id        uint32
 }
 
-func (h *tunnelHandler) add(ti *tunnelInfo) (string, error) {
+func (h *TunnelHandler) add(ti *tunnelInfo) (string, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -34,7 +34,7 @@ func (h *tunnelHandler) add(ti *tunnelInfo) (string, error) {
 	return id, nil
 }
 
-func (h *tunnelHandler) remove(id string) error {
+func (h *TunnelHandler) remove(id string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -51,7 +51,7 @@ func (h *tunnelHandler) remove(id string) error {
 	return nil
 }
 
-func (h *tunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *TunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a, ok := r.Header["Access-Token"]
 	if !ok || len(a) != 1 {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -149,8 +149,8 @@ func (h *tunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.ServeHTTP(w, r)
 }
 
-func newTunnelHandler() *tunnelHandler {
-	return &tunnelHandler{
+func NewTunnelHandler() *TunnelHandler {
+	return &TunnelHandler{
 		tunnels:   make(map[string]*tunnelInfo),
 		destToken: make(map[string]*tunnelInfo),
 		srcToken:  make(map[string]*tunnelInfo),

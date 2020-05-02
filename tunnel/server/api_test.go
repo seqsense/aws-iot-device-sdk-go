@@ -1,4 +1,4 @@
-package proxy
+package server
 
 import (
 	"fmt"
@@ -18,8 +18,8 @@ func TestAPI(t *testing.T) {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
-	tunnelHandler := newTunnelHandler()
-	apiHandler := newAPIHandler(tunnelHandler)
+	tunnelHandler := NewTunnelHandler()
+	apiHandler := NewAPIHandler(tunnelHandler)
 	mux := http.NewServeMux()
 	mux.Handle("/", apiHandler)
 	mux.Handle("/tunnel", tunnelHandler)
