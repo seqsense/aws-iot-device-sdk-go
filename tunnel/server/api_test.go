@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"testing"
@@ -25,7 +26,6 @@ func TestAPI(t *testing.T) {
 	mux.Handle("/tunnel", tunnelHandler)
 
 	s := &http.Server{
-		Addr:         ":8080",
 		Handler:      mux,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -35,10 +35,16 @@ func TestAPI(t *testing.T) {
 			t.Error(err)
 		}
 	}()
+
+	ln, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		switch err := s.ListenAndServe(); err {
+		switch err := s.Serve(ln); err {
 		case http.ErrServerClosed, nil:
 		default:
 			t.Error(err)
@@ -48,7 +54,7 @@ func TestAPI(t *testing.T) {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region:           aws.String("nothing"),
 		DisableSSL:       aws.Bool(true),
-		EndpointResolver: endpoints.ResolverFunc(endpointForFunc),
+		EndpointResolver: newEndpointForFunc(ln.Addr().(*net.TCPAddr).Port),
 		Credentials: credentials.NewStaticCredentials(
 			"ASIAZZZZZZZZZZZZZZZZ",
 			"0000000000000000000000000000000000000000",
@@ -71,13 +77,15 @@ func TestAPI(t *testing.T) {
 	t.Logf("%v", out)
 }
 
-func endpointForFunc(service, region string, opts ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
-	return endpoints.ResolvedEndpoint{
-		URL:                fmt.Sprintf("http://localhost:8080"),
-		PartitionID:        "clone",
-		SigningRegion:      region,
-		SigningName:        service,
-		SigningNameDerived: true,
-		SigningMethod:      "v4",
-	}, nil
+func newEndpointForFunc(port int) endpoints.Resolver {
+	return endpoints.ResolverFunc(func(service, region string, opts ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
+		return endpoints.ResolvedEndpoint{
+			URL:                fmt.Sprintf("http://localhost:%d", port),
+			PartitionID:        "clone",
+			SigningRegion:      region,
+			SigningName:        service,
+			SigningNameDerived: true,
+			SigningMethod:      "v4",
+		}, nil
+	})
 }
