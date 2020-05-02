@@ -67,14 +67,18 @@ func (h *tunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.mu.Lock()
 		ti, ok = h.srcToken[a[0]]
 		h.mu.Unlock()
-		chRead = ti.chDestSrc
-		chWrite = ti.chSrcDest
+		if ok {
+			chRead = ti.chDestSrc
+			chWrite = ti.chSrcDest
+		}
 	case tunnel.Destination:
 		h.mu.Lock()
 		ti, ok = h.destToken[a[0]]
 		h.mu.Unlock()
-		chRead = ti.chSrcDest
-		chWrite = ti.chDestSrc
+		if ok {
+			chRead = ti.chSrcDest
+			chWrite = ti.chDestSrc
+		}
 	default:
 		http.Error(w, "Invalid local-proxy-mode", http.StatusBadRequest)
 		return
