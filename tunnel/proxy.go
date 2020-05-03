@@ -27,7 +27,7 @@ func endpointHost(region string) string {
 // Dialer is a proxy destination dialer.
 type Dialer func() (io.ReadWriteCloser, error)
 
-func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *notification, opts ...proxyOption) error {
+func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *Notification, opts ...proxyOption) error {
 	if notification.ClientMode != Destination {
 		return errors.New("unsupported client mode")
 	}

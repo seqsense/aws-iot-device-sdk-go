@@ -12,11 +12,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/private/protocol/json/jsonutil"
 	ist "github.com/aws/aws-sdk-go/service/iotsecuretunneling"
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel"
 )
 
 // apiHandler handles iotsecuretunneling API requests.
 type apiHandler struct {
 	tunnelHandler *TunnelHandler
+	notifier      *Notifier
 }
 
 func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput, error) {
@@ -56,6 +58,21 @@ func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput,
 	id, err := h.tunnelHandler.add(ti)
 	if err != nil {
 		return nil, err
+	}
+
+	if h.notifier != nil {
+		if err := h.notifier.notify(
+			context.TODO(),
+			*in.DestinationConfig.ThingName,
+			&tunnel.Notification{
+				ClientAccessToken: ti.destAccessToken,
+				ClientMode:        tunnel.Destination,
+				Region:            "",
+				Services:          ti.services,
+			},
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	return &ist.OpenTunnelOutput{
@@ -126,8 +143,10 @@ func (h *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NewAPIHandler(tunnelHandler *TunnelHandler) http.Handler {
+// NewAPIHandler creates http handler of secure tunnel API.
+func NewAPIHandler(tunnelHandler *TunnelHandler, notifier *Notifier) http.Handler {
 	return &apiHandler{
 		tunnelHandler: tunnelHandler,
+		notifier:      notifier,
 	}
 }

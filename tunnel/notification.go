@@ -13,7 +13,8 @@ const (
 	Destination ClientMode = "destination"
 )
 
-type notification struct {
+// Notification represents notify message.
+type Notification struct {
 	ClientAccessToken string     `json:"clientAccessToken"`
 	ClientMode        ClientMode `json:"clientMode"`
 	Region            string     `json:"region"`

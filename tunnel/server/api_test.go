@@ -20,7 +20,7 @@ func TestAPI(t *testing.T) {
 	defer wg.Wait()
 
 	tunnelHandler := NewTunnelHandler()
-	apiHandler := NewAPIHandler(tunnelHandler)
+	apiHandler := NewAPIHandler(tunnelHandler, nil)
 	mux := http.NewServeMux()
 	mux.Handle("/", apiHandler)
 	mux.Handle("/tunnel", tunnelHandler)
