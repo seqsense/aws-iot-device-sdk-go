@@ -149,6 +149,7 @@ func (h *TunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.ServeHTTP(w, r)
 }
 
+// NewTunnelHandler creates tunnel WebSocket handler.
 func NewTunnelHandler() *TunnelHandler {
 	return &TunnelHandler{
 		tunnels:   make(map[string]*tunnelInfo),

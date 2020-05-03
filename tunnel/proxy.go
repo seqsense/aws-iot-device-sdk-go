@@ -32,7 +32,7 @@ type websocketCodec interface {
 	Receive(*websocket.Conn, interface{}) error
 }
 
-func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *notification, opts ...proxyOption) error {
+func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *Notification, opts ...proxyOption) error {
 	if notification.ClientMode != Destination {
 		return errors.New("unsupported client mode")
 	}
