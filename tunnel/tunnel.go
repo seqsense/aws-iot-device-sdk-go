@@ -21,24 +21,46 @@ type tunnel struct {
 	mu        sync.Mutex
 	onError   func(err error)
 	dialerMap map[string]Dialer
+	opts      *Options
 }
+
+// Options stores options of the tunnel.
+type Options struct {
+	// EndpointHostFunc is a function returns secure proxy endpoint.
+	EndpointHostFunc func(region string) string
+	// TopicFunc is a function returns MQTT topic for the operation.
+	TopicFunc func(operation string) string
+}
+
+// Option is a type of functional options.
+type Option func(*Options) error
 
 func (t *tunnel) topic(operation string) string {
 	return "$aws/things/" + t.thingName + "/tunnels/" + operation
 }
 
 // New creates new secure tunneling proxy.
-func New(ctx context.Context, cli awsiotdev.Device, dialer map[string]Dialer) (Tunnel, error) {
+func New(ctx context.Context, cli awsiotdev.Device, dialer map[string]Dialer, opts ...Option) (Tunnel, error) {
 	t := &tunnel{
 		thingName: cli.ThingName(),
 		dialerMap: dialer,
 	}
-	if err := t.ServeMux.Handle(t.topic("notify"), mqtt.HandlerFunc(t.notify)); err != nil {
+	t.opts = &Options{
+		TopicFunc:        t.topic,
+		EndpointHostFunc: endpointHost,
+	}
+	for _, o := range opts {
+		if err := o(t.opts); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := t.ServeMux.Handle(t.opts.TopicFunc("notify"), mqtt.HandlerFunc(t.notify)); err != nil {
 		return nil, err
 	}
 
 	err := cli.Subscribe(ctx,
-		mqtt.Subscription{Topic: t.topic("notify"), QoS: mqtt.QoS1},
+		mqtt.Subscription{Topic: t.opts.TopicFunc("notify"), QoS: mqtt.QoS1},
 	)
 	if err != nil {
 		return nil, err
