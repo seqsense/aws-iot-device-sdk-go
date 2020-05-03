@@ -29,7 +29,11 @@ func main() {
 	var notifier *server.Notifier
 	if *mqttEndpoint != "" {
 		sess := session.Must(session.NewSession())
-		dialer, err := awsiot.NewPresignDialer(sess, *mqttEndpoint)
+		dialer, err := awsiot.NewPresignDialer(sess, *mqttEndpoint,
+			mqtt.WithConnStateHandler(func(s mqtt.ConnState, err error) {
+				log.Printf("MQTT connection state changed (%s)", s)
+			}),
+		)
 		if err != nil {
 			log.Fatalf("Failed to create AWS IoT presign dialer (%s)", err.Error())
 		}
