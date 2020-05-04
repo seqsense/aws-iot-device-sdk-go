@@ -3,7 +3,6 @@ package tunnel
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,15 +23,10 @@ func endpointHost(region string) string {
 // Dialer is a proxy destination dialer.
 type Dialer func() (io.ReadWriteCloser, error)
 
-// Proxy local connection via IoT secure tunneling.
-func Proxy(ctx context.Context, dialer Dialer, notification *Notification, opts ...proxyOption) error {
-	if notification.ClientMode != Destination {
-		return errors.New("unsupported client mode")
-	}
-
+// ProxyDestination local connection via IoT secure tunneling.
+func ProxyDestination(ctx context.Context, dialer Dialer, endpoint, token string, opts ...ProxyOption) error {
 	opt := &ProxyOptions{
-		Scheme:           "wss",
-		EndpointHostFunc: endpointHost,
+		Scheme: "wss",
 	}
 	for _, o := range opts {
 		if err := o(opt); err != nil {
@@ -40,19 +34,18 @@ func Proxy(ctx context.Context, dialer Dialer, notification *Notification, opts 
 		}
 	}
 
-	host := opt.EndpointHostFunc(notification.Region)
 	wsc, err := websocket.NewConfig(
-		fmt.Sprintf("%s://%s/tunnel?local-proxy-mode=destination", opt.Scheme, host),
-		fmt.Sprintf("https://%s", host),
+		fmt.Sprintf("%s://%s/tunnel?local-proxy-mode=destination", opt.Scheme, endpoint),
+		fmt.Sprintf("https://%s", endpoint),
 	)
 	if err != nil {
 		return err
 	}
 	if !opt.NoTLS {
-		wsc.TlsConfig = &tls.Config{ServerName: host}
+		wsc.TlsConfig = &tls.Config{ServerName: endpoint}
 	}
 	wsc.Header = http.Header{
-		"Access-Token": []string{notification.ClientAccessToken},
+		"Access-Token": []string{token},
 		"User-Agent":   []string{userAgent},
 	}
 	wsc.Protocol = append(wsc.Protocol, websocketProtocol)
@@ -81,18 +74,9 @@ type ProxyOption func(*ProxyOptions) error
 
 // ProxyOptions stores options of the proxy.
 type ProxyOptions struct {
-	NoTLS            bool
-	Scheme           string
-	EndpointHostFunc func(string) string
-	ErrorHandler     ErrorHandler
-}
-
-// WithEndpointHostFunc sets a function to return proxy endpoint host.
-func WithEndpointHostFunc(f func(region string) string) ProxyOption {
-	return func(opt *ProxyOptions) error {
-		opt.EndpointHostFunc = f
-		return nil
-	}
+	NoTLS        bool
+	Scheme       string
+	ErrorHandler ErrorHandler
 }
 
 // WithErrorHandler sets a ErrorHandler.
