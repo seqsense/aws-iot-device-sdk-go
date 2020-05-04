@@ -12,7 +12,7 @@ import (
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel/msg"
 )
 
-func TestProxyImpl(t *testing.T) {
+func TestProxyDestination(t *testing.T) {
 	tca, tcb := net.Pipe()
 	ca, cb := net.Pipe()
 
