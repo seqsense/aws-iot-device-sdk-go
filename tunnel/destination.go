@@ -9,7 +9,7 @@ import (
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel/msg"
 )
 
-func proxyDestinationImpl(ws io.ReadWriter, dialer Dialer, eh ErrorHandler) error {
+func proxyDestination(ws io.ReadWriter, dialer Dialer, eh ErrorHandler) error {
 	conns := make(map[int32]io.ReadWriteCloser)
 	sz := make([]byte, 2)
 	b := make([]byte, 8192)
