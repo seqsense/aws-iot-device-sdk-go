@@ -77,7 +77,9 @@ func (t *tunnel) notify(msg *mqtt.Message) {
 	for _, srv := range n.Services {
 		if d, ok := t.dialerMap[srv]; ok {
 			go func() {
-				err := t.proxy(context.Background(), d, n)
+				err := Proxy(context.Background(), d, n,
+					WithErrorHandler(errorHandlerFunc(t.handleError)),
+				)
 				if err != nil {
 					t.handleError(err)
 				}
