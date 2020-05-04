@@ -55,7 +55,7 @@ func ProxyDestination(ctx context.Context, dialer Dialer, endpoint, token string
 	}
 	ws.PayloadType = websocket.BinaryFrame
 
-	return proxyDestinationImpl(ws, dialer, opt.ErrorHandler)
+	return proxyDestination(ws, dialer, opt.ErrorHandler)
 }
 
 // ErrorHandler is an interface to handler error.

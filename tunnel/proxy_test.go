@@ -21,11 +21,11 @@ func TestProxyImpl(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		tn := &tunnel{}
-		err := tn.proxyImpl(tca,
+		err := proxyDestination(tca,
 			func() (io.ReadWriteCloser, error) {
 				return cb, nil
 			},
+			nil,
 		)
 		if err != nil {
 			t.Error(err)
