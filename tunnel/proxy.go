@@ -27,11 +27,6 @@ func endpointHost(region string) string {
 // Dialer is a proxy destination dialer.
 type Dialer func() (io.ReadWriteCloser, error)
 
-type websocketCodec interface {
-	Send(*websocket.Conn, interface{}) error
-	Receive(*websocket.Conn, interface{}) error
-}
-
 func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *notification, opts ...proxyOption) error {
 	if notification.ClientMode != Destination {
 		return errors.New("unsupported client mode")

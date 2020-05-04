@@ -6,7 +6,6 @@ import (
 	"sync"
 	"testing"
 
-	"golang.org/x/net/websocket"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel/msg"
@@ -100,17 +99,4 @@ func TestProxyImpl(t *testing.T) {
 	if err := tcb.Close(); err != nil {
 		t.Fatal(err)
 	}
-}
-
-type mockCodec struct {
-	send    func(ws *websocket.Conn, v interface{}) error
-	receive func(ws *websocket.Conn, v interface{}) error
-}
-
-func (c *mockCodec) Send(ws *websocket.Conn, v interface{}) error {
-	return c.send(ws, v)
-}
-
-func (c *mockCodec) Receive(ws *websocket.Conn, v interface{}) error {
-	return c.receive(ws, v)
 }
