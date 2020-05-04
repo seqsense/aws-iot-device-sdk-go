@@ -9,9 +9,6 @@ import (
 	"net/http"
 
 	"golang.org/x/net/websocket"
-	"google.golang.org/protobuf/proto"
-
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel/msg"
 )
 
 const (
@@ -27,14 +24,15 @@ func endpointHost(region string) string {
 // Dialer is a proxy destination dialer.
 type Dialer func() (io.ReadWriteCloser, error)
 
-func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *notification, opts ...proxyOption) error {
+// Proxy local connection via IoT secure tunneling.
+func Proxy(ctx context.Context, dialer Dialer, notification *notification, opts ...ProxyOption) error {
 	if notification.ClientMode != Destination {
 		return errors.New("unsupported client mode")
 	}
 
-	opt := &proxyOpt{
-		scheme:           "wss",
-		endpointHostFunc: endpointHost,
+	opt := &ProxyOptions{
+		Scheme:           "wss",
+		EndpointHostFunc: endpointHost,
 	}
 	for _, o := range opts {
 		if err := o(opt); err != nil {
@@ -42,15 +40,15 @@ func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *notific
 		}
 	}
 
-	host := opt.endpointHostFunc(notification.Region)
+	host := opt.EndpointHostFunc(notification.Region)
 	wsc, err := websocket.NewConfig(
-		fmt.Sprintf("%s://%s/tunnel?local-proxy-mode=destination", opt.scheme, host),
+		fmt.Sprintf("%s://%s/tunnel?local-proxy-mode=destination", opt.Scheme, host),
 		fmt.Sprintf("https://%s", host),
 	)
 	if err != nil {
 		return err
 	}
-	if !opt.noTLS {
+	if !opt.NoTLS {
 		wsc.TlsConfig = &tls.Config{ServerName: host}
 	}
 	wsc.Header = http.Header{
@@ -64,112 +62,43 @@ func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *notific
 	}
 	ws.PayloadType = websocket.BinaryFrame
 
-	return t.proxyImpl(ws, dialer)
+	return proxyDestinationImpl(ws, dialer, opt.ErrorHandler)
 }
 
-func (t *tunnel) proxyImpl(ws io.ReadWriter, dialer Dialer) error {
-	conns := make(map[int32]io.ReadWriteCloser)
-	sz := make([]byte, 2)
-	b := make([]byte, 8192)
-	for {
-		if _, err := io.ReadFull(ws, sz); err != nil {
-			if err == io.EOF {
-				return nil
-			}
-			return err
-		}
-		l := int(sz[0])<<8 | int(sz[1])
-		if cap(b) < l {
-			b = make([]byte, l)
-		}
-		b = b[:l]
-		if _, err := io.ReadFull(ws, b); err != nil {
-			if err == io.EOF {
-				return nil
-			}
-			return err
-		}
-		m := &msg.Message{}
-		if err := proto.Unmarshal(b, m); err != nil {
-			t.handleError(fmt.Errorf("unmarshal failed: %v", err))
-			continue
-		}
-		switch m.Type {
-		case msg.Message_STREAM_START:
-			conn, err := dialer()
-			if err != nil {
-				t.handleError(fmt.Errorf("dial failed: %v", err))
-				continue
-			}
+// ErrorHandler is an interface to handler error.
+type ErrorHandler interface {
+	HandleError(error)
+}
 
-			conns[m.StreamId] = conn
-			go func() {
-				b := make([]byte, 8192)
-				for {
-					n, err := conn.Read(b)
-					if err != nil {
-						if err == io.EOF {
-							return
-						}
-						t.handleError(fmt.Errorf("connection closed: %v", err))
-						return
-					}
-					ms := &msg.Message{
-						Type:     msg.Message_DATA,
-						StreamId: m.StreamId,
-						Payload:  b[:n],
-					}
-					bs, err := proto.Marshal(ms)
-					if err != nil {
-						t.handleError(fmt.Errorf("marshal failed: %v", err))
-						continue
-					}
-					l := len(bs)
-					if _, err := ws.Write(
-						append([]byte{
-							byte(l >> 8), byte(l),
-						}, bs...),
-					); err != nil {
-						t.handleError(fmt.Errorf("send failed: %v", err))
-						return
-					}
-				}
-			}()
+type errorHandlerFunc func(error)
 
-		case msg.Message_STREAM_RESET:
-			if conn, ok := conns[m.StreamId]; ok {
-				_ = conn.Close()
-				delete(conns, m.StreamId)
-			}
+func (f errorHandlerFunc) HandleError(err error) {
+	f(err)
+}
 
-		case msg.Message_SESSION_RESET:
-			for id, c := range conns {
-				_ = c.Close()
-				delete(conns, id)
-			}
-			return io.EOF
+// ProxyOption is a type of functional options.
+type ProxyOption func(*ProxyOptions) error
 
-		case msg.Message_DATA:
-			if conn, ok := conns[m.StreamId]; ok {
-				if _, err := conn.Write(m.Payload); err != nil {
-					t.handleError(fmt.Errorf("write failed: %v", err))
-				}
-			}
-		}
+// ProxyOptions stores options of the proxy.
+type ProxyOptions struct {
+	NoTLS            bool
+	Scheme           string
+	EndpointHostFunc func(string) string
+	ErrorHandler     ErrorHandler
+}
+
+// WithEndpointHostFunc sets a function to return proxy endpoint host.
+func WithEndpointHostFunc(f func(region string) string) ProxyOption {
+	return func(opt *ProxyOptions) error {
+		opt.EndpointHostFunc = f
+		return nil
 	}
 }
 
-type proxyOption func(*proxyOpt) error
-
-type proxyOpt struct {
-	noTLS            bool
-	scheme           string
-	endpointHostFunc func(string) string
-}
-
-func withEndpointHostFunc(f func(region string) string) proxyOption {
-	return func(opt *proxyOpt) error {
-		opt.endpointHostFunc = f
+// WithErrorHandler sets a ErrorHandler.
+func WithErrorHandler(h ErrorHandler) ProxyOption {
+	return func(opt *ProxyOptions) error {
+		opt.ErrorHandler = h
 		return nil
 	}
 }
