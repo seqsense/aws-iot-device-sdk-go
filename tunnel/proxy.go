@@ -59,7 +59,7 @@ func (t *tunnel) proxy(ctx context.Context, dialer Dialer, notification *notific
 		wsc.TlsConfig = &tls.Config{ServerName: host}
 	}
 	wsc.Header = http.Header{
-		"access-token": []string{notification.ClientAccessToken},
+		"Access-Token": []string{notification.ClientAccessToken},
 		"User-Agent":   []string{userAgent},
 	}
 	wsc.Protocol = append(wsc.Protocol, websocketProtocol)
