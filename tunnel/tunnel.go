@@ -83,7 +83,7 @@ func (t *tunnel) notify(msg *mqtt.Message) {
 		if d, ok := t.dialerMap[srv]; ok {
 			go func() {
 				err := ProxyDestination(
-					context.Background(), d,
+					d,
 					t.opts.EndpointHostFunc(n.Region),
 					n.ClientAccessToken,
 					WithErrorHandler(errorHandlerFunc(t.handleError)),

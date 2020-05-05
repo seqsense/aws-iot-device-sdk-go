@@ -1,10 +1,10 @@
 package tunnel
 
 import (
-	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 
 	"golang.org/x/net/websocket"
@@ -24,22 +24,39 @@ func endpointHost(region string) string {
 type Dialer func() (io.ReadWriteCloser, error)
 
 // ProxyDestination local connection via IoT secure tunneling.
-func ProxyDestination(ctx context.Context, dialer Dialer, endpoint, token string, opts ...ProxyOption) error {
+func ProxyDestination(dialer Dialer, endpoint, token string, opts ...ProxyOption) error {
+	ws, opt, err := openProxyConn(endpoint, token, "destination", opts...)
+	if err != nil {
+		return err
+	}
+	return proxyDestination(ws, dialer, opt.ErrorHandler)
+}
+
+// ProxySource local connection via IoT secure tunneling.
+func ProxySource(listener net.Listener, endpoint, token string, opts ...ProxyOption) error {
+	ws, opt, err := openProxyConn(endpoint, token, "source", opts...)
+	if err != nil {
+		return err
+	}
+	return proxySource(ws, listener, opt.ErrorHandler)
+}
+
+func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (io.ReadWriter, *ProxyOptions, error) {
 	opt := &ProxyOptions{
 		Scheme: "wss",
 	}
 	for _, o := range opts {
 		if err := o(opt); err != nil {
-			return err
+			return nil, nil, err
 		}
 	}
 
 	wsc, err := websocket.NewConfig(
-		fmt.Sprintf("%s://%s/tunnel?local-proxy-mode=destination", opt.Scheme, endpoint),
+		fmt.Sprintf("%s://%s/tunnel?local-proxy-mode=%s", opt.Scheme, endpoint, mode),
 		fmt.Sprintf("https://%s", endpoint),
 	)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	if !opt.NoTLS {
 		wsc.TlsConfig = &tls.Config{ServerName: endpoint}
@@ -51,11 +68,11 @@ func ProxyDestination(ctx context.Context, dialer Dialer, endpoint, token string
 	wsc.Protocol = append(wsc.Protocol, websocketProtocol)
 	ws, err := websocket.DialConfig(wsc)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	ws.PayloadType = websocket.BinaryFrame
 
-	return proxyDestination(ws, dialer, opt.ErrorHandler)
+	return ws, opt, nil
 }
 
 // ErrorHandler is an interface to handler error.
