@@ -15,11 +15,10 @@ func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler) error
 	var muConns sync.Mutex
 	conns := make(map[int32]io.ReadWriteCloser)
 	go func() {
-		var streamID int32
+		var streamID int32 = 1
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
-				// Exit main routine
 				return
 			}
 
