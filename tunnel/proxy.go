@@ -25,7 +25,7 @@ type Dialer func() (io.ReadWriteCloser, error)
 
 // ProxyDestination local connection via IoT secure tunneling.
 func ProxyDestination(dialer Dialer, endpoint, token string, opts ...ProxyOption) error {
-	ws, opt, err := openProxyConn(endpoint, token, "destination", opts...)
+	ws, opt, err := openProxyConn(endpoint, "destination", token, opts...)
 	if err != nil {
 		return err
 	}
@@ -34,7 +34,7 @@ func ProxyDestination(dialer Dialer, endpoint, token string, opts ...ProxyOption
 
 // ProxySource local connection via IoT secure tunneling.
 func ProxySource(listener net.Listener, endpoint, token string, opts ...ProxyOption) error {
-	ws, opt, err := openProxyConn(endpoint, token, "source", opts...)
+	ws, opt, err := openProxyConn(endpoint, "source", token, opts...)
 	if err != nil {
 		return err
 	}
@@ -58,8 +58,11 @@ func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (io.ReadWr
 	if err != nil {
 		return nil, nil, err
 	}
-	if !opt.NoTLS {
-		wsc.TlsConfig = &tls.Config{ServerName: endpoint}
+	if opt.Scheme == "wss" {
+		wsc.TlsConfig = &tls.Config{
+			ServerName:         endpoint,
+			InsecureSkipVerify: opt.InsecureSkipVerify,
+		}
 	}
 	wsc.Header = http.Header{
 		"Access-Token": []string{token},
@@ -91,9 +94,9 @@ type ProxyOption func(*ProxyOptions) error
 
 // ProxyOptions stores options of the proxy.
 type ProxyOptions struct {
-	NoTLS        bool
-	Scheme       string
-	ErrorHandler ErrorHandler
+	InsecureSkipVerify bool
+	Scheme             string
+	ErrorHandler       ErrorHandler
 }
 
 // WithErrorHandler sets a ErrorHandler.
