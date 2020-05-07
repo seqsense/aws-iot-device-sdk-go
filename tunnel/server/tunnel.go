@@ -27,6 +27,8 @@ func (h *TunnelHandler) add(ti *tunnelInfo) (string, error) {
 	defer h.mu.Unlock()
 
 	id := fmt.Sprintf("%08x", h.id)
+	h.id++
+
 	h.tunnels[id] = ti
 	h.destToken[ti.destAccessToken] = ti
 	h.srcToken[ti.srcAccessToken] = ti
