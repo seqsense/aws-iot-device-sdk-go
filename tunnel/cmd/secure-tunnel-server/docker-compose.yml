@@ -1,0 +1,15 @@
+version: "2"
+services:
+  secure-tunnel-server:
+    build:
+      context: ../../../
+      dockerfile: tunnel/cmd/secure-tunnel-server/Dockerfile
+    command:
+      - "/usr/local/bin/secure-tunnel-server"
+      - "-mqtt-endpoint=${AWS_IOT_ENDPOINT}"
+    environment:
+      - AWS_IOT_ENDPOINT
+  tlsoffloading:
+    build: tlsoffloading
+    ports:
+      - "443:443"

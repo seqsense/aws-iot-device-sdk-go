@@ -70,7 +70,7 @@ func New(ctx context.Context, cli awsiotdev.Device, dialer map[string]Dialer, op
 }
 
 func (t *tunnel) notify(msg *mqtt.Message) {
-	n := &notification{}
+	n := &Notification{}
 	if err := json.Unmarshal(msg.Payload, n); err != nil {
 		t.handleError(err)
 		return
