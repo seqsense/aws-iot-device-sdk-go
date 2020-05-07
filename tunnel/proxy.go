@@ -23,7 +23,9 @@ func endpointHost(region string) string {
 // Dialer is a proxy destination dialer.
 type Dialer func() (io.ReadWriteCloser, error)
 
-// ProxyDestination local connection via IoT secure tunneling.
+// ProxyDestination proxies TCP connection from remote source device to
+// the local destination application via IoT secure tunneling.
+// This is usually used on IoT things.
 func ProxyDestination(dialer Dialer, endpoint, token string, opts ...ProxyOption) error {
 	ws, opt, err := openProxyConn(endpoint, "destination", token, opts...)
 	if err != nil {
@@ -32,7 +34,9 @@ func ProxyDestination(dialer Dialer, endpoint, token string, opts ...ProxyOption
 	return proxyDestination(ws, dialer, opt.ErrorHandler)
 }
 
-// ProxySource local connection via IoT secure tunneling.
+// ProxySource proxies TCP connection from local socket to
+// remote destination application via IoT secure tunneling.
+// This is usually used on a computer or bastion server.
 func ProxySource(listener net.Listener, endpoint, token string, opts ...ProxyOption) error {
 	ws, opt, err := openProxyConn(endpoint, "source", token, opts...)
 	if err != nil {
