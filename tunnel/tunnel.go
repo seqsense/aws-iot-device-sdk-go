@@ -3,6 +3,7 @@ package tunnel
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/at-wat/mqtt-go"
@@ -74,10 +75,19 @@ func (t *tunnel) notify(msg *mqtt.Message) {
 		t.handleError(err)
 		return
 	}
+	if n.ClientMode != Destination {
+		t.handleError(fmt.Errorf("unsupported client mode (%s)", n.ClientMode))
+		return
+	}
 	for _, srv := range n.Services {
 		if d, ok := t.dialerMap[srv]; ok {
 			go func() {
-				err := t.proxy(context.Background(), d, n)
+				err := ProxyDestination(
+					d,
+					t.opts.EndpointHostFunc(n.Region),
+					n.ClientAccessToken,
+					WithErrorHandler(errorHandlerFunc(t.handleError)),
+				)
 				if err != nil {
 					t.handleError(err)
 				}
