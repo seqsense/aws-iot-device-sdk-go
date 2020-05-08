@@ -3,11 +3,12 @@ language: go
 go:
   - "1.12"
   - "1.13"
+  - "1.14"
   - master
 
 env:
   global:
-    - REVIEW_DOG_ON=1.13
+    - REVIEW_DOG_ON=1.14
     - REVIEW_DOG_VERSION=0.9.17
     - GO111MODULE=on
 
@@ -24,11 +25,17 @@ install:
         | tar xzfv - -C ${GOPATH}/bin
     fi
 script:
-  - go build
+  - go build ./...
   - |
     echo "Enable coverage report"
     TEST_ARG="-coverprofile=coverage.txt -covermode=atomic -coverpkg=all"
-  - go test -v ${TEST_ARG} $(go list ./... | grep -v "/examples/")
+  - TEST_PKGS="$(go list ./... | grep -v "/examples/")"
+  - |
+    if [ ${TRAVIS_GO_VERSION} == "1.12" ]; then
+      # Skip testing cmd to workaround https://github.com/golang/go/issues/30374
+      TEST_PKGS="$(go list ./... | grep -v "/examples/" | grep -v "/cmd/")"
+    fi
+  - go test -v ${TEST_ARG} ${TEST_PKGS}
   - go vet ./...
   - |
     if [ ${TRAVIS_GO_VERSION} == ${REVIEW_DOG_ON} ]; then
