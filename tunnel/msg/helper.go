@@ -6,6 +6,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// WriteMessage marshals the message and sends to the writer.
 func WriteMessage(w io.Writer, m *Message) error {
 	bs, err := proto.Marshal(m)
 	if err != nil {
