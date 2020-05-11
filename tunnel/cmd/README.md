@@ -35,7 +35,8 @@ Following commands proxies connection to your local ssh server via `secure-tunne
 
 1. Build the localproxy
     ```shell
-    cd localproxy
+    $ cd localproxy
+    $ go build .
     ```
 2. Run the destination proxy
     ```shell
