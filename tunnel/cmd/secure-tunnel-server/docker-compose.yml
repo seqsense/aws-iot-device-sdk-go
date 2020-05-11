@@ -7,6 +7,7 @@ services:
     command:
       - "/usr/local/bin/secure-tunnel-server"
       - "-mqtt-endpoint=${AWS_IOT_ENDPOINT}"
+      # - "-generate-test-token"  # uncomment to generate token at beginning
     environment:
       - AWS_IOT_ENDPOINT
   tlsoffloading:

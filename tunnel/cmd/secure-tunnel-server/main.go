@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -17,9 +19,10 @@ import (
 )
 
 var (
-	mqttEndpoint = flag.String("mqtt-endpoint", "", "AWS IoT endpoint")
-	apiAddr      = flag.String("api-addr", ":80", "Address and port of API endpoint")
-	tunnelAddr   = flag.String("tunnel-addr", ":80", "Address and port of proxy WebSocket endpoint")
+	mqttEndpoint      = flag.String("mqtt-endpoint", "", "AWS IoT endpoint")
+	apiAddr           = flag.String("api-addr", ":80", "Address and port of API endpoint")
+	tunnelAddr        = flag.String("tunnel-addr", ":80", "Address and port of proxy WebSocket endpoint")
+	generateTestToken = flag.Bool("generate-test-token", false, "Generate a token for testing")
 )
 
 func init() {
@@ -60,6 +63,22 @@ func main() {
 
 	tunnelHandler := server.NewTunnelHandler()
 	apiHandler := server.NewAPIHandler(tunnelHandler, notifier)
+
+	if *generateTestToken {
+		apiHandler.ServeHTTP(
+			&noopResponseWriter{},
+			&http.Request{
+				Header: http.Header{
+					"X-Amz-Target": {"IoTSecuredTunneling.OpenTunnel"},
+				},
+				Body: ioutil.NopCloser(
+					bytes.NewReader([]byte(
+						"{\"DestinationConfig\": {\"Services\": [\"ssh\"], \"ThingName\": \"test\"}}",
+					)),
+				),
+			},
+		)
+	}
 
 	servers := map[string]*http.Server{
 		*apiAddr: {
@@ -102,4 +121,13 @@ func main() {
 		}
 	}
 	wg.Wait()
+}
+
+type noopResponseWriter struct{}
+
+func (*noopResponseWriter) Header() http.Header        { return make(http.Header) }
+func (*noopResponseWriter) WriteHeader(statusCode int) {}
+func (*noopResponseWriter) Write(b []byte) (int, error) {
+	log.Println(string(b))
+	return len(b), nil
 }
