@@ -37,10 +37,15 @@ func main() {
 		log.Fatal("error: one of -proxy-endpoint or -region must be specified")
 	}
 
-	proxyOpt := func(opt *tunnel.ProxyOptions) error {
-		opt.InsecureSkipVerify = *noSSLHostVerify
-		opt.Scheme = *proxyScheme
-		return nil
+	proxyOpts := []tunnel.ProxyOption{
+		func(opt *tunnel.ProxyOptions) error {
+			opt.InsecureSkipVerify = *noSSLHostVerify
+			opt.Scheme = *proxyScheme
+			return nil
+		},
+		tunnel.WithErrorHandler(tunnel.ErrorHandlerFunc(func(err error) {
+			log.Print(err)
+		})),
 	}
 
 	switch {
@@ -49,7 +54,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("error: %v", err)
 		}
-		err = tunnel.ProxySource(listener, endpoint, *accessToken, proxyOpt)
+		err = tunnel.ProxySource(listener, endpoint, *accessToken, proxyOpts...)
 		if err != nil {
 			log.Fatalf("error: %v", err)
 		}
@@ -57,7 +62,7 @@ func main() {
 	case *destinationApp != "" && *sourcePort == 0:
 		err := tunnel.ProxyDestination(func() (io.ReadWriteCloser, error) {
 			return net.Dial("tcp", *destinationApp)
-		}, endpoint, *accessToken, proxyOpt)
+		}, endpoint, *accessToken, proxyOpts...)
 		if err != nil {
 			log.Fatalf("error: %v", err)
 		}
