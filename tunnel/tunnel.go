@@ -86,7 +86,7 @@ func (t *tunnel) notify(msg *mqtt.Message) {
 					d,
 					t.opts.EndpointHostFunc(n.Region),
 					n.ClientAccessToken,
-					WithErrorHandler(ErrorHandlerFunc(t.handleError)),
+					WithErrorHandler(errorHandlerFunc(t.handleError)),
 				)
 				if err != nil {
 					t.handleError(err)

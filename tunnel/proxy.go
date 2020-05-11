@@ -87,11 +87,9 @@ type ErrorHandler interface {
 	HandleError(error)
 }
 
-// ErrorHandlerFunc type is an adapter to use handler function as ErrorHandler.
-type ErrorHandlerFunc func(error)
+type errorHandlerFunc func(error)
 
-// HandleError implements ErrorHandler interface.
-func (f ErrorHandlerFunc) HandleError(err error) {
+func (f errorHandlerFunc) HandleError(err error) {
 	f(err)
 }
 
