@@ -11,6 +11,7 @@ import (
 	"golang.org/x/net/websocket"
 
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel"
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel/msg"
 )
 
 // TunnelHandler handles websocket based secure tunneling sessions.
@@ -98,10 +99,15 @@ func (h *TunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Handler: websocket.Handler(func(ws *websocket.Conn) {
 			ws.PayloadType = websocket.BinaryFrame
 			defer func() {
+				_ = msg.WriteMessage(ws, &msg.Message{Type: msg.Message_STREAM_RESET})
 				_ = ws.Close()
 			}()
 
+			chWsClosed := make(chan struct{})
 			go func() {
+				defer func() {
+					close(chWsClosed)
+				}()
 				for {
 					b := make([]byte, 8192)
 					if _, err := io.ReadFull(ws, b[:2]); err != nil {
@@ -133,6 +139,8 @@ func (h *TunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}()
 			for {
 				select {
+				case <-chWsClosed:
+					return
 				case <-ti.chDone:
 					return
 				case b := <-chRead:

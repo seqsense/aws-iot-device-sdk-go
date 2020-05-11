@@ -87,9 +87,9 @@ type ErrorHandler interface {
 	HandleError(error)
 }
 
-type errorHandlerFunc func(error)
+type ErrorHandlerFunc func(error)
 
-func (f errorHandlerFunc) HandleError(err error) {
+func (f ErrorHandlerFunc) HandleError(err error) {
 	f(err)
 }
 

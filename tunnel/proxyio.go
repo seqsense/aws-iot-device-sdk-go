@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io"
 
-	"google.golang.org/protobuf/proto"
-
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel/msg"
 )
 
@@ -22,26 +20,13 @@ func readProxy(ws, conn io.ReadWriter, streamID int32, eh ErrorHandler) {
 			}
 			return
 		}
-		ms := &msg.Message{
+		if err := msg.WriteMessage(ws, &msg.Message{
 			Type:     msg.Message_DATA,
 			StreamId: streamID,
 			Payload:  b[:n],
-		}
-		bs, err := proto.Marshal(ms)
-		if err != nil {
+		}); err != nil {
 			if eh != nil {
-				eh.HandleError(fmt.Errorf("marshal failed: %v", err))
-			}
-			continue
-		}
-		l := len(bs)
-		if _, err := ws.Write(
-			append([]byte{
-				byte(l >> 8), byte(l),
-			}, bs...),
-		); err != nil {
-			if eh != nil {
-				eh.HandleError(fmt.Errorf("send failed: %v", err))
+				eh.HandleError(fmt.Errorf("message send failed: %v", err))
 			}
 			return
 		}
