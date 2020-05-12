@@ -6,12 +6,14 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"time"
 
 	"golang.org/x/net/websocket"
 )
 
 const (
 	defaultEndpointHostFormat = "data.tunneling.iot.%s.amazonaws.com"
+	defaultPingPeriod         = 5 * time.Second
 	websocketProtocol         = "aws.iot.securetunneling-1.0"
 	userAgent                 = "aws-iot-device-sdk-go/tunnel"
 )
@@ -31,6 +33,10 @@ func ProxyDestination(dialer Dialer, endpoint, token string, opts ...ProxyOption
 	if err != nil {
 		return err
 	}
+
+	pingCancel := newPinger(ws, opt.PingPeriod)
+	defer pingCancel()
+
 	return proxyDestination(ws, dialer, opt.ErrorHandler)
 }
 
@@ -42,12 +48,17 @@ func ProxySource(listener net.Listener, endpoint, token string, opts ...ProxyOpt
 	if err != nil {
 		return err
 	}
+
+	pingCancel := newPinger(ws, opt.PingPeriod)
+	defer pingCancel()
+
 	return proxySource(ws, listener, opt.ErrorHandler)
 }
 
-func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (io.ReadWriter, *ProxyOptions, error) {
+func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (*websocket.Conn, *ProxyOptions, error) {
 	opt := &ProxyOptions{
-		Scheme: "wss",
+		Scheme:     "wss",
+		PingPeriod: defaultPingPeriod,
 	}
 	for _, o := range opts {
 		if err := o(opt); err != nil {
@@ -103,12 +114,21 @@ type ProxyOptions struct {
 	InsecureSkipVerify bool
 	Scheme             string
 	ErrorHandler       ErrorHandler
+	PingPeriod         time.Duration
 }
 
 // WithErrorHandler sets a ErrorHandler.
 func WithErrorHandler(h ErrorHandler) ProxyOption {
 	return func(opt *ProxyOptions) error {
 		opt.ErrorHandler = h
+		return nil
+	}
+}
+
+// WithPingPeriod sets ping send period.
+func WithPingPeriod(d time.Duration) ProxyOption {
+	return func(opt *ProxyOptions) error {
+		opt.PingPeriod = d
 		return nil
 	}
 }
