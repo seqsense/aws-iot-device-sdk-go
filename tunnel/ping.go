@@ -19,7 +19,7 @@ func newPinger(ws *websocket.Conn, period time.Duration) func() {
 	var doneOnce sync.Once
 	done := make(chan struct{})
 
-	pingMessage := websocket.Codec{pingMarshal, pingUnmarshal}
+	pingMessage := websocket.Codec{Marshal: pingMarshal, Unmarshal: pingUnmarshal}
 	go func() {
 		for {
 			select {
