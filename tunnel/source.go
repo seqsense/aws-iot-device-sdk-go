@@ -22,35 +22,23 @@ func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler) error
 				return
 			}
 
-			m := &msg.Message{
-				Type:     msg.Message_STREAM_START,
-				StreamId: streamID,
-			}
-			bs, err := proto.Marshal(m)
-			if err != nil {
-				if eh != nil {
-					eh.HandleError(fmt.Errorf("marshal failed: %v", err))
-				}
-				continue
-			}
-			l := len(bs)
-			if _, err := ws.Write(
-				append([]byte{
-					byte(l >> 8), byte(l),
-				}, bs...),
-			); err != nil {
-				if eh != nil {
-					eh.HandleError(fmt.Errorf("send failed: %v", err))
-				}
-				continue
-			}
-
 			muConns.Lock()
-			conns[streamID] = conn
+			id := streamID
+			conns[id] = conn
 			streamID++
 			muConns.Unlock()
 
-			go readProxy(ws, conn, m.StreamId, eh)
+			if err := msg.WriteMessage(ws, &msg.Message{
+				Type:     msg.Message_STREAM_START,
+				StreamId: id,
+			}); err != nil {
+				if eh != nil {
+					eh.HandleError(fmt.Errorf("message send failed: %v", err))
+				}
+				continue
+			}
+
+			go readProxy(ws, conn, id, eh)
 		}
 	}()
 
