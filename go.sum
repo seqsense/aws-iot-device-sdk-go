@@ -1,5 +1,5 @@
-github.com/at-wat/mqtt-go v0.10.0 h1:j6DItIbsS9T3eElnypo1mjgmGJLJDAFQr9+NOVKKff8=
-github.com/at-wat/mqtt-go v0.10.0/go.mod h1:OHBDB5WCqFs+jlVabgP6V1FinrLp82d2wZU+6pZHzhA=
+github.com/at-wat/mqtt-go v0.10.1 h1:tF7jvqU6WdHSpODGKugjOjEEZrQbYo5S2FlvhOxE73k=
+github.com/at-wat/mqtt-go v0.10.1/go.mod h1:OHBDB5WCqFs+jlVabgP6V1FinrLp82d2wZU+6pZHzhA=
 github.com/aws/aws-sdk-go v1.31.4 h1:YZ0uEYIWeanGuAomElHmRWMAbXVqrQixxgf2vtIjO6M=
 github.com/aws/aws-sdk-go v1.31.4/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
