@@ -13,7 +13,7 @@ RUN go build -tags netgo -installsuffix netgo
 RUN cp secure-tunnel-server /usr/local/bin/
 
 # =====================
-FROM alpine:3.11
+FROM alpine:3.12
 
 COPY --from=go-builder /usr/local/bin/secure-tunnel-server /usr/local/bin/
 
