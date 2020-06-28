@@ -6,7 +6,7 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/google/uuid v1.1.1
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
-	google.golang.org/protobuf v1.24.0
+	google.golang.org/protobuf v1.25.0
 )
 
 go 1.13
