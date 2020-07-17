@@ -30,6 +30,8 @@ type Jobs interface {
 	mqtt.Handler
 	// OnError sets handler of asynchronous errors.
 	OnError(func(error))
+	// OnJobChange sets handler for job update.
+	OnJobChange(func(map[JobExecutionState][]JobExecutionSummary))
 	// GetPendingJobs gets list of pending jobs.
 	GetPendingJobs(ctx context.Context) (map[JobExecutionState][]JobExecutionSummary, error)
 	// DescribeJob gets details of specific job.
@@ -40,12 +42,13 @@ type Jobs interface {
 
 type jobs struct {
 	mqtt.ServeMux
-	cli       mqtt.Client
-	thingName string
-	mu        sync.Mutex
-	chResps   map[string]chan interface{}
-	onError   func(err error)
-	msgToken  int
+	cli         mqtt.Client
+	thingName   string
+	mu          sync.Mutex
+	chResps     map[string]chan interface{}
+	onError     func(err error)
+	onJobChange func(map[JobExecutionState][]JobExecutionSummary)
+	msgToken    int
 }
 
 func (j *jobs) token() string {
@@ -93,12 +96,18 @@ func New(ctx context.Context, cli awsiotdev.Device) (Jobs, error) {
 }
 
 func (j *jobs) notify(msg *mqtt.Message) {
-	exe := &jobExecutionsChangedMessage{}
-	if err := json.Unmarshal(msg.Payload, exe); err != nil {
+	m := &jobExecutionsChangedMessage{}
+	if err := json.Unmarshal(msg.Payload, m); err != nil {
 		j.handleError(err)
 		return
 	}
-	fmt.Printf("%+v\n", *exe)
+	j.mu.Lock()
+	cb := j.onJobChange
+	j.mu.Unlock()
+
+	if cb != nil {
+		go cb(m.Jobs)
+	}
 }
 
 func (j *jobs) GetPendingJobs(ctx context.Context) (map[JobExecutionState][]JobExecutionSummary, error) {
@@ -306,4 +315,10 @@ func (j *jobs) handleError(err error) {
 	if cb != nil {
 		cb(err)
 	}
+}
+
+func (j *jobs) OnJobChange(cb func(map[JobExecutionState][]JobExecutionSummary)) {
+	j.mu.Lock()
+	j.onJobChange = cb
+	j.mu.Unlock()
 }

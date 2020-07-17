@@ -69,27 +69,40 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	j.OnError(func(err error) {
+		fmt.Printf("async error: %v\n", err)
+	})
 	cli.Handle(j)
+
+	processJob := func(jbs map[jobs.JobExecutionState][]jobs.JobExecutionSummary) {
+		if q, ok := jbs[jobs.Queued]; ok && len(q) > 0 {
+			fmt.Printf("get job detail of %s\n", q[0].JobID)
+			jb, err := j.DescribeJob(ctx, q[0].JobID)
+			if err != nil {
+				fmt.Printf("describe job error: %v\n", err)
+			} else {
+				fmt.Printf("described: %+v\n", *jb)
+			}
+			fmt.Print("update job status to IN_PROGRESS\n")
+			if err := j.UpdateJob(ctx, jb, jobs.InProgress); err != nil {
+				fmt.Printf("update job error: %v\n", err)
+			}
+		} else {
+			fmt.Printf("no queued job\n")
+		}
+	}
+
+	j.OnJobChange(func(jbs map[jobs.JobExecutionState][]jobs.JobExecutionSummary) {
+		fmt.Printf("job changed: %+v\n", jbs)
+		processJob(jbs)
+	})
 
 	jbs, err := j.GetPendingJobs(ctx)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("%+v\n", jbs)
-
-	if q, ok := jbs[jobs.Queued]; ok && len(q) > 0 {
-		jb, err := j.DescribeJob(ctx, q[0].JobID)
-		if err != nil {
-			fmt.Printf("error: %v\n", err)
-		} else {
-			fmt.Printf("%+v\n", *jb)
-		}
-		if err := j.UpdateJob(ctx, jb, jobs.InProgress); err != nil {
-			fmt.Printf("error: %v\n", err)
-		}
-	} else {
-		fmt.Printf("no queued job\n")
-	}
+	fmt.Printf("jobs: %+v\n", jbs)
+	processJob(jbs)
 
 	select {}
 }
