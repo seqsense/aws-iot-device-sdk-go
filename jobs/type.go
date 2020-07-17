@@ -14,6 +14,10 @@
 
 package jobs
 
+import (
+	"fmt"
+)
+
 // JobExecutionState represents job status.
 type JobExecutionState string
 
@@ -64,7 +68,7 @@ type ErrorResponse struct {
 
 // Error implements error interface.
 func (e *ErrorResponse) Error() string {
-	return e.Code + ": " + e.Message
+	return fmt.Sprintf("%s (%s): %s", e.Code, e.ClientToken, e.Message)
 }
 
 type jobExecutionsChangedMessage struct {

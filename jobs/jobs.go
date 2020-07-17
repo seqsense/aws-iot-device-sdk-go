@@ -112,7 +112,7 @@ func (j *jobs) notify(msg *mqtt.Message) {
 
 func (j *jobs) GetPendingJobs(ctx context.Context) (map[JobExecutionState][]JobExecutionSummary, error) {
 	req := &simpleRequest{ClientToken: j.token()}
-	ch := make(chan interface{})
+	ch := make(chan interface{}, 1)
 	j.mu.Lock()
 	j.chResps[req.ClientToken] = ch
 	j.mu.Unlock()
@@ -159,7 +159,7 @@ func (j *jobs) DescribeJob(ctx context.Context, id string) (*JobExecution, error
 		IncludeJobDocument: true,
 		ClientToken:        j.token(),
 	}
-	ch := make(chan interface{})
+	ch := make(chan interface{}, 1)
 	j.mu.Lock()
 	j.chResps[req.ClientToken] = ch
 	j.mu.Unlock()
@@ -199,7 +199,9 @@ func (j *jobs) DescribeJob(ctx context.Context, id string) (*JobExecution, error
 }
 
 func (j *jobs) UpdateJob(ctx context.Context, je *JobExecution, s JobExecutionState, opt ...UpdateJobOption) error {
-	opts := &UpdateJobOptions{}
+	opts := &UpdateJobOptions{
+		Details: make(map[string]string),
+	}
 	for _, o := range opt {
 		o(opts)
 	}
@@ -210,7 +212,7 @@ func (j *jobs) UpdateJob(ctx context.Context, je *JobExecution, s JobExecutionSt
 		StepTimeoutInMinutes: opts.TimeoutMinutes,
 		ClientToken:          j.token(),
 	}
-	ch := make(chan interface{})
+	ch := make(chan interface{}, 1)
 	j.mu.Lock()
 	j.chResps[req.ClientToken] = ch
 	j.mu.Unlock()
