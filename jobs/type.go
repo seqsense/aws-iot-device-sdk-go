@@ -1,7 +1,23 @@
+// Copyright 2020 SEQSENSE, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package jobs
 
+// JobExecutionState represents job status.
 type JobExecutionState string
 
+// JobExecutionState values.
 const (
 	Queued     JobExecutionState = "QUEUED"
 	InProgress JobExecutionState = "IN_PROGRESS"
@@ -13,6 +29,7 @@ const (
 	Removed    JobExecutionState = "REMOVED"
 )
 
+// JobExecutionSummary represents summary of a job.
 type JobExecutionSummary struct {
 	JobID           string `json:"jobId"`
 	QueuedAt        int64  `json:"queuedAt"`
@@ -22,6 +39,7 @@ type JobExecutionSummary struct {
 	ExecutionNumber int    `json:"executionNumber"`
 }
 
+// JobExecution represents details of a job.
 type JobExecution struct {
 	JobID           string            `json:"jobId"`
 	ThingName       string            `json:"thingName"`
@@ -35,6 +53,7 @@ type JobExecution struct {
 	ExecutionNumber int               `json:"executionNumber"`
 }
 
+// ErrorResponse represents error message from AWS IoT.
 type ErrorResponse struct {
 	Code           string            `json:"code"`
 	Message        string            `json:"message"`
@@ -43,6 +62,7 @@ type ErrorResponse struct {
 	ExecutionState JobExecutionState `json:"executionState"`
 }
 
+// Error implements error interface.
 func (e *ErrorResponse) Error() string {
 	return e.Code + ": " + e.Message
 }
