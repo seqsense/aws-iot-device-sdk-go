@@ -34,6 +34,8 @@ type Jobs interface {
 	GetPendingJobs(ctx context.Context) (map[JobExecutionState][]JobExecutionSummary, error)
 	// DescribeJob gets details of specific job.
 	DescribeJob(ctx context.Context, id string) (*JobExecution, error)
+	// UpdateJob updates job status.
+	UpdateJob(ctx context.Context, j *JobExecution, s JobExecutionState, opt ...UpdateJobOption) error
 }
 
 type jobs struct {
@@ -68,9 +70,11 @@ func New(ctx context.Context, cli awsiotdev.Device) (Jobs, error) {
 	}{
 		{j.topic("notify"), mqtt.HandlerFunc(j.notify)},
 		{j.topic("+/get/accepted"), mqtt.HandlerFunc(j.getJobAccepted)},
-		{j.topic("+/get/rejected"), mqtt.HandlerFunc(j.getRejected)},
+		{j.topic("+/get/rejected"), mqtt.HandlerFunc(j.rejected)},
+		{j.topic("+/update/accepted"), mqtt.HandlerFunc(j.updateJobAccepted)},
+		{j.topic("+/update/rejected"), mqtt.HandlerFunc(j.rejected)},
 		{j.topic("get/accepted"), mqtt.HandlerFunc(j.getAccepted)},
-		{j.topic("get/rejected"), mqtt.HandlerFunc(j.getRejected)},
+		{j.topic("get/rejected"), mqtt.HandlerFunc(j.rejected)},
 	} {
 		if err := j.ServeMux.Handle(sub.topic, sub.handler); err != nil {
 			return nil, err
@@ -185,6 +189,57 @@ func (j *jobs) DescribeJob(ctx context.Context, id string) (*JobExecution, error
 	}
 }
 
+func (j *jobs) UpdateJob(ctx context.Context, je *JobExecution, s JobExecutionState, opt ...UpdateJobOption) error {
+	opts := &UpdateJobOptions{}
+	for _, o := range opt {
+		o(opts)
+	}
+	req := &updateJobExecutionRequest{
+		Status:               s,
+		StatusDetails:        opts.Details,
+		ExpectedVersion:      je.VersionNumber,
+		StepTimeoutInMinutes: opts.TimeoutMinutes,
+		ClientToken:          j.token(),
+	}
+	ch := make(chan interface{})
+	j.mu.Lock()
+	j.chResps[req.ClientToken] = ch
+	j.mu.Unlock()
+	defer func() {
+		j.mu.Lock()
+		delete(j.chResps, req.ClientToken)
+		j.mu.Unlock()
+	}()
+
+	breq, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	if err := j.cli.Publish(ctx,
+		&mqtt.Message{
+			Topic:   j.topic(je.JobID + "/update"),
+			QoS:     mqtt.QoS1,
+			Payload: []byte(breq),
+		},
+	); err != nil {
+		return err
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case res := <-ch:
+		switch r := res.(type) {
+		case *updateJobExecutionResponse:
+			return nil
+		case *ErrorResponse:
+			return r
+		default:
+			return ErrInvalidResponse
+		}
+	}
+}
+
 func (j *jobs) handleResponse(r interface{}) {
 	token, ok := clientToken(r)
 	if !ok {
@@ -203,31 +258,39 @@ func (j *jobs) handleResponse(r interface{}) {
 }
 
 func (j *jobs) getAccepted(msg *mqtt.Message) {
-	exe := &getPendingJobExecutionsResponse{}
-	if err := json.Unmarshal(msg.Payload, exe); err != nil {
+	res := &getPendingJobExecutionsResponse{}
+	if err := json.Unmarshal(msg.Payload, res); err != nil {
 		j.handleError(err)
 		return
 	}
-	j.handleResponse(exe)
+	j.handleResponse(res)
 }
 
-func (j *jobs) getRejected(msg *mqtt.Message) {
+func (j *jobs) getJobAccepted(msg *mqtt.Message) {
+	res := &describeJobExecutionResponse{}
+	if err := json.Unmarshal(msg.Payload, res); err != nil {
+		j.handleError(err)
+		return
+	}
+	j.handleResponse(res)
+}
+
+func (j *jobs) updateJobAccepted(msg *mqtt.Message) {
+	res := &updateJobExecutionResponse{}
+	if err := json.Unmarshal(msg.Payload, res); err != nil {
+		j.handleError(err)
+		return
+	}
+	j.handleResponse(res)
+}
+
+func (j *jobs) rejected(msg *mqtt.Message) {
 	e := &ErrorResponse{}
 	if err := json.Unmarshal(msg.Payload, e); err != nil {
 		j.handleError(err)
 		return
 	}
 	j.handleResponse(e)
-}
-
-func (j *jobs) getJobAccepted(msg *mqtt.Message) {
-	exe := &describeJobExecutionResponse{}
-	if err := json.Unmarshal(msg.Payload, exe); err != nil {
-		j.handleError(err)
-		fmt.Printf("%+v\n", err)
-		return
-	}
-	j.handleResponse(exe)
 }
 
 func (j *jobs) OnError(cb func(err error)) {

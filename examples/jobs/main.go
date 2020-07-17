@@ -84,8 +84,11 @@ func main() {
 		} else {
 			fmt.Printf("%+v\n", *jb)
 		}
+		if err := j.UpdateJob(ctx, jb, jobs.InProgress); err != nil {
+			fmt.Printf("error: %v\n", err)
+		}
 	} else {
-		fmt.Printf("no job")
+		fmt.Printf("no queued job\n")
 	}
 
 	select {}

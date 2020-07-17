@@ -94,3 +94,21 @@ type describeJobExecutionResponse struct {
 	Timestamp   int64        `json:"timestamp"`
 	ClientToken string       `json:"clientToken"`
 }
+
+type updateJobExecutionRequest struct {
+	Status                   JobExecutionState `json:"status"`
+	StatusDetails            map[string]string `json:"statusDetails"`
+	ExpectedVersion          int               `json:"expectedVersion"`
+	ExecutionNumber          int               `json:"executionNumber,omitempty"`
+	IncludeJobExecutionState bool              `json:"includeJobExecutionState,omitempty"`
+	IncludeJobDocument       bool              `json:"includeJobDocument,omitempty"`
+	StepTimeoutInMinutes     int               `json:"stepTimeoutInMinutes,omitempty"`
+	ClientToken              string            `json:"clientToken"`
+}
+
+type updateJobExecutionResponse struct {
+	ExecutionState JobExecutionState `json:"executionState"`
+	JobDocument    interface{}       `json:"jobDocument"`
+	Timestamp      int64             `json:"timestamp"`
+	ClientToken    string            `json:"clientToken"`
+}
