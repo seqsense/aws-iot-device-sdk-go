@@ -24,6 +24,48 @@ import (
 	"github.com/at-wat/mqtt-go"
 )
 
+func TestNotify(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	j, err := New(ctx, &dummyClient{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := map[JobExecutionState][]JobExecutionSummary{
+		Queued: []JobExecutionSummary{
+			{JobID: "testID", VersionNumber: 1},
+		},
+	}
+
+	done := make(chan struct{})
+	j.OnJobChange(func(jbs map[JobExecutionState][]JobExecutionSummary) {
+		if !reflect.DeepEqual(expected, jbs) {
+			t.Fatalf("Expected jobs: %v, got: %v", expected, jbs)
+		}
+		close(done)
+	})
+
+	req := &jobExecutionsChangedMessage{
+		Jobs: expected,
+	}
+	breq, err := json.Marshal(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	j.Serve(&mqtt.Message{
+		Topic:   j.(*jobs).topic("notify"),
+		Payload: breq,
+	})
+
+	select {
+	case <-done:
+	case <-ctx.Done():
+		t.Fatal("Timeout")
+	}
+}
+
 func TestGetPendingJobs(t *testing.T) {
 	testCases := map[string]struct {
 		response      interface{}
