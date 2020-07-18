@@ -83,10 +83,12 @@ func (s *shadow) getAccepted(msg *mqtt.Message) {
 		s.handleError(err)
 		return
 	}
+	s.mu.Lock()
 	s.doc = doc
+	s.mu.Unlock()
 	s.handleResponse(doc)
 
-	s.handleDelta(s.doc.State.Delta)
+	s.handleDelta(doc.State.Delta)
 }
 
 func (s *shadow) rejected(msg *mqtt.Message) {
@@ -104,7 +106,10 @@ func (s *shadow) updateAccepted(msg *mqtt.Message) {
 		s.handleError(err)
 		return
 	}
-	if err := s.doc.update(doc); err != nil {
+	s.mu.Lock()
+	err := s.doc.update(doc)
+	s.mu.Unlock()
+	if err != nil {
 		s.handleError(err)
 		return
 	}
@@ -117,9 +122,12 @@ func (s *shadow) updateDelta(msg *mqtt.Message) {
 		s.handleError(err)
 		return
 	}
+	s.mu.Lock()
 	ok := s.doc.updateDelta(state)
+	delta := cloneState(s.doc.State.Delta)
+	s.mu.Unlock()
 	if ok {
-		s.handleDelta(s.doc.State.Delta)
+		s.handleDelta(delta)
 	}
 }
 
@@ -129,7 +137,9 @@ func (s *shadow) deleteAccepted(msg *mqtt.Message) {
 		s.handleError(err)
 		return
 	}
+	s.mu.Lock()
 	s.doc = nil
+	s.mu.Unlock()
 	s.handleResponse(doc)
 }
 
@@ -219,7 +229,10 @@ func (s *shadow) Report(ctx context.Context, state interface{}) (*ThingDocument,
 	case res := <-ch:
 		switch r := res.(type) {
 		case *thingDocumentRaw:
-			return s.doc, nil
+			s.mu.Lock()
+			doc := s.doc.clone()
+			s.mu.Unlock()
+			return doc, nil
 		case *ErrorResponse:
 			return nil, r
 		default:
@@ -267,7 +280,10 @@ func (s *shadow) Desire(ctx context.Context, state interface{}) (*ThingDocument,
 	case res := <-ch:
 		switch r := res.(type) {
 		case *thingDocumentRaw:
-			return s.doc, nil
+			s.mu.Lock()
+			doc := s.doc.clone()
+			s.mu.Unlock()
+			return doc, nil
 		case *ErrorResponse:
 			return nil, r
 		default:
@@ -362,7 +378,9 @@ func (s *shadow) Delete(ctx context.Context) error {
 }
 
 func (s *shadow) Document() *ThingDocument {
-	return s.doc
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.doc.clone()
 }
 
 func (s *shadow) OnDelta(cb func(delta map[string]interface{})) {
