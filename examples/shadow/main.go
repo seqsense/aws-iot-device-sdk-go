@@ -75,19 +75,21 @@ func main() {
 	cli.Handle(s)
 
 	fmt.Print("> update desire\n")
-	if err := s.Desire(ctx, sampleState{Value: 1}); err != nil {
+	doc, err := s.Desire(ctx, sampleState{Value: 1})
+	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("document: %v\n", s.Document())
+	fmt.Printf("document: %v\n", doc)
 
 	fmt.Print("> update report\n")
-	if err := s.Report(ctx, sampleState{Value: 2}); err != nil {
+	doc, err = s.Report(ctx, sampleState{Value: 2})
+	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("document: %v\n", s.Document())
+	fmt.Printf("document: %v\n", doc)
 
 	fmt.Print("> get document\n")
-	doc, err := s.Get(ctx)
+	doc, err = s.Get(ctx)
 	if err != nil {
 		panic(err)
 	}
