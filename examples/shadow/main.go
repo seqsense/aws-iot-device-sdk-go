@@ -75,13 +75,13 @@ func main() {
 	cli.Handle(s)
 
 	fmt.Print("> update desire\n")
-	if err := s.Desire(ctx, SampleState{Value: 1}); err != nil {
+	if err := s.Desire(ctx, sampleState{Value: 1}); err != nil {
 		panic(err)
 	}
 	fmt.Printf("document: %v\n", s.Document())
 
 	fmt.Print("> update report\n")
-	if err := s.Report(ctx, SampleState{Value: 2}); err != nil {
+	if err := s.Report(ctx, sampleState{Value: 2}); err != nil {
 		panic(err)
 	}
 	fmt.Printf("document: %v\n", s.Document())
@@ -101,7 +101,7 @@ func main() {
 	fmt.Printf("document: %v\n", s.Document())
 }
 
-type SampleState struct {
+type sampleState struct {
 	Value  int
 	Struct struct {
 		NestedValue int
