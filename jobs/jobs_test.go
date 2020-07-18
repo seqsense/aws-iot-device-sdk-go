@@ -17,21 +17,33 @@ package jobs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/at-wat/mqtt-go"
+	mockmqtt "github.com/at-wat/mqtt-go/mock"
 )
+
+type mockDevice struct {
+	*mockmqtt.Client
+}
+
+func (d *mockDevice) ThingName() string {
+	return "test"
+}
 
 func TestNotify(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	j, err := New(ctx, &dummyClient{})
+	cli := &mockDevice{&mockmqtt.Client{}}
+	j, err := New(ctx, cli)
 	if err != nil {
 		t.Fatal(err)
 	}
+	cli.Handle(j)
 
 	expected := map[JobExecutionState][]JobExecutionSummary{
 		Queued: []JobExecutionSummary{
@@ -54,7 +66,7 @@ func TestNotify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	j.Serve(&mqtt.Message{
+	cli.Serve(&mqtt.Message{
 		Topic:   j.(*jobs).topic("notify"),
 		Payload: breq,
 	})
@@ -107,26 +119,29 @@ func TestGetPendingJobs(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 
 			var j Jobs
-			cli := &dummyClient{
-				publish: func(ctx context.Context, msg *mqtt.Message) {
-					req := &simpleRequest{}
-					if err := json.Unmarshal(msg.Payload, req); err != nil {
-						t.Error(err)
-						cancel()
-						return
-					}
-					res := testCase.response
-					setClientToken(res, req.ClientToken)
-					bres, err := json.Marshal(res)
-					if err != nil {
-						t.Error(err)
-						cancel()
-						return
-					}
-					j.Serve(&mqtt.Message{
-						Topic:   j.(*jobs).topic(testCase.responseTopic),
-						Payload: bres,
-					})
+			cli := &mockDevice{
+				Client: &mockmqtt.Client{
+					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
+						req := &simpleRequest{}
+						if err := json.Unmarshal(msg.Payload, req); err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						res := testCase.response
+						setClientToken(res, req.ClientToken)
+						bres, err := json.Marshal(res)
+						if err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						j.Serve(&mqtt.Message{
+							Topic:   j.(*jobs).topic(testCase.responseTopic),
+							Payload: bres,
+						})
+						return nil
+					},
 				},
 			}
 			var err error
@@ -134,6 +149,7 @@ func TestGetPendingJobs(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			cli.Handle(j)
 
 			jbs, err := j.GetPendingJobs(ctx)
 			if err != nil {
@@ -201,33 +217,36 @@ func TestDescribeJob(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 
 			var j Jobs
-			cli := &dummyClient{
-				publish: func(ctx context.Context, msg *mqtt.Message) {
-					req := &describeJobExecutionRequest{}
-					if err := json.Unmarshal(msg.Payload, req); err != nil {
-						t.Error(err)
-						cancel()
-						return
-					}
-					clientToken := req.ClientToken
-					setClientToken(req, "")
-					if !reflect.DeepEqual(testCase.expectedRequest, req) {
-						t.Errorf("Expected request: %v, got: %v", testCase.expectedRequest, req)
-						cancel()
-						return
-					}
-					res := testCase.response
-					setClientToken(res, clientToken)
-					bres, err := json.Marshal(res)
-					if err != nil {
-						t.Error(err)
-						cancel()
-						return
-					}
-					j.Serve(&mqtt.Message{
-						Topic:   j.(*jobs).topic(testCase.responseTopic),
-						Payload: bres,
-					})
+			cli := &mockDevice{
+				Client: &mockmqtt.Client{
+					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
+						req := &describeJobExecutionRequest{}
+						if err := json.Unmarshal(msg.Payload, req); err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						clientToken := req.ClientToken
+						setClientToken(req, "")
+						if !reflect.DeepEqual(testCase.expectedRequest, req) {
+							t.Errorf("Expected request: %v, got: %v", testCase.expectedRequest, req)
+							cancel()
+							return errors.New("unexpected request")
+						}
+						res := testCase.response
+						setClientToken(res, clientToken)
+						bres, err := json.Marshal(res)
+						if err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						j.Serve(&mqtt.Message{
+							Topic:   j.(*jobs).topic(testCase.responseTopic),
+							Payload: bres,
+						})
+						return nil
+					},
 				},
 			}
 			var err error
@@ -235,6 +254,7 @@ func TestDescribeJob(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			cli.Handle(j)
 
 			jb, err := j.DescribeJob(ctx, testCase.id)
 			if err != nil {
@@ -368,33 +388,36 @@ func TestUpdateJob(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 
 			var j Jobs
-			cli := &dummyClient{
-				publish: func(ctx context.Context, msg *mqtt.Message) {
-					req := &updateJobExecutionRequest{}
-					if err := json.Unmarshal(msg.Payload, req); err != nil {
-						t.Error(err)
-						cancel()
-						return
-					}
-					clientToken := req.ClientToken
-					setClientToken(req, "")
-					if !reflect.DeepEqual(testCase.expectedRequest, req) {
-						t.Errorf("Expected request: %v, got: %v", testCase.expectedRequest, req)
-						cancel()
-						return
-					}
-					res := testCase.response
-					setClientToken(res, clientToken)
-					bres, err := json.Marshal(res)
-					if err != nil {
-						t.Error(err)
-						cancel()
-						return
-					}
-					j.Serve(&mqtt.Message{
-						Topic:   j.(*jobs).topic(testCase.responseTopic),
-						Payload: bres,
-					})
+			cli := &mockDevice{
+				Client: &mockmqtt.Client{
+					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
+						req := &updateJobExecutionRequest{}
+						if err := json.Unmarshal(msg.Payload, req); err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						clientToken := req.ClientToken
+						setClientToken(req, "")
+						if !reflect.DeepEqual(testCase.expectedRequest, req) {
+							t.Errorf("Expected request: %v, got: %v", testCase.expectedRequest, req)
+							cancel()
+							return errors.New("unexpected request")
+						}
+						res := testCase.response
+						setClientToken(res, clientToken)
+						bres, err := json.Marshal(res)
+						if err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						j.Serve(&mqtt.Message{
+							Topic:   j.(*jobs).topic(testCase.responseTopic),
+							Payload: bres,
+						})
+						return nil
+					},
 				},
 			}
 			var err error
@@ -402,6 +425,7 @@ func TestUpdateJob(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			cli.Handle(j)
 
 			err = j.UpdateJob(ctx, testCase.execution, testCase.status, testCase.options...)
 			if err != nil {
@@ -412,36 +436,4 @@ func TestUpdateJob(t *testing.T) {
 			}
 		})
 	}
-}
-
-type dummyClient struct {
-	publish func(context.Context, *mqtt.Message)
-	handler mqtt.Handler
-}
-
-func (c *dummyClient) ThingName() string {
-	return "test"
-}
-
-func (*dummyClient) Connect(ctx context.Context, clientID string, opts ...mqtt.ConnectOption) (sessionPresent bool, err error) {
-	return false, nil
-}
-func (*dummyClient) Disconnect(ctx context.Context) error {
-	panic("not implemented")
-}
-func (c *dummyClient) Publish(ctx context.Context, message *mqtt.Message) error {
-	c.publish(ctx, message)
-	return nil
-}
-func (*dummyClient) Subscribe(ctx context.Context, subs ...mqtt.Subscription) error {
-	return nil
-}
-func (*dummyClient) Unsubscribe(ctx context.Context, subs ...string) error {
-	panic("not implemented")
-}
-func (*dummyClient) Ping(ctx context.Context) error {
-	panic("not implemented")
-}
-func (c *dummyClient) Handle(handler mqtt.Handler) {
-	c.handler = handler
 }
