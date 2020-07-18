@@ -17,10 +17,10 @@ type Shadow interface {
 	mqtt.Handler
 	// Get thing state and update local state document.
 	Get(ctx context.Context) (*ThingDocument, error)
-	// Report thing state.
-	Report(ctx context.Context, state interface{}) error
-	// Desire sets desired thing state.
-	Desire(ctx context.Context, state interface{}) error
+	// Report thing state and update local state document.
+	Report(ctx context.Context, state interface{}) (*ThingDocument, error)
+	// Desire sets desired thing state and update local state document.
+	Desire(ctx context.Context, state interface{}) (*ThingDocument, error)
 	// Document returns full thing document.
 	Document() *ThingDocument
 	// Delete thing shadow.
@@ -180,10 +180,10 @@ func New(ctx context.Context, cli awsiotdev.Device) (Shadow, error) {
 	return s, nil
 }
 
-func (s *shadow) Report(ctx context.Context, state interface{}) error {
+func (s *shadow) Report(ctx context.Context, state interface{}) (*ThingDocument, error) {
 	rawState, err := json.Marshal(state)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	token := s.token()
 	rawStateJSON := json.RawMessage(rawState)
@@ -192,7 +192,7 @@ func (s *shadow) Report(ctx context.Context, state interface{}) error {
 		ClientToken: token,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ch := make(chan interface{}, 1)
@@ -210,28 +210,28 @@ func (s *shadow) Report(ctx context.Context, state interface{}) error {
 		QoS:     mqtt.QoS1,
 		Payload: data,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return nil, ctx.Err()
 	case res := <-ch:
 		switch r := res.(type) {
 		case *thingDocumentRaw:
-			return nil
+			return s.doc, nil
 		case *ErrorResponse:
-			return r
+			return nil, r
 		default:
-			return ErrInvalidResponse
+			return nil, ErrInvalidResponse
 		}
 	}
 }
 
-func (s *shadow) Desire(ctx context.Context, state interface{}) error {
+func (s *shadow) Desire(ctx context.Context, state interface{}) (*ThingDocument, error) {
 	rawState, err := json.Marshal(state)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	token := s.token()
 	rawStateJSON := json.RawMessage(rawState)
@@ -240,7 +240,7 @@ func (s *shadow) Desire(ctx context.Context, state interface{}) error {
 		ClientToken: token,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ch := make(chan interface{}, 1)
@@ -258,20 +258,20 @@ func (s *shadow) Desire(ctx context.Context, state interface{}) error {
 		QoS:     mqtt.QoS1,
 		Payload: data,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return nil, ctx.Err()
 	case res := <-ch:
 		switch r := res.(type) {
 		case *thingDocumentRaw:
-			return nil
+			return s.doc, nil
 		case *ErrorResponse:
-			return r
+			return nil, r
 		default:
-			return ErrInvalidResponse
+			return nil, ErrInvalidResponse
 		}
 	}
 }
@@ -309,6 +309,7 @@ func (s *shadow) Get(ctx context.Context) (*ThingDocument, error) {
 	case res := <-ch:
 		switch r := res.(type) {
 		case *ThingDocument:
+			setClientToken(r, "")
 			return r, nil
 		case *ErrorResponse:
 			return nil, r
