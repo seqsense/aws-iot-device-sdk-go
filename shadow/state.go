@@ -3,10 +3,28 @@ package shadow
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 // ErrVersionConflict means thing state update was aborted due to version conflict.
 var ErrVersionConflict = errors.New("version conflict")
+
+type simpleRequest struct {
+	ClientToken string `json:"clientToken"`
+}
+
+// ErrorResponse represents error response from AWS IoT.
+type ErrorResponse struct {
+	Code        string `json:"code"`
+	Message     string `json:"message"`
+	Timestamp   int64  `json:"timestamp"`
+	ClientToken string `json:"clientToken"`
+}
+
+// Error implements error interface.
+func (e *ErrorResponse) Error() string {
+	return fmt.Sprintf("%s (%s): %s", e.Code, e.ClientToken, e.Message)
+}
 
 // ThingState represents Thing Shadow State.
 type ThingState struct {
@@ -17,21 +35,24 @@ type ThingState struct {
 
 // ThingDocument represents Thing Shadow Document.
 type ThingDocument struct {
-	State     ThingState `json:"state"`
-	Version   int        `json:"version,omitempty"`
-	Timestamp int        `json:"timestamp,omitempty"`
+	State       ThingState `json:"state"`
+	Version     int        `json:"version,omitempty"`
+	Timestamp   int        `json:"timestamp,omitempty"`
+	ClientToken string     `json:"clientToken,omitempty"`
 }
 
 type thingStateRaw struct {
-	Desired  json.RawMessage `json:"desired,omitempty"`
-	Reported json.RawMessage `json:"reported,omitempty"`
-	Delta    json.RawMessage `json:"delta,omitempty"`
+	Desired     json.RawMessage `json:"desired,omitempty"`
+	Reported    json.RawMessage `json:"reported,omitempty"`
+	Delta       json.RawMessage `json:"delta,omitempty"`
+	ClientToken string          `json:"clientToken,omitempty"`
 }
 
 type thingDocumentRaw struct {
-	State     thingStateRaw `json:"state"`
-	Version   int           `json:"version,omitempty"`
-	Timestamp int           `json:"timestamp,omitempty"`
+	State       thingStateRaw `json:"state"`
+	Version     int           `json:"version,omitempty"`
+	Timestamp   int           `json:"timestamp,omitempty"`
+	ClientToken string        `json:"clientToken,omitempty"`
 }
 
 type thingDelta struct {

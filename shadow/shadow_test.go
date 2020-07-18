@@ -7,7 +7,7 @@ import (
 	mqtt "github.com/at-wat/mqtt-go"
 )
 
-func TestShadow(t *testing.T) {
+func TestShadowHandler(t *testing.T) {
 	t.Run("Rejected", func(t *testing.T) {
 		chErr := make(chan error, 1)
 		s := &shadow{
@@ -33,48 +33,18 @@ func TestShadow(t *testing.T) {
 			Timestamp: 12345,
 		}
 
-		t.Run("Get", func(t *testing.T) {
-			s.getRejected(&mqtt.Message{})
-			select {
-			case err := <-chErr:
-				if err == nil {
-					t.Error("onError must be called with non-nil error")
-				}
-			default:
-				t.Fatal("Timeout")
+		s.rejected(&mqtt.Message{})
+		select {
+		case err := <-chErr:
+			if err == nil {
+				t.Error("onError must be called with non-nil error")
 			}
-			if !reflect.DeepEqual(*expectedDoc, *s.doc) {
-				t.Error("Document must not be changed on reject")
-			}
-		})
-		t.Run("Update", func(t *testing.T) {
-			s.updateRejected(&mqtt.Message{})
-			select {
-			case err := <-chErr:
-				if err == nil {
-					t.Error("onError must be called with non-nil error")
-				}
-			default:
-				t.Fatal("Timeout")
-			}
-			if !reflect.DeepEqual(*expectedDoc, *s.doc) {
-				t.Error("Document must not be changed on reject")
-			}
-		})
-		t.Run("Delete", func(t *testing.T) {
-			s.deleteRejected(&mqtt.Message{})
-			select {
-			case err := <-chErr:
-				if err == nil {
-					t.Error("onError must be called with non-nil error")
-				}
-			default:
-				t.Fatal("Timeout")
-			}
-			if !reflect.DeepEqual(*expectedDoc, *s.doc) {
-				t.Error("Document must not be changed on reject")
-			}
-		})
+		default:
+			t.Fatal("Timeout")
+		}
+		if !reflect.DeepEqual(*expectedDoc, *s.doc) {
+			t.Error("Document must not be changed on reject")
+		}
 	})
 
 	t.Run("Accepted", func(t *testing.T) {
@@ -150,7 +120,7 @@ func TestShadow(t *testing.T) {
 					chErr <- err
 				},
 			}
-			s.deleteAccepted(&mqtt.Message{})
+			s.deleteAccepted(&mqtt.Message{Payload: []byte("{}")})
 
 			select {
 			case err := <-chErr:
