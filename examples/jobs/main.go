@@ -55,7 +55,7 @@ func main() {
 		panic(err)
 	}
 	cli.Handle(mqtt.HandlerFunc(func(m *mqtt.Message) {
-		fmt.Printf("Message dropped: %v\n", *m)
+		fmt.Printf("message dropped: %v\n", *m)
 	}))
 
 	if _, err := cli.Connect(ctx,
@@ -76,14 +76,14 @@ func main() {
 
 	processJob := func(jbs map[jobs.JobExecutionState][]jobs.JobExecutionSummary) {
 		if q, ok := jbs[jobs.Queued]; ok && len(q) > 0 {
-			fmt.Printf("get job detail of %s\n", q[0].JobID)
+			fmt.Printf("> get job detail of %s\n", q[0].JobID)
 			jb, err := j.DescribeJob(ctx, q[0].JobID)
 			if err != nil {
 				fmt.Printf("describe job error: %v\n", err)
 			} else {
 				fmt.Printf("described: %+v\n", *jb)
 			}
-			fmt.Print("update job status to IN_PROGRESS\n")
+			fmt.Print("> update job status to IN_PROGRESS\n")
 			if err := j.UpdateJob(ctx, jb, jobs.InProgress); err != nil {
 				fmt.Printf("update job error: %v\n", err)
 			}
@@ -97,6 +97,7 @@ func main() {
 		processJob(jbs)
 	})
 
+	fmt.Print("> get pending jobs\n")
 	jbs, err := j.GetPendingJobs(ctx)
 	if err != nil {
 		panic(err)
