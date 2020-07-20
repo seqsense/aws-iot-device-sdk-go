@@ -130,7 +130,7 @@ func (j *jobs) GetPendingJobs(ctx context.Context) (map[JobExecutionState][]JobE
 		&mqtt.Message{
 			Topic:   j.topic("get"),
 			QoS:     mqtt.QoS1,
-			Payload: []byte(breq),
+			Payload: breq,
 		},
 	); err != nil {
 		return nil, err
@@ -177,7 +177,7 @@ func (j *jobs) DescribeJob(ctx context.Context, id string) (*JobExecution, error
 		&mqtt.Message{
 			Topic:   j.topic(id + "/get"),
 			QoS:     mqtt.QoS1,
-			Payload: []byte(breq),
+			Payload: breq,
 		},
 	); err != nil {
 		return nil, err
@@ -230,7 +230,7 @@ func (j *jobs) UpdateJob(ctx context.Context, je *JobExecution, s JobExecutionSt
 		&mqtt.Message{
 			Topic:   j.topic(je.JobID + "/update"),
 			QoS:     mqtt.QoS1,
-			Payload: []byte(breq),
+			Payload: breq,
 		},
 	); err != nil {
 		return err
