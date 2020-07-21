@@ -67,7 +67,7 @@ func main() {
 		panic(err)
 	}
 	if _, err := cli.Connect(ctx,
-		"sample",
+		thingName,
 		mqtt.WithKeepAlive(30),
 	); err != nil {
 		panic(err)
