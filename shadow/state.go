@@ -15,7 +15,7 @@ type simpleRequest struct {
 
 // ErrorResponse represents error response from AWS IoT.
 type ErrorResponse struct {
-	Code        string `json:"code"`
+	Code        int    `json:"code"`
 	Message     string `json:"message"`
 	Timestamp   int64  `json:"timestamp"`
 	ClientToken string `json:"clientToken"`
@@ -23,7 +23,7 @@ type ErrorResponse struct {
 
 // Error implements error interface.
 func (e *ErrorResponse) Error() string {
-	return fmt.Sprintf("%s (%s): %s", e.Code, e.ClientToken, e.Message)
+	return fmt.Sprintf("%d (%s): %s", e.Code, e.ClientToken, e.Message)
 }
 
 // ThingState represents Thing Shadow State.
