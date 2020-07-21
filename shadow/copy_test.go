@@ -80,22 +80,22 @@ func TestClone(t *testing.T) {
 	for name, testCase := range testCases {
 		testCase := testCase
 		t.Run(name, func(t *testing.T) {
-			originalJson, err := json.Marshal(testCase.doc)
+			originalJSON, err := json.Marshal(testCase.doc)
 			if err != nil {
 				t.Fatal(err)
 			}
 			cloned := testCase.doc.clone()
 			testCase.mutate(cloned)
 
-			resultJson, err := json.Marshal(testCase.doc)
+			resultJSON, err := json.Marshal(testCase.doc)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if !bytes.Equal(originalJson, resultJson) {
+			if !bytes.Equal(originalJSON, resultJSON) {
 				t.Errorf(
 					"Original document is mutated by updating cloned one\nexpected: %s\ngot: %s",
-					originalJson, resultJson,
+					originalJSON, resultJSON,
 				)
 			}
 		})
