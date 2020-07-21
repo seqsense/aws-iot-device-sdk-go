@@ -48,6 +48,9 @@ func cloneStateSlice(s []interface{}) []interface{} {
 
 // clone returns deepcopy of the document.
 func (s *ThingDocument) clone() *ThingDocument {
+	if s == nil {
+		return nil
+	}
 	c := *s
 	c.State.Desired = cloneState(s.State.Desired)
 	c.State.Reported = cloneState(s.State.Reported)
