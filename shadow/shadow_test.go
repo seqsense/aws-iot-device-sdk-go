@@ -1,13 +1,25 @@
 package shadow
 
 import (
+	"context"
+	"encoding/json"
 	"reflect"
 	"testing"
+	"time"
 
 	mqtt "github.com/at-wat/mqtt-go"
+	mockmqtt "github.com/at-wat/mqtt-go/mock"
 )
 
-func TestShadow(t *testing.T) {
+type mockDevice struct {
+	*mockmqtt.Client
+}
+
+func (d *mockDevice) ThingName() string {
+	return "test"
+}
+
+func TestHandlers(t *testing.T) {
 	t.Run("Rejected", func(t *testing.T) {
 		chErr := make(chan error, 1)
 		s := &shadow{
@@ -33,48 +45,18 @@ func TestShadow(t *testing.T) {
 			Timestamp: 12345,
 		}
 
-		t.Run("Get", func(t *testing.T) {
-			s.getRejected(&mqtt.Message{})
-			select {
-			case err := <-chErr:
-				if err == nil {
-					t.Error("onError must be called with non-nil error")
-				}
-			default:
-				t.Fatal("Timeout")
+		s.rejected(&mqtt.Message{})
+		select {
+		case err := <-chErr:
+			if err == nil {
+				t.Error("onError must be called with non-nil error")
 			}
-			if !reflect.DeepEqual(*expectedDoc, *s.doc) {
-				t.Error("Document must not be changed on reject")
-			}
-		})
-		t.Run("Update", func(t *testing.T) {
-			s.updateRejected(&mqtt.Message{})
-			select {
-			case err := <-chErr:
-				if err == nil {
-					t.Error("onError must be called with non-nil error")
-				}
-			default:
-				t.Fatal("Timeout")
-			}
-			if !reflect.DeepEqual(*expectedDoc, *s.doc) {
-				t.Error("Document must not be changed on reject")
-			}
-		})
-		t.Run("Delete", func(t *testing.T) {
-			s.deleteRejected(&mqtt.Message{})
-			select {
-			case err := <-chErr:
-				if err == nil {
-					t.Error("onError must be called with non-nil error")
-				}
-			default:
-				t.Fatal("Timeout")
-			}
-			if !reflect.DeepEqual(*expectedDoc, *s.doc) {
-				t.Error("Document must not be changed on reject")
-			}
-		})
+		default:
+			t.Fatal("Timeout")
+		}
+		if !reflect.DeepEqual(*expectedDoc, *s.doc) {
+			t.Error("Document must not be changed on reject")
+		}
 	})
 
 	t.Run("Accepted", func(t *testing.T) {
@@ -150,7 +132,7 @@ func TestShadow(t *testing.T) {
 					chErr <- err
 				},
 			}
-			s.deleteAccepted(&mqtt.Message{})
+			s.deleteAccepted(&mqtt.Message{Payload: []byte("{}")})
 
 			select {
 			case err := <-chErr:
@@ -311,4 +293,401 @@ func TestShadow(t *testing.T) {
 			}
 		})
 	})
+}
+
+func TestOnDelta(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	cli := &mockDevice{&mockmqtt.Client{}}
+	s, err := New(ctx, cli)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cli.Handle(s)
+
+	expected := map[string]interface{}{
+		"key": "value",
+	}
+
+	done := make(chan struct{})
+	s.OnDelta(func(delta map[string]interface{}) {
+		if !reflect.DeepEqual(expected, delta) {
+			t.Fatalf("Expected delta: %v, got: %v", expected, delta)
+		}
+		close(done)
+	})
+
+	req := &thingDelta{
+		State: map[string]interface{}{
+			"key": "value",
+		},
+		Version: 10,
+	}
+	breq, err := json.Marshal(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cli.Serve(&mqtt.Message{
+		Topic:   s.(*shadow).topic("update/delta"),
+		Payload: breq,
+	})
+
+	select {
+	case <-done:
+	case <-ctx.Done():
+		t.Fatal("Timeout")
+	}
+}
+
+func TestGet(t *testing.T) {
+	testCases := map[string]struct {
+		response      interface{}
+		responseTopic string
+		expected      interface{}
+		err           error
+	}{
+		"Success": {
+			response: &ThingDocument{
+				Version: 5,
+				State: ThingState{
+					Desired:  map[string]interface{}{"key": "value"},
+					Reported: map[string]interface{}{"key": "value"},
+				},
+			},
+			responseTopic: "get/accepted",
+			expected: &ThingDocument{
+				Version: 5,
+				State: ThingState{
+					Desired:  map[string]interface{}{"key": "value"},
+					Reported: map[string]interface{}{"key": "value"},
+				},
+			},
+		},
+		"Error": {
+			response: &ErrorResponse{
+				Code:    "Failed",
+				Message: "Reason",
+			},
+			responseTopic: "get/rejected",
+			err: &ErrorResponse{
+				Code:    "Failed",
+				Message: "Reason",
+			},
+		},
+	}
+
+	for name, testCase := range testCases {
+		testCase := testCase
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+
+			var s Shadow
+			var cli *mockDevice
+			cli = &mockDevice{
+				Client: &mockmqtt.Client{
+					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
+						req := &simpleRequest{}
+						if err := json.Unmarshal(msg.Payload, req); err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						res := testCase.response
+						setClientToken(res, req.ClientToken)
+						bres, err := json.Marshal(res)
+						if err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						cli.Serve(&mqtt.Message{
+							Topic:   s.(*shadow).topic(testCase.responseTopic),
+							Payload: bres,
+						})
+						return nil
+					},
+				},
+			}
+			var err error
+			s, err = New(ctx, cli)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cli.Handle(s)
+
+			doc, err := s.Get(ctx)
+			if err != nil {
+				setClientToken(err, "")
+				if !reflect.DeepEqual(testCase.err, err) {
+					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+				}
+			} else {
+				if !reflect.DeepEqual(testCase.expected, doc) {
+					t.Errorf("Expected document: %v, got: %v", testCase.expected, doc)
+				}
+			}
+		})
+	}
+}
+
+func TestDesire(t *testing.T) {
+	testCases := map[string]struct {
+		input         map[string]interface{}
+		response      interface{}
+		responseTopic string
+		expected      interface{}
+		err           error
+	}{
+		"Success": {
+			input: map[string]interface{}{"key": "value"},
+			response: &ThingDocument{
+				Version: 5,
+				State: ThingState{
+					Desired: map[string]interface{}{"key": "value"},
+				},
+			},
+			responseTopic: "update/accepted",
+			expected: &ThingDocument{
+				Version: 5,
+				State: ThingState{
+					Desired:  map[string]interface{}{"key": "value"},
+					Reported: map[string]interface{}{},
+					Delta:    map[string]interface{}{},
+				},
+			},
+		},
+		"Error": {
+			input: map[string]interface{}{"key": "value"},
+			response: &ErrorResponse{
+				Code:    "Failed",
+				Message: "Reason",
+			},
+			responseTopic: "update/rejected",
+			err: &ErrorResponse{
+				Code:    "Failed",
+				Message: "Reason",
+			},
+		},
+	}
+
+	for name, testCase := range testCases {
+		testCase := testCase
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+
+			var s Shadow
+			var cli *mockDevice
+			cli = &mockDevice{
+				Client: &mockmqtt.Client{
+					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
+						req := &simpleRequest{}
+						if err := json.Unmarshal(msg.Payload, req); err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						res := testCase.response
+						setClientToken(res, req.ClientToken)
+						bres, err := json.Marshal(res)
+						if err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						cli.Serve(&mqtt.Message{
+							Topic:   s.(*shadow).topic(testCase.responseTopic),
+							Payload: bres,
+						})
+						return nil
+					},
+				},
+			}
+			var err error
+			s, err = New(ctx, cli)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cli.Handle(s)
+
+			doc, err := s.Desire(ctx, testCase.input)
+			if err != nil {
+				setClientToken(err, "")
+				if !reflect.DeepEqual(testCase.err, err) {
+					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+				}
+			} else {
+				if !reflect.DeepEqual(testCase.expected, doc) {
+					t.Errorf("Expected document: %v, got: %v", testCase.expected, doc)
+				}
+			}
+		})
+	}
+}
+
+func TestReport(t *testing.T) {
+	testCases := map[string]struct {
+		input         map[string]interface{}
+		response      interface{}
+		responseTopic string
+		expected      interface{}
+		err           error
+	}{
+		"Success": {
+			input: map[string]interface{}{"key": "value"},
+			response: &ThingDocument{
+				Version: 5,
+				State: ThingState{
+					Reported: map[string]interface{}{"key": "value"},
+				},
+			},
+			responseTopic: "update/accepted",
+			expected: &ThingDocument{
+				Version: 5,
+				State: ThingState{
+					Reported: map[string]interface{}{"key": "value"},
+					Desired:  map[string]interface{}{},
+					Delta:    map[string]interface{}{},
+				},
+			},
+		},
+		"Error": {
+			input: map[string]interface{}{"key": "value"},
+			response: &ErrorResponse{
+				Code:    "Failed",
+				Message: "Reason",
+			},
+			responseTopic: "update/rejected",
+			err: &ErrorResponse{
+				Code:    "Failed",
+				Message: "Reason",
+			},
+		},
+	}
+
+	for name, testCase := range testCases {
+		testCase := testCase
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+
+			var s Shadow
+			var cli *mockDevice
+			cli = &mockDevice{
+				Client: &mockmqtt.Client{
+					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
+						req := &simpleRequest{}
+						if err := json.Unmarshal(msg.Payload, req); err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						res := testCase.response
+						setClientToken(res, req.ClientToken)
+						bres, err := json.Marshal(res)
+						if err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						cli.Serve(&mqtt.Message{
+							Topic:   s.(*shadow).topic(testCase.responseTopic),
+							Payload: bres,
+						})
+						return nil
+					},
+				},
+			}
+			var err error
+			s, err = New(ctx, cli)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cli.Handle(s)
+
+			doc, err := s.Report(ctx, testCase.input)
+			if err != nil {
+				setClientToken(err, "")
+				if !reflect.DeepEqual(testCase.err, err) {
+					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+				}
+			} else {
+				if !reflect.DeepEqual(testCase.expected, doc) {
+					t.Errorf("Expected document: %v, got: %v", testCase.expected, doc)
+				}
+			}
+		})
+	}
+}
+
+func TestDelete(t *testing.T) {
+	testCases := map[string]struct {
+		response      interface{}
+		responseTopic string
+		err           error
+	}{
+		"Success": {
+			response:      &ThingDocument{Version: 10},
+			responseTopic: "delete/accepted",
+		},
+		"Error": {
+			response: &ErrorResponse{
+				Code:    "Failed",
+				Message: "Reason",
+			},
+			responseTopic: "delete/rejected",
+			err: &ErrorResponse{
+				Code:    "Failed",
+				Message: "Reason",
+			},
+		},
+	}
+
+	for name, testCase := range testCases {
+		testCase := testCase
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+
+			var s Shadow
+			var cli *mockDevice
+			cli = &mockDevice{
+				Client: &mockmqtt.Client{
+					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
+						req := &simpleRequest{}
+						if err := json.Unmarshal(msg.Payload, req); err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						res := testCase.response
+						setClientToken(res, req.ClientToken)
+						bres, err := json.Marshal(res)
+						if err != nil {
+							t.Error(err)
+							cancel()
+							return err
+						}
+						s.Serve(&mqtt.Message{
+							Topic:   s.(*shadow).topic(testCase.responseTopic),
+							Payload: bres,
+						})
+						return nil
+					},
+				},
+			}
+			var err error
+			s, err = New(ctx, cli)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cli.Handle(s)
+
+			err = s.Delete(ctx)
+			if err != nil {
+				setClientToken(err, "")
+				if !reflect.DeepEqual(testCase.err, err) {
+					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+				}
+			}
+		})
+	}
 }
