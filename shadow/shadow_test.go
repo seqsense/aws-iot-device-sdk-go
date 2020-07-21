@@ -366,12 +366,12 @@ func TestGet(t *testing.T) {
 		},
 		"Error": {
 			response: &ErrorResponse{
-				Code:    "Failed",
+				Code:    400,
 				Message: "Reason",
 			},
 			responseTopic: "get/rejected",
 			err: &ErrorResponse{
-				Code:    "Failed",
+				Code:    400,
 				Message: "Reason",
 			},
 		},
@@ -460,12 +460,12 @@ func TestDesire(t *testing.T) {
 		"Error": {
 			input: map[string]interface{}{"key": "value"},
 			response: &ErrorResponse{
-				Code:    "Failed",
+				Code:    400,
 				Message: "Reason",
 			},
 			responseTopic: "update/rejected",
 			err: &ErrorResponse{
-				Code:    "Failed",
+				Code:    400,
 				Message: "Reason",
 			},
 		},
@@ -554,12 +554,12 @@ func TestReport(t *testing.T) {
 		"Error": {
 			input: map[string]interface{}{"key": "value"},
 			response: &ErrorResponse{
-				Code:    "Failed",
+				Code:    400,
 				Message: "Reason",
 			},
 			responseTopic: "update/rejected",
 			err: &ErrorResponse{
-				Code:    "Failed",
+				Code:    400,
 				Message: "Reason",
 			},
 		},
@@ -631,12 +631,12 @@ func TestDelete(t *testing.T) {
 		},
 		"Error": {
 			response: &ErrorResponse{
-				Code:    "Failed",
+				Code:    400,
 				Message: "Reason",
 			},
 			responseTopic: "delete/rejected",
 			err: &ErrorResponse{
-				Code:    "Failed",
+				Code:    400,
 				Message: "Reason",
 			},
 		},
