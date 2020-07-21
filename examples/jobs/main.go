@@ -15,11 +15,20 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if len(os.Args) != 2 {
-		println("usage: jobs aws_iot_endpoint")
+	if len(os.Args) != 3 {
+		println("usage: jobs AWS_IOT_ENDPOINT THING_NAME")
+		println("")
+		println("This example fetches AWS IoT Jobs and sets first QUEUED job status to IN_PROGRESS.")
+		println("THING_NAME must be registered to your account of AWS IoT beforehand.")
+		println("")
+		println("Following files must be placed under the current working directory:")
+		println("         root-CA.crt: root CA certificate")
+		println(" certificate.pem.crt: client certificate associated to THING_NAME")
+		println("     private.pem.key: private key associated to THING_NAME")
 		os.Exit(1)
 	}
 	host := os.Args[1]
+	thingName := os.Args[2]
 
 	for _, file := range []string{
 		"root-CA.crt",
@@ -34,7 +43,7 @@ func main() {
 	}
 
 	cli, err := awsiotdev.New(
-		"sample",
+		thingName,
 		&mqtt.URLDialer{
 			URL: fmt.Sprintf("mqtts://%s:8883", host),
 			Options: []mqtt.DialOption{
@@ -59,7 +68,7 @@ func main() {
 	}))
 
 	if _, err := cli.Connect(ctx,
-		"sample",
+		thingName,
 		mqtt.WithKeepAlive(30),
 	); err != nil {
 		panic(err)
