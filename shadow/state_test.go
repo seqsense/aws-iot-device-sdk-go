@@ -3,6 +3,7 @@ package shadow
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -71,5 +72,19 @@ func TestThingDocument_update(t *testing.T) {
 			"Document must be cleared by nil\nexpected: %v\ngot: %v",
 			*expected2, *doc,
 		)
+	}
+}
+
+func TestErrorResponse(t *testing.T) {
+	err := &ErrorResponse{
+		Code:    100,
+		Message: "error message",
+	}
+	errStr := err.Error()
+	if !strings.Contains(errStr, "100") {
+		t.Error("Error string should contain error code")
+	}
+	if !strings.Contains(errStr, "error message") {
+		t.Error("Error string should contain error message")
 	}
 }
