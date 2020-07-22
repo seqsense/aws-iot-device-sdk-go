@@ -81,40 +81,45 @@ func main() {
 	s.OnError(func(err error) {
 		fmt.Printf("async error: %v\n", err)
 	})
+	s.OnDelta(func(delta map[string]interface{}) {
+		fmt.Printf("delta: %+v\n", delta)
+	})
 	cli.Handle(s)
 
 	fmt.Print("> update desire\n")
-	doc, err := s.Desire(ctx, sampleState{Value: 1})
+	doc, err := s.Desire(ctx, sampleState{Value: 1, Struct: sampleStruct{Values: []int{1, 2}}})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("document: %v\n", doc)
+	fmt.Printf("document: %+v\n", doc)
 
 	fmt.Print("> update report\n")
-	doc, err = s.Report(ctx, sampleState{Value: 2})
+	doc, err = s.Report(ctx, sampleState{Value: 2, Struct: sampleStruct{Values: []int{1, 2}}})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("document: %v\n", doc)
+	fmt.Printf("document: %+v\n", doc)
 
 	fmt.Print("> get document\n")
 	doc, err = s.Get(ctx)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("document: %v\n", doc)
+	fmt.Printf("document: %+v\n", doc)
 
 	fmt.Print("> delete\n")
 	err = s.Delete(ctx)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("document: %v\n", s.Document())
+	fmt.Printf("document: %+v\n", s.Document())
+}
+
+type sampleStruct struct {
+	Values []int
 }
 
 type sampleState struct {
 	Value  int
-	Struct struct {
-		NestedValue int
-	}
+	Struct sampleStruct
 }
