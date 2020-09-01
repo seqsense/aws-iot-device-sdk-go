@@ -5,7 +5,7 @@ require (
 	github.com/aws/aws-sdk-go v1.34.13
 	github.com/golang/protobuf v1.4.2
 	github.com/google/uuid v1.1.1
-	golang.org/x/net v0.0.0-20200707034311-ab3426394381
+	golang.org/x/net v0.0.0-20200822124328-c89045814202
 	google.golang.org/protobuf v1.25.0
 )
 
