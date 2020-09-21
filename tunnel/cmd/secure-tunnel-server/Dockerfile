@@ -1,5 +1,5 @@
 # =====================
-FROM golang:1.14-alpine3.12 as go-builder
+FROM golang:1.15-alpine3.12 as go-builder
 
 ENV CGO_ENABLED=0
 
