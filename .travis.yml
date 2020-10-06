@@ -1,16 +1,15 @@
 language: go
 
 go:
-  - "1.12"
   - "1.13"
   - "1.14"
+  - "1.15"
   - master
 
 env:
   global:
-    - REVIEW_DOG_ON=1.14
+    - REVIEW_DOG_ON=1.15
     - REVIEW_DOG_VERSION=0.9.17
-    - GO111MODULE=on
 
 branches:
   only:
