@@ -1,11 +1,11 @@
 package tunnel
 
 import (
-	"fmt"
 	"io"
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel/msg"
 )
 
@@ -18,7 +18,7 @@ func proxyDestination(ws io.ReadWriter, dialer Dialer, eh ErrorHandler) error {
 			if err == io.EOF {
 				return nil
 			}
-			return err
+			return ioterr.New(err, "reading length header")
 		}
 		l := int(sz[0])<<8 | int(sz[1])
 		if cap(b) < l {
@@ -29,12 +29,12 @@ func proxyDestination(ws io.ReadWriter, dialer Dialer, eh ErrorHandler) error {
 			if err == io.EOF {
 				return nil
 			}
-			return err
+			return ioterr.New(err, "reading message")
 		}
 		m := &msg.Message{}
 		if err := proto.Unmarshal(b, m); err != nil {
 			if eh != nil {
-				eh.HandleError(fmt.Errorf("unmarshal failed: %v", err))
+				eh.HandleError(ioterr.New(err, "unmarshaling message"))
 			}
 			continue
 		}
@@ -43,7 +43,7 @@ func proxyDestination(ws io.ReadWriter, dialer Dialer, eh ErrorHandler) error {
 			conn, err := dialer()
 			if err != nil {
 				if eh != nil {
-					eh.HandleError(fmt.Errorf("dial failed: %v", err))
+					eh.HandleError(ioterr.New(err, "dialing to destination"))
 				}
 				continue
 			}
@@ -67,7 +67,7 @@ func proxyDestination(ws io.ReadWriter, dialer Dialer, eh ErrorHandler) error {
 		case msg.Message_DATA:
 			if conn, ok := conns[m.StreamId]; ok {
 				if _, err := conn.Write(m.Payload); err != nil {
-					eh.HandleError(fmt.Errorf("write failed: %v", err))
+					eh.HandleError(ioterr.New(err, "writing message"))
 				}
 			}
 		}

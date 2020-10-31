@@ -7,6 +7,7 @@ import (
 
 	"github.com/at-wat/mqtt-go"
 
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel"
 )
 
@@ -35,7 +36,7 @@ func NewNotifier(cli mqtt.Client, opts ...NotifierOption) *Notifier {
 func (n *Notifier) notify(ctx context.Context, thingName string, notify *tunnel.Notification) error {
 	b, err := json.Marshal(notify)
 	if err != nil {
-		return err
+		return ioterr.New(err, "marshaling notification")
 	}
 	return n.cli.Publish(ctx,
 		&mqtt.Message{

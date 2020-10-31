@@ -12,6 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/private/protocol/json/jsonutil"
 	ist "github.com/aws/aws-sdk-go/service/iotsecuretunneling"
+
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel"
 )
 
@@ -23,7 +25,7 @@ type apiHandler struct {
 
 func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput, error) {
 	if err := in.Validate(); err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "validating request")
 	}
 	lifetime := 12 * time.Hour
 	if in.TimeoutConfig != nil && in.TimeoutConfig.MaxLifetimeTimeoutMinutes != nil {
@@ -32,12 +34,12 @@ func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput,
 
 	r1, err := uuid.NewRandom()
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "generating uuid")
 	}
 
 	r2, err := uuid.NewRandom()
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "generating uuid")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), lifetime)
@@ -57,7 +59,7 @@ func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput,
 
 	id, err := h.tunnelHandler.add(ti)
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "adding tunnel")
 	}
 
 	if h.notifier != nil {
@@ -71,7 +73,7 @@ func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput,
 				Services:          ti.services,
 			},
 		); err != nil {
-			return nil, err
+			return nil, ioterr.New(err, "notifying destination")
 		}
 	}
 
@@ -85,13 +87,13 @@ func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput,
 
 func (h *apiHandler) closeTunnel(in *ist.CloseTunnelInput) (*ist.CloseTunnelOutput, error) {
 	if err := in.Validate(); err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "validating request")
 	}
 
 	id := *in.TunnelId
 
 	if err := h.tunnelHandler.remove(id); err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "removing tunnel")
 	}
 
 	return &ist.CloseTunnelOutput{}, nil

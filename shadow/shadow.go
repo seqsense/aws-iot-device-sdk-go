@@ -9,7 +9,9 @@ import (
 	"sync/atomic"
 
 	"github.com/at-wat/mqtt-go"
+
 	"github.com/seqsense/aws-iot-device-sdk-go/v4"
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 )
 
 // Shadow is an interface of Thing Shadow.
@@ -80,7 +82,7 @@ func (s *shadow) handleResponse(r interface{}) {
 func (s *shadow) getAccepted(msg *mqtt.Message) {
 	doc := &ThingDocument{}
 	if err := json.Unmarshal(msg.Payload, doc); err != nil {
-		s.handleError(err)
+		s.handleError(ioterr.New(err, "unmarshaling thing document"))
 		return
 	}
 	s.mu.Lock()
@@ -94,7 +96,7 @@ func (s *shadow) getAccepted(msg *mqtt.Message) {
 func (s *shadow) rejected(msg *mqtt.Message) {
 	e := &ErrorResponse{}
 	if err := json.Unmarshal(msg.Payload, e); err != nil {
-		s.handleError(err)
+		s.handleError(ioterr.New(err, "unmarshaling error response"))
 		return
 	}
 	s.handleResponse(e)
@@ -103,14 +105,14 @@ func (s *shadow) rejected(msg *mqtt.Message) {
 func (s *shadow) updateAccepted(msg *mqtt.Message) {
 	doc := &thingDocumentRaw{}
 	if err := json.Unmarshal(msg.Payload, doc); err != nil {
-		s.handleError(err)
+		s.handleError(ioterr.New(err, "unmarshaling thing document"))
 		return
 	}
 	s.mu.Lock()
 	err := s.doc.update(doc)
 	s.mu.Unlock()
 	if err != nil {
-		s.handleError(err)
+		s.handleError(ioterr.New(err, "updating local thing document"))
 		return
 	}
 	s.handleResponse(doc)
@@ -119,7 +121,7 @@ func (s *shadow) updateAccepted(msg *mqtt.Message) {
 func (s *shadow) updateDelta(msg *mqtt.Message) {
 	state := &thingDelta{}
 	if err := json.Unmarshal(msg.Payload, state); err != nil {
-		s.handleError(err)
+		s.handleError(ioterr.New(err, "unmarshaling thing delta"))
 		return
 	}
 	s.mu.Lock()
@@ -134,7 +136,7 @@ func (s *shadow) updateDelta(msg *mqtt.Message) {
 func (s *shadow) deleteAccepted(msg *mqtt.Message) {
 	doc := &thingDocumentRaw{}
 	if err := json.Unmarshal(msg.Payload, doc); err != nil {
-		s.handleError(err)
+		s.handleError(ioterr.New(err, "unmarshaling thing document"))
 		return
 	}
 	s.mu.Lock()
@@ -171,7 +173,7 @@ func New(ctx context.Context, cli awsiotdev.Device) (Shadow, error) {
 		{s.topic("delete/rejected"), mqtt.HandlerFunc(s.rejected)},
 	} {
 		if err := s.ServeMux.Handle(sub.topic, sub.handler); err != nil {
-			return nil, err
+			return nil, ioterr.New(err, "registering message handlers")
 		}
 	}
 
@@ -185,7 +187,7 @@ func New(ctx context.Context, cli awsiotdev.Device) (Shadow, error) {
 		mqtt.Subscription{Topic: s.topic("delete/rejected"), QoS: mqtt.QoS1},
 	)
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "subscribing shadow topics")
 	}
 	return s, nil
 }
@@ -193,7 +195,7 @@ func New(ctx context.Context, cli awsiotdev.Device) (Shadow, error) {
 func (s *shadow) Report(ctx context.Context, state interface{}) (*ThingDocument, error) {
 	rawState, err := json.Marshal(state)
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "marshaling state")
 	}
 	token := s.token()
 	rawStateJSON := json.RawMessage(rawState)
@@ -202,7 +204,7 @@ func (s *shadow) Report(ctx context.Context, state interface{}) (*ThingDocument,
 		ClientToken: token,
 	})
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "marshaling request")
 	}
 
 	ch := make(chan interface{}, 1)
@@ -220,12 +222,12 @@ func (s *shadow) Report(ctx context.Context, state interface{}) (*ThingDocument,
 		QoS:     mqtt.QoS1,
 		Payload: data,
 	}); err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "sending request")
 	}
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, ioterr.New(ctx.Err(), "updating reported state")
 	case res := <-ch:
 		switch r := res.(type) {
 		case *thingDocumentRaw:
@@ -236,7 +238,7 @@ func (s *shadow) Report(ctx context.Context, state interface{}) (*ThingDocument,
 		case *ErrorResponse:
 			return nil, r
 		default:
-			return nil, ErrInvalidResponse
+			return nil, ioterr.New(ErrInvalidResponse, "updating reported state")
 		}
 	}
 }
@@ -244,7 +246,7 @@ func (s *shadow) Report(ctx context.Context, state interface{}) (*ThingDocument,
 func (s *shadow) Desire(ctx context.Context, state interface{}) (*ThingDocument, error) {
 	rawState, err := json.Marshal(state)
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "marshaling state")
 	}
 	token := s.token()
 	rawStateJSON := json.RawMessage(rawState)
@@ -253,7 +255,7 @@ func (s *shadow) Desire(ctx context.Context, state interface{}) (*ThingDocument,
 		ClientToken: token,
 	})
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "marshaling request")
 	}
 
 	ch := make(chan interface{}, 1)
@@ -271,12 +273,12 @@ func (s *shadow) Desire(ctx context.Context, state interface{}) (*ThingDocument,
 		QoS:     mqtt.QoS1,
 		Payload: data,
 	}); err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "sending request")
 	}
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, ioterr.New(ctx.Err(), "updating desired state")
 	case res := <-ch:
 		switch r := res.(type) {
 		case *thingDocumentRaw:
@@ -287,7 +289,7 @@ func (s *shadow) Desire(ctx context.Context, state interface{}) (*ThingDocument,
 		case *ErrorResponse:
 			return nil, r
 		default:
-			return nil, ErrInvalidResponse
+			return nil, ioterr.New(ErrInvalidResponse, "updating desired state")
 		}
 	}
 }
@@ -298,7 +300,7 @@ func (s *shadow) Get(ctx context.Context) (*ThingDocument, error) {
 		ClientToken: token,
 	})
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "marshaling requst")
 	}
 
 	ch := make(chan interface{}, 1)
@@ -316,12 +318,12 @@ func (s *shadow) Get(ctx context.Context) (*ThingDocument, error) {
 		QoS:     mqtt.QoS1,
 		Payload: []byte(data),
 	}); err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "sending request")
 	}
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, ioterr.New(ctx.Err(), "getting document")
 	case res := <-ch:
 		switch r := res.(type) {
 		case *ThingDocument:
@@ -330,7 +332,7 @@ func (s *shadow) Get(ctx context.Context) (*ThingDocument, error) {
 		case *ErrorResponse:
 			return nil, r
 		default:
-			return nil, ErrInvalidResponse
+			return nil, ioterr.New(ErrInvalidResponse, "getting document")
 		}
 	}
 }
@@ -341,7 +343,7 @@ func (s *shadow) Delete(ctx context.Context) error {
 		ClientToken: token,
 	})
 	if err != nil {
-		return err
+		return ioterr.New(err, "marshaling request")
 	}
 
 	ch := make(chan interface{}, 1)
@@ -359,12 +361,12 @@ func (s *shadow) Delete(ctx context.Context) error {
 		QoS:     mqtt.QoS1,
 		Payload: []byte(data),
 	}); err != nil {
-		return err
+		return ioterr.New(err, "sending request")
 	}
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return ioterr.New(ctx.Err(), "deleting state")
 	case res := <-ch:
 		switch r := res.(type) {
 		case *thingDocumentRaw:
@@ -372,7 +374,7 @@ func (s *shadow) Delete(ctx context.Context) error {
 		case *ErrorResponse:
 			return r
 		default:
-			return ErrInvalidResponse
+			return ioterr.New(ErrInvalidResponse, "deleting state")
 		}
 	}
 }

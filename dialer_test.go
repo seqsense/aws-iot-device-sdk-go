@@ -43,7 +43,7 @@ func TestNewDialer(t *testing.T) {
 		c := c
 		t.Run(name, func(t *testing.T) {
 			d, err := NewDialer(&dummyConfigProvider{}, c.url)
-			if err != c.err {
+			if !errors.Is(err, c.err) {
 				t.Fatalf("Expected error: %v, got: %v", c.err, err)
 			}
 			if !reflect.DeepEqual(c.dialer, d) {

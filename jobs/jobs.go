@@ -22,7 +22,9 @@ import (
 	"sync"
 
 	"github.com/at-wat/mqtt-go"
+
 	"github.com/seqsense/aws-iot-device-sdk-go/v4"
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 )
 
 // Jobs is an interface of IoT Jobs.
@@ -80,7 +82,7 @@ func New(ctx context.Context, cli awsiotdev.Device) (Jobs, error) {
 		{j.topic("get/rejected"), mqtt.HandlerFunc(j.rejected)},
 	} {
 		if err := j.ServeMux.Handle(sub.topic, sub.handler); err != nil {
-			return nil, err
+			return nil, ioterr.New(err, "registering message handlers")
 		}
 	}
 
@@ -90,7 +92,7 @@ func New(ctx context.Context, cli awsiotdev.Device) (Jobs, error) {
 		mqtt.Subscription{Topic: j.topic("+/get/#"), QoS: mqtt.QoS1},
 	)
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "subscribing jobs topics")
 	}
 	return j, nil
 }
@@ -98,7 +100,7 @@ func New(ctx context.Context, cli awsiotdev.Device) (Jobs, error) {
 func (j *jobs) notify(msg *mqtt.Message) {
 	m := &jobExecutionsChangedMessage{}
 	if err := json.Unmarshal(msg.Payload, m); err != nil {
-		j.handleError(err)
+		j.handleError(ioterr.New(err, "unmarshaling job executions changed message"))
 		return
 	}
 	j.mu.Lock()
@@ -124,7 +126,7 @@ func (j *jobs) GetPendingJobs(ctx context.Context) (map[JobExecutionState][]JobE
 
 	breq, err := json.Marshal(req)
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "marshaling request")
 	}
 	if err := j.cli.Publish(ctx,
 		&mqtt.Message{
@@ -133,12 +135,12 @@ func (j *jobs) GetPendingJobs(ctx context.Context) (map[JobExecutionState][]JobE
 			Payload: breq,
 		},
 	); err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "sending request")
 	}
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, ioterr.New(ctx.Err(), "getting pending job")
 	case res := <-ch:
 		switch r := res.(type) {
 		case *getPendingJobExecutionsResponse:
@@ -149,7 +151,7 @@ func (j *jobs) GetPendingJobs(ctx context.Context) (map[JobExecutionState][]JobE
 		case *ErrorResponse:
 			return nil, r
 		default:
-			return nil, ErrInvalidResponse
+			return nil, ioterr.New(ErrInvalidResponse, "getting pending job")
 		}
 	}
 }
@@ -171,7 +173,7 @@ func (j *jobs) DescribeJob(ctx context.Context, id string) (*JobExecution, error
 
 	breq, err := json.Marshal(req)
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "marshaling request")
 	}
 	if err := j.cli.Publish(ctx,
 		&mqtt.Message{
@@ -180,12 +182,12 @@ func (j *jobs) DescribeJob(ctx context.Context, id string) (*JobExecution, error
 			Payload: breq,
 		},
 	); err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "sending request")
 	}
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, ioterr.New(ctx.Err(), "describing job")
 	case res := <-ch:
 		switch r := res.(type) {
 		case *describeJobExecutionResponse:
@@ -193,7 +195,7 @@ func (j *jobs) DescribeJob(ctx context.Context, id string) (*JobExecution, error
 		case *ErrorResponse:
 			return nil, r
 		default:
-			return nil, ErrInvalidResponse
+			return nil, ioterr.New(ErrInvalidResponse, "describing job")
 		}
 	}
 }
@@ -224,7 +226,7 @@ func (j *jobs) UpdateJob(ctx context.Context, je *JobExecution, s JobExecutionSt
 
 	breq, err := json.Marshal(req)
 	if err != nil {
-		return err
+		return ioterr.New(err, "marshaling request")
 	}
 	if err := j.cli.Publish(ctx,
 		&mqtt.Message{
@@ -233,12 +235,12 @@ func (j *jobs) UpdateJob(ctx context.Context, je *JobExecution, s JobExecutionSt
 			Payload: breq,
 		},
 	); err != nil {
-		return err
+		return ioterr.New(err, "sending request")
 	}
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return ioterr.New(ctx.Err(), "updating job")
 	case res := <-ch:
 		switch r := res.(type) {
 		case *updateJobExecutionResponse:
@@ -246,7 +248,7 @@ func (j *jobs) UpdateJob(ctx context.Context, je *JobExecution, s JobExecutionSt
 		case *ErrorResponse:
 			return r
 		default:
-			return ErrInvalidResponse
+			return ioterr.New(ErrInvalidResponse, "updating job")
 		}
 	}
 }
@@ -271,7 +273,7 @@ func (j *jobs) handleResponse(r interface{}) {
 func (j *jobs) getAccepted(msg *mqtt.Message) {
 	res := &getPendingJobExecutionsResponse{}
 	if err := json.Unmarshal(msg.Payload, res); err != nil {
-		j.handleError(err)
+		j.handleError(ioterr.New(err, "unmarshaling pending job executions response"))
 		return
 	}
 	j.handleResponse(res)
@@ -280,7 +282,7 @@ func (j *jobs) getAccepted(msg *mqtt.Message) {
 func (j *jobs) getJobAccepted(msg *mqtt.Message) {
 	res := &describeJobExecutionResponse{}
 	if err := json.Unmarshal(msg.Payload, res); err != nil {
-		j.handleError(err)
+		j.handleError(ioterr.New(err, "unmarshaling describe job execution response"))
 		return
 	}
 	j.handleResponse(res)
@@ -289,7 +291,7 @@ func (j *jobs) getJobAccepted(msg *mqtt.Message) {
 func (j *jobs) updateJobAccepted(msg *mqtt.Message) {
 	res := &updateJobExecutionResponse{}
 	if err := json.Unmarshal(msg.Payload, res); err != nil {
-		j.handleError(err)
+		j.handleError(ioterr.New(err, "unmarshaling update job execution response"))
 		return
 	}
 	j.handleResponse(res)
@@ -298,7 +300,7 @@ func (j *jobs) updateJobAccepted(msg *mqtt.Message) {
 func (j *jobs) rejected(msg *mqtt.Message) {
 	e := &ErrorResponse{}
 	if err := json.Unmarshal(msg.Payload, e); err != nil {
-		j.handleError(err)
+		j.handleError(ioterr.New(err, "unmarshaling error response"))
 		return
 	}
 	j.handleResponse(e)

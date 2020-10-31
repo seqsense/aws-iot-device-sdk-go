@@ -17,6 +17,8 @@ package awsiotdev
 
 import (
 	"github.com/at-wat/mqtt-go"
+
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 )
 
 // Device is an AWS IoT device.
@@ -34,7 +36,7 @@ type device struct {
 func New(thingName string, dialer mqtt.Dialer, opts ...mqtt.ReconnectOption) (Device, error) {
 	cli, err := mqtt.NewReconnectClient(dialer, opts...)
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "creating MQTT connection")
 	}
 	return &device{
 		Client:    cli,
