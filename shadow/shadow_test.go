@@ -3,12 +3,15 @@ package shadow
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
 
-	mqtt "github.com/at-wat/mqtt-go"
+	"github.com/at-wat/mqtt-go"
 	mockmqtt "github.com/at-wat/mqtt-go/mock"
+
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 )
 
 type mockDevice struct {
@@ -17,6 +20,29 @@ type mockDevice struct {
 
 func (d *mockDevice) ThingName() string {
 	return "test"
+}
+
+func TestNew(t *testing.T) {
+	errDummy := errors.New("dummy error")
+
+	t.Run("SubscribeError", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		cli := &mockDevice{&mockmqtt.Client{
+			SubscribeFn: func(ctx context.Context, subs ...mqtt.Subscription) error {
+				return errDummy
+			},
+		}}
+		_, err := New(ctx, cli)
+		var ie *ioterr.Error
+		if !errors.As(err, &ie) {
+			t.Errorf("Expected error type: %T, got: %T", ie, err)
+		}
+		if !errors.Is(err, errDummy) {
+			t.Errorf("Expected error: %v, got: %v", errDummy, err)
+		}
+	})
 }
 
 func TestHandlers(t *testing.T) {
@@ -48,8 +74,9 @@ func TestHandlers(t *testing.T) {
 		s.rejected(&mqtt.Message{})
 		select {
 		case err := <-chErr:
-			if err == nil {
-				t.Error("onError must be called with non-nil error")
+			var ie *ioterr.Error
+			if !errors.As(err, &ie) {
+				t.Errorf("Expected error type: %T, got: %T", ie, err)
 			}
 		default:
 			t.Fatal("Timeout")
@@ -293,6 +320,50 @@ func TestHandlers(t *testing.T) {
 			}
 		})
 	})
+}
+
+func TestHandlers_InvalidResponse(t *testing.T) {
+	for _, topic := range []string{
+		"update/delta",
+		"update/accepted",
+		"update/rejected",
+		"get/accepted",
+		"get/rejected",
+		"delete/accepted",
+		"delete/rejected",
+	} {
+		topic := topic
+		t.Run(topic, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+
+			var cli *mockDevice
+			cli = &mockDevice{Client: &mockmqtt.Client{}}
+
+			s, err := New(ctx, cli)
+			if err != nil {
+				t.Fatal(err)
+			}
+			chErr := make(chan error, 1)
+			s.OnError(func(err error) { chErr <- err })
+			cli.Handle(s)
+
+			cli.Serve(&mqtt.Message{
+				Topic:   s.(*shadow).topic(topic),
+				Payload: []byte{0xff, 0xff, 0xff},
+			})
+
+			select {
+			case err := <-chErr:
+				var ie *ioterr.Error
+				if !errors.As(err, &ie) {
+					t.Errorf("Expected error type: %T, got: %T", ie, err)
+				}
+			case <-ctx.Done():
+				t.Fatal("Timeout")
+			}
+		})
+	}
 }
 
 func TestOnDelta(t *testing.T) {

@@ -24,7 +24,11 @@ import (
 
 	"github.com/at-wat/mqtt-go"
 	mockmqtt "github.com/at-wat/mqtt-go/mock"
+
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 )
+
+var errPublish = errors.New("publish failure")
 
 type mockDevice struct {
 	*mockmqtt.Client
@@ -32,6 +36,29 @@ type mockDevice struct {
 
 func (d *mockDevice) ThingName() string {
 	return "test"
+}
+
+func TestNew(t *testing.T) {
+	errDummy := errors.New("dummy error")
+
+	t.Run("SubscribeError", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		cli := &mockDevice{&mockmqtt.Client{
+			SubscribeFn: func(ctx context.Context, subs ...mqtt.Subscription) error {
+				return errDummy
+			},
+		}}
+		_, err := New(ctx, cli)
+		var ie *ioterr.Error
+		if !errors.As(err, &ie) {
+			t.Errorf("Expected error type: %T, got: %T", ie, err)
+		}
+		if !errors.Is(err, errDummy) {
+			t.Errorf("Expected error: %v, got: %v", errDummy, err)
+		}
+	})
 }
 
 func TestNotify(t *testing.T) {
@@ -80,10 +107,11 @@ func TestNotify(t *testing.T) {
 
 func TestGetPendingJobs(t *testing.T) {
 	testCases := map[string]struct {
-		response      interface{}
-		responseTopic string
-		expected      interface{}
-		err           error
+		publishFailure bool
+		response       interface{}
+		responseTopic  string
+		expected       interface{}
+		err            error
 	}{
 		"Success": {
 			response: &getPendingJobExecutionsResponse{
@@ -111,6 +139,10 @@ func TestGetPendingJobs(t *testing.T) {
 				Message: "Reason",
 			},
 		},
+		"PublishError": {
+			publishFailure: true,
+			err:            errPublish,
+		},
 	}
 
 	for name, testCase := range testCases {
@@ -122,6 +154,9 @@ func TestGetPendingJobs(t *testing.T) {
 			cli := &mockDevice{
 				Client: &mockmqtt.Client{
 					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
+						if testCase.publishFailure {
+							return errPublish
+						}
 						req := &simpleRequest{}
 						if err := json.Unmarshal(msg.Payload, req); err != nil {
 							t.Error(err)
@@ -154,7 +189,12 @@ func TestGetPendingJobs(t *testing.T) {
 			jbs, err := j.GetPendingJobs(ctx)
 			if err != nil {
 				setClientToken(err, "")
-				if !reflect.DeepEqual(testCase.err, err) {
+				var er *ErrorResponse
+				if errors.As(err, &er) {
+					if !reflect.DeepEqual(testCase.err, er) {
+						t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+					}
+				} else if !errors.Is(err, testCase.err) {
 					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
 				}
 			} else {
@@ -169,6 +209,7 @@ func TestGetPendingJobs(t *testing.T) {
 func TestDescribeJob(t *testing.T) {
 	testCases := map[string]struct {
 		id              string
+		publishFailure  bool
 		expectedRequest interface{}
 		response        interface{}
 		responseTopic   string
@@ -209,6 +250,14 @@ func TestDescribeJob(t *testing.T) {
 				Message: "Reason",
 			},
 		},
+		"PublishError": {
+			id:             "testID",
+			publishFailure: true,
+			expectedRequest: &describeJobExecutionRequest{
+				IncludeJobDocument: true,
+			},
+			err: errPublish,
+		},
 	}
 
 	for name, testCase := range testCases {
@@ -220,6 +269,9 @@ func TestDescribeJob(t *testing.T) {
 			cli := &mockDevice{
 				Client: &mockmqtt.Client{
 					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
+						if testCase.publishFailure {
+							return errPublish
+						}
 						req := &describeJobExecutionRequest{}
 						if err := json.Unmarshal(msg.Payload, req); err != nil {
 							t.Error(err)
@@ -259,7 +311,12 @@ func TestDescribeJob(t *testing.T) {
 			jb, err := j.DescribeJob(ctx, testCase.id)
 			if err != nil {
 				setClientToken(err, "")
-				if !reflect.DeepEqual(testCase.err, err) {
+				var er *ErrorResponse
+				if errors.As(err, &er) {
+					if !reflect.DeepEqual(testCase.err, er) {
+						t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+					}
+				} else if !errors.Is(err, testCase.err) {
 					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
 				}
 			} else {
@@ -273,6 +330,7 @@ func TestDescribeJob(t *testing.T) {
 
 func TestUpdateJob(t *testing.T) {
 	testCases := map[string]struct {
+		publishFailure  bool
 		execution       *JobExecution
 		status          JobExecutionState
 		options         []UpdateJobOption
@@ -380,6 +438,17 @@ func TestUpdateJob(t *testing.T) {
 				Message: "Reason",
 			},
 		},
+		"PublishError": {
+			publishFailure: true,
+			execution: &JobExecution{
+				JobID:         "testID",
+				JobDocument:   "doc",
+				StatusDetails: map[string]string{},
+				VersionNumber: 6,
+			},
+			status: Queued,
+			err:    errPublish,
+		},
 	}
 
 	for name, testCase := range testCases {
@@ -391,6 +460,9 @@ func TestUpdateJob(t *testing.T) {
 			cli := &mockDevice{
 				Client: &mockmqtt.Client{
 					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
+						if testCase.publishFailure {
+							return errPublish
+						}
 						req := &updateJobExecutionRequest{}
 						if err := json.Unmarshal(msg.Payload, req); err != nil {
 							t.Error(err)
@@ -430,9 +502,57 @@ func TestUpdateJob(t *testing.T) {
 			err = j.UpdateJob(ctx, testCase.execution, testCase.status, testCase.options...)
 			if err != nil {
 				setClientToken(err, "")
-				if !reflect.DeepEqual(testCase.err, err) {
+				var er *ErrorResponse
+				if errors.As(err, &er) {
+					if !reflect.DeepEqual(testCase.err, er) {
+						t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+					}
+				} else if !errors.Is(err, testCase.err) {
 					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
 				}
+			}
+		})
+	}
+}
+
+func TestHandlers_InvalidResponse(t *testing.T) {
+	for _, topic := range []string{
+		"notify",
+		"test/get/accepted",
+		"test/get/rejected",
+		"test/update/accepted",
+		"test/update/rejected",
+		"get/accepted",
+		"get/rejected",
+	} {
+		topic := topic
+		t.Run(topic, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
+			cli := &mockDevice{Client: &mockmqtt.Client{}}
+
+			j, err := New(ctx, cli)
+			if err != nil {
+				t.Fatal(err)
+			}
+			chErr := make(chan error, 1)
+			j.OnError(func(err error) { chErr <- err })
+			cli.Handle(j)
+
+			cli.Serve(&mqtt.Message{
+				Topic:   j.(*jobs).topic(topic),
+				Payload: []byte{0xff, 0xff, 0xff},
+			})
+
+			select {
+			case err := <-chErr:
+				var ie *ioterr.Error
+				if !errors.As(err, &ie) {
+					t.Errorf("Expected error type: %T, got: %T", ie, err)
+				}
+			case <-ctx.Done():
+				t.Fatal("Timeout")
 			}
 		})
 	}

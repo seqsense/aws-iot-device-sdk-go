@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -11,8 +12,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	ist "github.com/aws/aws-sdk-go/service/iotsecuretunneling"
+
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 )
 
 func TestAPI(t *testing.T) {
@@ -75,6 +79,32 @@ func TestAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("%v", out)
+}
+
+func TestAPI_Validate(t *testing.T) {
+	h := apiHandler{}
+
+	var err error
+	var ie *ioterr.Error
+	var re request.ErrInvalidParams
+
+	_, err = h.openTunnel(&ist.OpenTunnelInput{
+		Tags: []*ist.Tag{},
+	})
+	if !errors.As(err, &ie) {
+		t.Errorf("Expected error type: %T, got: %T", ie, err)
+	}
+	if !errors.As(err, &re) {
+		t.Errorf("Expected error type: %T, got: %T", re, err)
+	}
+
+	_, err = h.closeTunnel(&ist.CloseTunnelInput{})
+	if !errors.As(err, &ie) {
+		t.Errorf("Expected error type: %T, got: %T", ie, err)
+	}
+	if !errors.As(err, &re) {
+		t.Errorf("Expected error type: %T, got: %T", re, err)
+	}
 }
 
 func newEndpointForFunc(port int) endpoints.Resolver {
