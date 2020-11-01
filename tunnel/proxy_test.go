@@ -107,9 +107,9 @@ func TestProxySource(t *testing.T) {
 	ca, cb := net.Pipe()
 
 	var wg sync.WaitGroup
-	wg.Add(1)
 	defer wg.Wait()
 
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		var i int
@@ -131,9 +131,11 @@ func TestProxySource(t *testing.T) {
 	payload1 := "the payload 1"
 	payload2 := "the payload 2"
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		if _, err := ca.Write([]byte(payload1)); err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 	}()
 
