@@ -1,7 +1,7 @@
 module github.com/seqsense/aws-iot-device-sdk-go/v4
 
 require (
-	github.com/at-wat/mqtt-go v0.11.0
+	github.com/at-wat/mqtt-go v0.11.4
 	github.com/aws/aws-sdk-go v1.35.19
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.4.3
