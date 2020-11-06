@@ -20,6 +20,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 
 	"github.com/at-wat/mqtt-go"
+
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 	presigner "github.com/seqsense/aws-iot-device-sdk-go/v4/presigner"
 )
 
@@ -39,14 +41,13 @@ func NewPresignDialer(sess client.ConfigProvider, endpoint string, opts ...mqtt.
 }
 
 func (d *presignDialer) Dial() (mqtt.ClientCloser, error) {
-	// Presign URL here.
 	url, err := d.signer.PresignWssNow(d.endpoint)
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "presigning wss URL")
 	}
 	cli, err := mqtt.Dial(url, d.opts...)
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "dialing")
 	}
 	return cli, nil
 }
@@ -56,7 +57,7 @@ func (d *presignDialer) Dial() (mqtt.ClientCloser, error) {
 func NewDialer(sess client.ConfigProvider, urlStr string, opts ...mqtt.DialOption) (mqtt.Dialer, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "parsing server URL")
 	}
 	switch u.Scheme {
 	case "mqtts":
@@ -64,6 +65,6 @@ func NewDialer(sess client.ConfigProvider, urlStr string, opts ...mqtt.DialOptio
 	case "wss":
 		return NewPresignDialer(sess, u.Host)
 	default:
-		return nil, mqtt.ErrUnsupportedProtocol
+		return nil, ioterr.New(mqtt.ErrUnsupportedProtocol, "new dialer")
 	}
 }

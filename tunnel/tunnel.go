@@ -3,11 +3,13 @@ package tunnel
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"sync"
 
 	"github.com/at-wat/mqtt-go"
+
 	"github.com/seqsense/aws-iot-device-sdk-go/v4"
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 )
 
 // Tunnel is an interface of secure tunneling.
@@ -36,6 +38,9 @@ type Options struct {
 // Option is a type of functional options.
 type Option func(*Options) error
 
+// ErrInvalidClientMode indicate that the requested client mode is not valid for the tunnel.
+var ErrInvalidClientMode = errors.New("invalid client mode")
+
 func (t *tunnel) topic(operation string) string {
 	return "$aws/things/" + t.thingName + "/tunnels/" + operation
 }
@@ -52,19 +57,19 @@ func New(ctx context.Context, cli awsiotdev.Device, dialer map[string]Dialer, op
 	}
 	for _, o := range opts {
 		if err := o(t.opts); err != nil {
-			return nil, err
+			return nil, ioterr.New(err, "applying options")
 		}
 	}
 
 	if err := t.ServeMux.Handle(t.opts.TopicFunc("notify"), mqtt.HandlerFunc(t.notify)); err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "registering message handler")
 	}
 
 	err := cli.Subscribe(ctx,
 		mqtt.Subscription{Topic: t.opts.TopicFunc("notify"), QoS: mqtt.QoS1},
 	)
 	if err != nil {
-		return nil, err
+		return nil, ioterr.New(err, "subscribing tunnel topic")
 	}
 	return t, nil
 }
@@ -72,11 +77,11 @@ func New(ctx context.Context, cli awsiotdev.Device, dialer map[string]Dialer, op
 func (t *tunnel) notify(msg *mqtt.Message) {
 	n := &Notification{}
 	if err := json.Unmarshal(msg.Payload, n); err != nil {
-		t.handleError(err)
+		t.handleError(ioterr.New(err, "unmarshaling notification"))
 		return
 	}
 	if n.ClientMode != Destination {
-		t.handleError(fmt.Errorf("unsupported client mode (%s)", n.ClientMode))
+		t.handleError(ioterr.Newf(ErrInvalidClientMode, "requested %s", n.ClientMode))
 		return
 	}
 	for _, srv := range n.Services {
@@ -89,7 +94,7 @@ func (t *tunnel) notify(msg *mqtt.Message) {
 					WithErrorHandler(ErrorHandlerFunc(t.handleError)),
 				)
 				if err != nil {
-					t.handleError(err)
+					t.handleError(ioterr.New(err, "creating proxy destination"))
 				}
 			}()
 		}

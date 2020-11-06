@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"golang.org/x/net/websocket"
+
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 )
 
 const (
@@ -31,7 +33,7 @@ type Dialer func() (io.ReadWriteCloser, error)
 func ProxyDestination(dialer Dialer, endpoint, token string, opts ...ProxyOption) error {
 	ws, opt, err := openProxyConn(endpoint, "destination", token, opts...)
 	if err != nil {
-		return err
+		return ioterr.New(err, "opening proxy destination")
 	}
 
 	pingCancel := newPinger(ws, opt.PingPeriod)
@@ -46,7 +48,7 @@ func ProxyDestination(dialer Dialer, endpoint, token string, opts ...ProxyOption
 func ProxySource(listener net.Listener, endpoint, token string, opts ...ProxyOption) error {
 	ws, opt, err := openProxyConn(endpoint, "source", token, opts...)
 	if err != nil {
-		return err
+		return ioterr.New(err, "opening proxy source")
 	}
 
 	pingCancel := newPinger(ws, opt.PingPeriod)
@@ -62,7 +64,7 @@ func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (*websocke
 	}
 	for _, o := range opts {
 		if err := o(opt); err != nil {
-			return nil, nil, err
+			return nil, nil, ioterr.New(err, "applying options")
 		}
 	}
 
@@ -71,7 +73,7 @@ func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (*websocke
 		fmt.Sprintf("https://%s", endpoint),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, ioterr.New(err, "creating ws config")
 	}
 	if opt.Scheme == "wss" {
 		wsc.TlsConfig = &tls.Config{
@@ -86,7 +88,7 @@ func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (*websocke
 	wsc.Protocol = append(wsc.Protocol, websocketProtocol)
 	ws, err := websocket.DialConfig(wsc)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, ioterr.New(err, "creating ws dial config")
 	}
 	ws.PayloadType = websocket.BinaryFrame
 

@@ -30,6 +30,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/signer/v4"
+
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 )
 
 // Presigner is an AWS v4 signer wrapper for AWS IoT.
@@ -59,7 +61,7 @@ func (a *Presigner) PresignWss(endpoint string, expire time.Duration, from time.
 	}
 	cred, err := a.clientConfig.Config.Credentials.Get()
 	if err != nil {
-		return "", err
+		return "", ioterr.New(err, "getting credentials")
 	}
 	sessionToken := cred.SessionToken
 
@@ -71,7 +73,7 @@ func (a *Presigner) PresignWss(endpoint string, expire time.Duration, from time.
 
 	originalURL, err := url.Parse(fmt.Sprintf("wss://%s/mqtt", endpoint))
 	if err != nil {
-		return "", err
+		return "", ioterr.New(err, "parsing server URL")
 	}
 
 	req := &http.Request{
@@ -84,7 +86,7 @@ func (a *Presigner) PresignWss(endpoint string, expire time.Duration, from time.
 		expire, from,
 	)
 	if err != nil {
-		return "", err
+		return "", ioterr.New(err, "presigning URL")
 	}
 
 	ret := req.URL.String()

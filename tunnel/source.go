@@ -1,13 +1,13 @@
 package tunnel
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"sync"
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel/msg"
 )
 
@@ -19,6 +19,9 @@ func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler) error
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
+				if eh != nil {
+					eh.HandleError(ioterr.New(err, "accepting source connection"))
+				}
 				return
 			}
 
@@ -33,7 +36,7 @@ func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler) error
 				StreamId: id,
 			}); err != nil {
 				if eh != nil {
-					eh.HandleError(fmt.Errorf("message send failed: %v", err))
+					eh.HandleError(ioterr.New(err, "sending message"))
 				}
 				continue
 			}
@@ -49,7 +52,7 @@ func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler) error
 			if err == io.EOF {
 				return nil
 			}
-			return err
+			return ioterr.New(err, "reading length header")
 		}
 		l := int(sz[0])<<8 | int(sz[1])
 		if cap(b) < l {
@@ -60,12 +63,12 @@ func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler) error
 			if err == io.EOF {
 				return nil
 			}
-			return err
+			return ioterr.New(err, "reading message")
 		}
 		m := &msg.Message{}
 		if err := proto.Unmarshal(b, m); err != nil {
 			if eh != nil {
-				eh.HandleError(fmt.Errorf("unmarshal failed: %v", err))
+				eh.HandleError(ioterr.New(err, "unmarshaling message"))
 			}
 			continue
 		}
@@ -93,7 +96,7 @@ func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler) error
 			muConns.Unlock()
 			if ok {
 				if _, err := conn.Write(m.Payload); err != nil {
-					eh.HandleError(fmt.Errorf("write failed: %v", err))
+					eh.HandleError(ioterr.New(err, "writing message"))
 				}
 			}
 		}
