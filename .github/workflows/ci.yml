@@ -48,7 +48,9 @@ jobs:
         with:
           reviewdog_version: latest
       - name: Install golint
-        run: go install golang.org/x/lint/golint
+        run: |
+          go install golang.org/x/lint/golint
+          echo $(go env GOROOT)/bin >> ${GITHUB_PATH}
       - name: Lint
         if: ${{ matrix.go-version }} == ${{ env.REVIEW_DOG_ON }}
         run: golint ./... | reviewdog -f=golint -reporter=github-pr-review
