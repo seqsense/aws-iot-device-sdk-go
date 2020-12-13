@@ -1,0 +1,57 @@
+name: ci
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version:
+          - "1.13"
+          - "1.14"
+          - "1.15"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Run go vet
+        run: go vet ./...
+      - name: Run go build
+        run: go build ./...
+      - name: Run go test
+        run: |
+          go test -v -race \
+            -coverprofile=coverage.txt -covermode=atomic -coverpkg=all \
+            $(go list ./... | grep -v "/examples/")
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v1
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
+      - uses: reviewdog/action-setup@v1
+        with:
+          reviewdog_version: latest
+      - name: Install golint
+        run: go install golang.org/x/lint/golint
+      - name: Lint
+        if: ${{ matrix.go-version }} == ${{ env.REVIEW_DOG_ON }}
+        run: golint ./... | reviewdog -f=golint -reporter=github-pr-review
+        env:
+          GITHUB_API: https://gh-bot.dev-sq.work/
+          REVIEWDOG_GITHUB_API_TOKEN: 13615617-11a9-4af8-a4e0-09e658cbcb7e
