@@ -17,6 +17,6 @@ jobs:
         with:
           git_user: sqbot
           git_email: bot@seqsense.com
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.SQBOT_GITHUB_TOKEN }}
           commit_style: squash
           push: force
