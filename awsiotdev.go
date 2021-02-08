@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package awsiotdev implements offline queueing and reconnecting features of MQTT protocol.
+// Package awsiotdev implements AWS IoT presigned WebSockets dialer for github.com/at-wat/mqtt-go, and AWS IoT functionalities.
 package awsiotdev
 
 import (
