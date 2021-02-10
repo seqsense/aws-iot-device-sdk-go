@@ -20,11 +20,12 @@ type Options struct {
 }
 
 // Option is a functional option of UpdateJob.
-type Option func(options *Options)
+type Option func(options *Options) error
 
 // WithName sets shadow name.
 func WithName(name string) Option {
-	return func(o *Options) {
+	return func(o *Options) error {
 		o.Name = name
+		return nil
 	}
 }

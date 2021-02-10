@@ -168,7 +168,9 @@ func (s *shadow) deleteAccepted(msg *mqtt.Message) {
 func New(ctx context.Context, cli awsiotdev.Device, opt ...Option) (Shadow, error) {
 	opts := &Options{}
 	for _, o := range opt {
-		o(opts)
+		if err := o(opts); err != nil {
+			return nil, ioterr.New(err, "applying option")
+		}
 	}
 	s := &shadow{
 		cli:       cli,
