@@ -1,4 +1,4 @@
-// Copyright 2020 SEQSENSE, Inc.
+// Copyright 2020-2021 SEQSENSE, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ type Options struct {
 // Option is a functional option of UpdateJob.
 type Option func(options *Options)
 
-// WithName sets shadow name
+// WithName sets shadow name.
 func WithName(name string) Option {
 	return func(o *Options) {
 		o.Name = name
