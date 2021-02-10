@@ -57,6 +57,44 @@ func TestNew(t *testing.T) {
 			t.Errorf("Expected error: %v, got: %v", errDummy, err)
 		}
 	})
+
+	t.Run("Options", func(t *testing.T) {
+		t.Run("WithName", func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
+			cli := &mockDevice{&mockmqtt.Client{}}
+			operation := "foo/bar"
+
+			testCases := map[string]struct {
+				input    string
+				expected string
+			}{
+				"ClassicShadow": {
+					input:    "",
+					expected: "$aws/things/" + cli.ThingName() + "/shadow/" + operation,
+				},
+				"NamedShadow": {
+					input:    "testShadow",
+					expected: "$aws/things/" + cli.ThingName() + "/shadow/name/testShadow/" + operation,
+				},
+			}
+
+			for name, testCase := range testCases {
+				testCase := testCase
+				t.Run(name, func(t *testing.T) {
+					s, err := New(ctx, cli, WithName(testCase.input))
+					if err != nil {
+						t.Fatal(err)
+					}
+					topic := s.(*shadow).topic(operation)
+					if topic != testCase.expected {
+						t.Errorf("Expected topic name: %v, got: %v", testCase.expected, topic)
+					}
+				})
+			}
+		})
+	})
 }
 
 func TestHandlers(t *testing.T) {

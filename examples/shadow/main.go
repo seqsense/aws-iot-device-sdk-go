@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/at-wat/mqtt-go"
-	"github.com/seqsense/aws-iot-device-sdk-go/v4"
+	awsiotdev "github.com/seqsense/aws-iot-device-sdk-go/v4"
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/shadow"
 )
 
@@ -29,8 +29,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if len(os.Args) != 3 {
-		println("usage: shadow AWS_IOT_ENDPOINT THING_NAME")
+	if len(os.Args) != 4 {
+		println("usage: shadow AWS_IOT_ENDPOINT THING_NAME SHADOW_NAME")
 		println("")
 		println("This example updates and deletes AWS IoT Thing Shadow.")
 		println("THING_NAME must be registered to your account of AWS IoT beforehand.")
@@ -43,6 +43,7 @@ func main() {
 	}
 	host := os.Args[1]
 	thingName := os.Args[2]
+	shadowName := os.Args[3]
 
 	for _, file := range []string{
 		"root-CA.crt",
@@ -88,7 +89,7 @@ func main() {
 		panic(err)
 	}
 
-	s, err := shadow.New(ctx, cli)
+	s, err := shadow.New(ctx, cli, shadow.WithName(shadowName))
 	if err != nil {
 		panic(err)
 	}

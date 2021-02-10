@@ -24,7 +24,7 @@ import (
 
 	"github.com/at-wat/mqtt-go"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4"
+	awsiotdev "github.com/seqsense/aws-iot-device-sdk-go/v4"
 	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
 )
 
@@ -57,6 +57,7 @@ type shadow struct {
 	mqtt.ServeMux
 	cli       mqtt.Client
 	thingName string
+	name      string
 	doc       *ThingDocument
 	mu        sync.Mutex
 	onDelta   func(delta map[string]interface{})
@@ -73,7 +74,11 @@ func (s *shadow) token() string {
 }
 
 func (s *shadow) topic(operation string) string {
-	return "$aws/things/" + s.thingName + "/shadow/" + operation
+	prefix := "$aws/things/" + s.thingName + "/shadow"
+	if s.name != "" {
+		prefix += "/name/" + s.name
+	}
+	return prefix + "/" + operation
 }
 
 func (s *shadow) handleResponse(r interface{}) {
@@ -160,10 +165,17 @@ func (s *shadow) deleteAccepted(msg *mqtt.Message) {
 }
 
 // New creates Thing Shadow interface.
-func New(ctx context.Context, cli awsiotdev.Device) (Shadow, error) {
+func New(ctx context.Context, cli awsiotdev.Device, opt ...Option) (Shadow, error) {
+	opts := &Options{}
+	for _, o := range opt {
+		if err := o(opts); err != nil {
+			return nil, ioterr.New(err, "applying option")
+		}
+	}
 	s := &shadow{
 		cli:       cli,
 		thingName: cli.ThingName(),
+		name:      opts.Name,
 		doc: &ThingDocument{
 			State: ThingState{
 				Desired:  map[string]interface{}{},
