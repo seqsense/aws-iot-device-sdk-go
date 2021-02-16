@@ -59,8 +59,8 @@ func TestNew(t *testing.T) {
 		defer cancel()
 
 		cli := &mockDevice{&mockmqtt.Client{
-			SubscribeFn: func(ctx context.Context, subs ...mqtt.Subscription) error {
-				return errDummy
+			SubscribeFn: func(ctx context.Context, subs ...mqtt.Subscription) ([]mqtt.Subscription, error) {
+				return nil, errDummy
 			},
 		}}
 		_, err := New(ctx, cli, map[string]Dialer{})

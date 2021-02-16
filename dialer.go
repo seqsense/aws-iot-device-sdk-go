@@ -40,7 +40,7 @@ func NewPresignDialer(sess client.ConfigProvider, endpoint string, opts ...mqtt.
 	}, nil
 }
 
-func (d *presignDialer) Dial() (mqtt.ClientCloser, error) {
+func (d *presignDialer) Dial() (*mqtt.BaseClient, error) {
 	url, err := d.signer.PresignWssNow(d.endpoint)
 	if err != nil {
 		return nil, ioterr.New(err, "presigning wss URL")

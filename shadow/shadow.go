@@ -203,7 +203,7 @@ func New(ctx context.Context, cli awsiotdev.Device, opt ...Option) (Shadow, erro
 		}
 	}
 
-	err := cli.Subscribe(ctx,
+	_, err := cli.Subscribe(ctx,
 		mqtt.Subscription{Topic: s.topic("update/delta"), QoS: mqtt.QoS1},
 		mqtt.Subscription{Topic: s.topic("update/accepted"), QoS: mqtt.QoS1},
 		mqtt.Subscription{Topic: s.topic("update/rejected"), QoS: mqtt.QoS1},

@@ -22,7 +22,7 @@ import (
 
 func TestNew(t *testing.T) {
 	const name = "thing_name1"
-	d, err := New(name, mqtt.DialerFunc(func() (mqtt.ClientCloser, error) {
+	d, err := New(name, mqtt.DialerFunc(func() (*mqtt.BaseClient, error) {
 		return &mqtt.BaseClient{}, nil
 	}))
 	if err != nil {
