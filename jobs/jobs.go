@@ -86,7 +86,7 @@ func New(ctx context.Context, cli awsiotdev.Device) (Jobs, error) {
 		}
 	}
 
-	err := cli.Subscribe(ctx,
+	_, err := cli.Subscribe(ctx,
 		mqtt.Subscription{Topic: j.topic("notify"), QoS: mqtt.QoS1},
 		mqtt.Subscription{Topic: j.topic("get/#"), QoS: mqtt.QoS1},
 		mqtt.Subscription{Topic: j.topic("+/get/#"), QoS: mqtt.QoS1},

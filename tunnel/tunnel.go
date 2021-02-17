@@ -79,7 +79,7 @@ func New(ctx context.Context, cli awsiotdev.Device, dialer map[string]Dialer, op
 		return nil, ioterr.New(err, "registering message handler")
 	}
 
-	err := cli.Subscribe(ctx,
+	_, err := cli.Subscribe(ctx,
 		mqtt.Subscription{Topic: t.opts.TopicFunc("notify"), QoS: mqtt.QoS1},
 	)
 	if err != nil {
