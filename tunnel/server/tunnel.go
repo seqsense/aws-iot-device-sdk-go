@@ -24,8 +24,8 @@ import (
 
 	"golang.org/x/net/websocket"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel"
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel/msg"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/tunnel"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/tunnel/msg"
 )
 
 // TunnelHandler handles websocket based secure tunneling sessions.

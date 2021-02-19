@@ -28,8 +28,8 @@ import (
 
 	mqtt "github.com/at-wat/mqtt-go"
 	"github.com/aws/aws-sdk-go/aws/session"
-	awsiot "github.com/seqsense/aws-iot-device-sdk-go/v4"
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel/server"
+	awsiot "github.com/seqsense/aws-iot-device-sdk-go/v5"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/tunnel/server"
 )
 
 var (

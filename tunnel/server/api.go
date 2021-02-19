@@ -27,8 +27,8 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/json/jsonutil"
 	ist "github.com/aws/aws-sdk-go/service/iotsecuretunneling"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/tunnel"
 )
 
 // apiHandler handles iotsecuretunneling API requests.

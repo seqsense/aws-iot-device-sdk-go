@@ -24,8 +24,8 @@ import (
 
 	"github.com/at-wat/mqtt-go"
 
-	awsiotdev "github.com/seqsense/aws-iot-device-sdk-go/v4"
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
+	awsiotdev "github.com/seqsense/aws-iot-device-sdk-go/v5"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 )
 
 // Shadow is an interface of Thing Shadow.

@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 )
 
 // ErrVersionConflict means thing state update was aborted due to version conflict.

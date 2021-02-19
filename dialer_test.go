@@ -40,8 +40,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/presigner"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/presigner"
 )
 
 type dummyConfigProvider struct{}
