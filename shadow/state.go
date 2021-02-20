@@ -90,13 +90,13 @@ func (s *ThingDocument) update(state *thingDocumentRaw) error {
 	if err := updateStateRaw(s.State.Desired, state.State.Desired); err != nil {
 		return ioterr.New(err, "updating desired state")
 	}
-	if err := updateStateRaw(s.Metadata.Desired, state.Metadata.Desired); err != nil {
+	if err := updateStateMetadataRaw(s.Metadata.Desired, state.Metadata.Desired); err != nil {
 		return ioterr.New(err, "updating desired state")
 	}
 	if err := updateStateRaw(s.State.Reported, state.State.Reported); err != nil {
 		return ioterr.New(err, "updating reported state")
 	}
-	if err := updateStateRaw(s.Metadata.Reported, state.Metadata.Reported); err != nil {
+	if err := updateStateMetadataRaw(s.Metadata.Reported, state.Metadata.Reported); err != nil {
 		return ioterr.New(err, "updating reported state")
 	}
 	return nil
@@ -114,17 +114,35 @@ func (s *ThingDocument) updateDelta(state *thingDelta) bool {
 	return true
 }
 
-func updateStateRaw(state map[string]interface{}, update json.RawMessage) error {
+func updateStateRawCommon(state map[string]interface{}, update json.RawMessage) bool {
 	if !hasUpdate(update) {
-		return nil
+		return true
 	}
 	if update == nil {
 		for k := range state {
 			delete(state, k)
 		}
+		return true
+	}
+	return false
+}
+
+func updateStateRaw(state map[string]interface{}, update json.RawMessage) error {
+	if updateStateRawCommon(state, update) {
 		return nil
 	}
 	var u map[string]interface{}
+	if err := json.Unmarshal([]byte(update), &u); err != nil {
+		return ioterr.New(err, "unmarshaling update")
+	}
+	return updateState(state, u)
+}
+
+func updateStateMetadataRaw(state map[string]interface{}, update json.RawMessage) error {
+	if updateStateRawCommon(state, update) {
+		return nil
+	}
+	var u NestedMetadata
 	if err := json.Unmarshal([]byte(update), &u); err != nil {
 		return ioterr.New(err, "unmarshaling update")
 	}

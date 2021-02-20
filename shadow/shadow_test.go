@@ -181,7 +181,7 @@ func TestHandlers(t *testing.T) {
 				t.Error(err)
 			case delta := <-chDelta:
 				if !reflect.DeepEqual(expectedDoc.State.Delta, delta) {
-					t.Errorf("Expected delta: %v, got: %v",
+					t.Errorf("Expected delta:\n%+v\ngot:\n%+v",
 						expectedDoc.State.Delta, delta,
 					)
 				}
@@ -189,7 +189,7 @@ func TestHandlers(t *testing.T) {
 				t.Fatal("Timeout")
 			}
 			if !reflect.DeepEqual(expectedDoc, s.doc) {
-				t.Errorf("Expected state: %v, got: %v",
+				t.Errorf("Expected state:\n%v\ngot:\n%v",
 					expectedDoc, s.doc,
 				)
 			}
@@ -266,7 +266,7 @@ func TestHandlers(t *testing.T) {
 				t.Error(err)
 			case delta := <-chDelta:
 				if !reflect.DeepEqual(expectedDoc.State.Delta, delta) {
-					t.Errorf("Expected delta: %v, got: %v",
+					t.Errorf("Expected delta:\n%+v\ngot:\n%+v",
 						expectedDoc.State.Delta, delta,
 					)
 				}
@@ -274,7 +274,7 @@ func TestHandlers(t *testing.T) {
 				t.Fatal("Timeout")
 			}
 			if !reflect.DeepEqual(expectedDoc, s.doc) {
-				t.Errorf("Expected state: %v, got: %v",
+				t.Errorf("Expected state:\n%+v\ngot\n%+v",
 					expectedDoc, s.doc,
 				)
 			}
@@ -327,7 +327,7 @@ func TestHandlers(t *testing.T) {
 			default:
 			}
 			if !reflect.DeepEqual(expectedDoc, s.doc) {
-				t.Errorf("Expected state: %v, got: %v",
+				t.Errorf("Expected state:\n%+v\ngot:\n%+v",
 					expectedDoc, s.doc,
 				)
 			}
@@ -366,7 +366,7 @@ func TestHandlers(t *testing.T) {
 			)})
 
 			if !reflect.DeepEqual(expectedDoc, s.doc) {
-				t.Errorf("Expected state: %v, got: %v",
+				t.Errorf("Expected state:\n%+v\ngot:\n%+v",
 					expectedDoc, s.doc,
 				)
 			}
@@ -436,7 +436,7 @@ func TestOnDelta(t *testing.T) {
 	done := make(chan struct{})
 	s.OnDelta(func(delta map[string]interface{}) {
 		if !reflect.DeepEqual(expected, delta) {
-			t.Fatalf("Expected delta: %v, got: %v", expected, delta)
+			t.Fatalf("Expected delta:\n%+v\ngot:\n%+v", expected, delta)
 		}
 		close(done)
 	})
@@ -543,11 +543,11 @@ func TestGet(t *testing.T) {
 			if err != nil {
 				setClientToken(err, "")
 				if !reflect.DeepEqual(testCase.err, err) {
-					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+					t.Fatalf("Expected error:\n%+v\ngot:\n%+v", testCase.err, err)
 				}
 			} else {
 				if !reflect.DeepEqual(testCase.expected, doc) {
-					t.Errorf("Expected document: %v, got: %v", testCase.expected, doc)
+					t.Errorf("Expected document:\n%+v\ngot:\n%+v", testCase.expected, doc)
 				}
 			}
 		})
@@ -569,6 +569,9 @@ func TestDesire(t *testing.T) {
 				State: ThingState{
 					Desired: map[string]interface{}{"key": "value"},
 				},
+				Metadata: ThingStateMetadata{
+					Desired: map[string]interface{}{"key": Metadata{Timestamp: 1234}},
+				},
 			},
 			responseTopic: "update/accepted",
 			expected: &ThingDocument{
@@ -577,6 +580,11 @@ func TestDesire(t *testing.T) {
 					Desired:  map[string]interface{}{"key": "value"},
 					Reported: map[string]interface{}{},
 					Delta:    map[string]interface{}{},
+				},
+				Metadata: ThingStateMetadata{
+					Desired:  NestedMetadata{"key": Metadata{Timestamp: 1234}},
+					Reported: NestedMetadata{},
+					Delta:    NestedMetadata{},
 				},
 			},
 		},
@@ -637,11 +645,11 @@ func TestDesire(t *testing.T) {
 			if err != nil {
 				setClientToken(err, "")
 				if !reflect.DeepEqual(testCase.err, err) {
-					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+					t.Fatalf("Expected error:\n%+v\ngot:\n%+v", testCase.err, err)
 				}
 			} else {
 				if !reflect.DeepEqual(testCase.expected, doc) {
-					t.Errorf("Expected document: %v, got: %v", testCase.expected, doc)
+					t.Errorf("Expected document:\n%+v\ngot:\n%+v", testCase.expected, doc)
 				}
 			}
 		})
@@ -663,6 +671,9 @@ func TestReport(t *testing.T) {
 				State: ThingState{
 					Reported: map[string]interface{}{"key": "value"},
 				},
+				Metadata: ThingStateMetadata{
+					Reported: map[string]interface{}{"key": Metadata{Timestamp: 1234}},
+				},
 			},
 			responseTopic: "update/accepted",
 			expected: &ThingDocument{
@@ -671,6 +682,11 @@ func TestReport(t *testing.T) {
 					Reported: map[string]interface{}{"key": "value"},
 					Desired:  map[string]interface{}{},
 					Delta:    map[string]interface{}{},
+				},
+				Metadata: ThingStateMetadata{
+					Reported: NestedMetadata{"key": Metadata{Timestamp: 1234}},
+					Desired:  NestedMetadata{},
+					Delta:    NestedMetadata{},
 				},
 			},
 		},
@@ -731,11 +747,11 @@ func TestReport(t *testing.T) {
 			if err != nil {
 				setClientToken(err, "")
 				if !reflect.DeepEqual(testCase.err, err) {
-					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+					t.Fatalf("Expected error:\n%+v\ngot:\n%+v", testCase.err, err)
 				}
 			} else {
 				if !reflect.DeepEqual(testCase.expected, doc) {
-					t.Errorf("Expected document: %v, got: %v", testCase.expected, doc)
+					t.Errorf("Expected document:\n%+v\ngot:\n%+v", testCase.expected, doc)
 				}
 			}
 		})
@@ -808,7 +824,7 @@ func TestDelete(t *testing.T) {
 			if err != nil {
 				setClientToken(err, "")
 				if !reflect.DeepEqual(testCase.err, err) {
-					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+					t.Fatalf("Expected error:\n%v\ngot:\n%v", testCase.err, err)
 				}
 			}
 		})
