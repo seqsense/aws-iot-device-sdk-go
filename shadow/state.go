@@ -51,10 +51,11 @@ type ThingState struct {
 
 // ThingDocument represents Thing Shadow Document.
 type ThingDocument struct {
-	State       ThingState `json:"state"`
-	Version     int        `json:"version,omitempty"`
-	Timestamp   int        `json:"timestamp,omitempty"`
-	ClientToken string     `json:"clientToken,omitempty"`
+	State       ThingState         `json:"state"`
+	Metadata    ThingStateMetadata `json:"metadata"`
+	Version     int                `json:"version,omitempty"`
+	Timestamp   int                `json:"timestamp,omitempty"`
+	ClientToken string             `json:"clientToken,omitempty"`
 }
 
 type thingStateRaw struct {
@@ -66,6 +67,7 @@ type thingStateRaw struct {
 
 type thingDocumentRaw struct {
 	State       thingStateRaw `json:"state"`
+	Metadata    thingStateRaw `json:"metadata"`
 	Version     int           `json:"version,omitempty"`
 	Timestamp   int           `json:"timestamp,omitempty"`
 	ClientToken string        `json:"clientToken,omitempty"`
@@ -73,6 +75,7 @@ type thingDocumentRaw struct {
 
 type thingDelta struct {
 	State     map[string]interface{} `json:"state"`
+	Metadata  NestedMetadata         `json:"metadata"`
 	Version   int                    `json:"version,omitempty"`
 	Timestamp int                    `json:"timestamp,omitempty"`
 }
@@ -87,7 +90,13 @@ func (s *ThingDocument) update(state *thingDocumentRaw) error {
 	if err := updateStateRaw(s.State.Desired, state.State.Desired); err != nil {
 		return ioterr.New(err, "updating desired state")
 	}
+	if err := updateStateRaw(s.Metadata.Desired, state.Metadata.Desired); err != nil {
+		return ioterr.New(err, "updating desired state")
+	}
 	if err := updateStateRaw(s.State.Reported, state.State.Reported); err != nil {
+		return ioterr.New(err, "updating reported state")
+	}
+	if err := updateStateRaw(s.Metadata.Reported, state.Metadata.Reported); err != nil {
 		return ioterr.New(err, "updating reported state")
 	}
 	return nil
@@ -101,6 +110,7 @@ func (s *ThingDocument) updateDelta(state *thingDelta) bool {
 	s.Version = state.Version
 	s.Timestamp = state.Timestamp
 	s.State.Delta = state.State
+	s.Metadata.Delta = state.Metadata
 	return true
 }
 

@@ -182,6 +182,11 @@ func New(ctx context.Context, cli awsiotdev.Device, opt ...Option) (Shadow, erro
 				Reported: map[string]interface{}{},
 				Delta:    map[string]interface{}{},
 			},
+			Metadata: ThingStateMetadata{
+				Desired:  map[string]interface{}{},
+				Reported: map[string]interface{}{},
+				Delta:    map[string]interface{}{},
+			},
 		},
 
 		chResps: make(map[string]chan interface{}),
