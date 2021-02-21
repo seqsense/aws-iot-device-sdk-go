@@ -31,7 +31,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/signer/v4"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 )
 
 // Presigner is an AWS v4 signer wrapper for AWS IoT.

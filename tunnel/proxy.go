@@ -24,7 +24,7 @@ import (
 
 	"golang.org/x/net/websocket"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 )
 
 const (

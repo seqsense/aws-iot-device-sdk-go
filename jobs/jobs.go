@@ -23,8 +23,8 @@ import (
 
 	"github.com/at-wat/mqtt-go"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4"
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 )
 
 // Jobs is an interface of IoT Jobs.

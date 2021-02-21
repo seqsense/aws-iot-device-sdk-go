@@ -30,7 +30,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	ist "github.com/aws/aws-sdk-go/service/iotsecuretunneling"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 )
 
 func TestAPI(t *testing.T) {

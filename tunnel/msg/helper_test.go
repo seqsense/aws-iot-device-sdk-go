@@ -19,7 +19,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 )
 
 func TestWriteMessage(t *testing.T) {

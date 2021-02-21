@@ -21,7 +21,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/tunnel"
 )
 
 var (

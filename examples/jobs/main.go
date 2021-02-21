@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/at-wat/mqtt-go"
-	"github.com/seqsense/aws-iot-device-sdk-go/v4"
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/jobs"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/jobs"
 )
 
 func main() {

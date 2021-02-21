@@ -21,8 +21,8 @@ import (
 
 	"github.com/at-wat/mqtt-go"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/internal/ioterr"
-	presigner "github.com/seqsense/aws-iot-device-sdk-go/v4/presigner"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
+	presigner "github.com/seqsense/aws-iot-device-sdk-go/v5/presigner"
 )
 
 type presignDialer struct {

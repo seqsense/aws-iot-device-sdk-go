@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v4/tunnel/msg"
+	"github.com/seqsense/aws-iot-device-sdk-go/v5/tunnel/msg"
 )
 
 func readProxy(ws, conn io.ReadWriter, streamID int32, eh ErrorHandler) {
