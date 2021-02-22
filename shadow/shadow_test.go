@@ -465,25 +465,46 @@ func TestOnDelta(t *testing.T) {
 
 func TestGet(t *testing.T) {
 	testCases := map[string]struct {
+		initial       *ThingDocument
 		response      interface{}
 		responseTopic string
 		expected      interface{}
 		err           error
 	}{
 		"Success": {
+			initial: &ThingDocument{
+				Version: 5,
+				State: ThingState{
+					Delta: map[string]interface{}{"key": "value2"},
+				},
+				Metadata: ThingStateMetadata{
+					Delta: map[string]interface{}{"key": Metadata{Timestamp: 1234}},
+				},
+			},
 			response: &ThingDocument{
 				Version: 5,
 				State: ThingState{
-					Desired:  map[string]interface{}{"key": "value"},
+					Desired:  map[string]interface{}{"key": "value2"},
 					Reported: map[string]interface{}{"key": "value"},
+					Delta:    map[string]interface{}{"key": "value2"},
+				},
+				Metadata: ThingStateMetadata{
+					Desired:  map[string]interface{}{"key": Metadata{Timestamp: 1234}},
+					Reported: map[string]interface{}{"key": Metadata{Timestamp: 1235}},
 				},
 			},
 			responseTopic: "get/accepted",
 			expected: &ThingDocument{
 				Version: 5,
 				State: ThingState{
-					Desired:  map[string]interface{}{"key": "value"},
+					Desired:  map[string]interface{}{"key": "value2"},
 					Reported: map[string]interface{}{"key": "value"},
+					Delta:    map[string]interface{}{"key": "value2"},
+				},
+				Metadata: ThingStateMetadata{
+					Desired:  NestedMetadata{"key": Metadata{Timestamp: 1234}},
+					Reported: NestedMetadata{"key": Metadata{Timestamp: 1235}},
+					Delta:    NestedMetadata{"key": Metadata{Timestamp: 1234}},
 				},
 			},
 		},
@@ -536,6 +557,9 @@ func TestGet(t *testing.T) {
 			s, err = New(ctx, cli)
 			if err != nil {
 				t.Fatal(err)
+			}
+			if testCase.initial != nil {
+				s.(*shadow).doc = testCase.initial
 			}
 			cli.Handle(s)
 

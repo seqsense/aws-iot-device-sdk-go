@@ -105,6 +105,8 @@ func (s *shadow) getAccepted(msg *mqtt.Message) {
 		return
 	}
 	s.mu.Lock()
+	// For some reason, AWS IoT ommits Metadata.Delta from Get response. Keep previous Metadata.Delta.
+	doc.Metadata.Delta = s.doc.Metadata.Delta
 	s.doc = doc
 	s.mu.Unlock()
 	s.handleResponse(doc)
