@@ -16,7 +16,8 @@ package shadow
 
 // Options stores Device Shadow options.
 type Options struct {
-	Name string
+	Name              string
+	IncrementalUpdate bool
 }
 
 // Option is a functional option of UpdateJob.
@@ -26,6 +27,15 @@ type Option func(options *Options) error
 func WithName(name string) Option {
 	return func(o *Options) error {
 		o.Name = name
+		return nil
+	}
+}
+
+// WithIncrementalUpdate enables increamental update of state document.
+// Enabled by default.
+func WithIncrementalUpdate(enable bool) Option {
+	return func(o *Options) error {
+		o.IncrementalUpdate = enable
 		return nil
 	}
 }

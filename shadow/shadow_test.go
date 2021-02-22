@@ -579,102 +579,107 @@ func TestGet(t *testing.T) {
 }
 
 func TestDesire(t *testing.T) {
-	testCases := map[string]struct {
-		input         map[string]interface{}
-		response      interface{}
-		responseTopic string
-		expected      interface{}
-		err           error
-	}{
-		"Success": {
-			input: map[string]interface{}{"key": "value"},
-			response: &ThingDocument{
-				Version: 5,
-				State: ThingState{
-					Desired: map[string]interface{}{"key": "value"},
-				},
-				Metadata: ThingStateMetadata{
-					Desired: map[string]interface{}{"key": Metadata{Timestamp: 1234}},
-				},
-			},
-			responseTopic: "update/accepted",
-			expected: &ThingDocument{
-				Version: 5,
-				State: ThingState{
-					Desired:  map[string]interface{}{"key": "value"},
-					Reported: map[string]interface{}{},
-					Delta:    map[string]interface{}{},
-				},
-				Metadata: ThingStateMetadata{
-					Desired:  NestedMetadata{"key": Metadata{Timestamp: 1234}},
-					Reported: NestedMetadata{},
-					Delta:    NestedMetadata{},
-				},
-			},
-		},
-		"Error": {
-			input: map[string]interface{}{"key": "value"},
-			response: &ErrorResponse{
-				Code:    400,
-				Message: "Reason",
-			},
-			responseTopic: "update/rejected",
-			err: &ErrorResponse{
-				Code:    400,
-				Message: "Reason",
-			},
-		},
-	}
-
-	for name, testCase := range testCases {
-		testCase := testCase
+	for name, inc := range map[string]bool{"Incremental": true, "NoIncremental": false} {
+		inc := inc
 		t.Run(name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-
-			var s Shadow
-			var cli *mockDevice
-			cli = &mockDevice{
-				Client: &mockmqtt.Client{
-					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
-						req := &simpleRequest{}
-						if err := json.Unmarshal(msg.Payload, req); err != nil {
-							t.Error(err)
-							cancel()
-							return err
-						}
-						res := testCase.response
-						setClientToken(res, req.ClientToken)
-						bres, err := json.Marshal(res)
-						if err != nil {
-							t.Error(err)
-							cancel()
-							return err
-						}
-						cli.Serve(&mqtt.Message{
-							Topic:   s.(*shadow).topic(testCase.responseTopic),
-							Payload: bres,
-						})
-						return nil
+			testCases := map[string]struct {
+				input         map[string]interface{}
+				response      interface{}
+				responseTopic string
+				expected      interface{}
+				err           error
+			}{
+				"Success": {
+					input: map[string]interface{}{"key": "value"},
+					response: &ThingDocument{
+						Version: 5,
+						State: ThingState{
+							Desired: map[string]interface{}{"key": "value"},
+						},
+						Metadata: ThingStateMetadata{
+							Desired: map[string]interface{}{"key": Metadata{Timestamp: 1234}},
+						},
+					},
+					responseTopic: "update/accepted",
+					expected: &ThingDocument{
+						Version: 5,
+						State: ThingState{
+							Desired:  map[string]interface{}{"key": "value"},
+							Reported: map[string]interface{}{},
+							Delta:    map[string]interface{}{},
+						},
+						Metadata: ThingStateMetadata{
+							Desired:  NestedMetadata{"key": Metadata{Timestamp: 1234}},
+							Reported: NestedMetadata{},
+							Delta:    NestedMetadata{},
+						},
+					},
+				},
+				"Error": {
+					input: map[string]interface{}{"key": "value"},
+					response: &ErrorResponse{
+						Code:    400,
+						Message: "Reason",
+					},
+					responseTopic: "update/rejected",
+					err: &ErrorResponse{
+						Code:    400,
+						Message: "Reason",
 					},
 				},
 			}
-			var err error
-			s, err = New(ctx, cli)
-			if err != nil {
-				t.Fatal(err)
-			}
-			cli.Handle(s)
 
-			doc, err := s.Desire(ctx, testCase.input)
-			if err != nil {
-				setClientToken(err, "")
-				if !reflect.DeepEqual(testCase.err, err) {
-					t.Fatalf("Expected error:\n%+v\ngot:\n%+v", testCase.err, err)
-				}
-			} else {
-				if !reflect.DeepEqual(testCase.expected, doc) {
-					t.Errorf("Expected document:\n%+v\ngot:\n%+v", testCase.expected, doc)
-				}
+			for name, testCase := range testCases {
+				testCase := testCase
+				t.Run(name, func(t *testing.T) {
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+
+					var s Shadow
+					var cli *mockDevice
+					cli = &mockDevice{
+						Client: &mockmqtt.Client{
+							PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
+								req := &simpleRequest{}
+								if err := json.Unmarshal(msg.Payload, req); err != nil {
+									t.Error(err)
+									cancel()
+									return err
+								}
+								res := testCase.response
+								setClientToken(res, req.ClientToken)
+								bres, err := json.Marshal(res)
+								if err != nil {
+									t.Error(err)
+									cancel()
+									return err
+								}
+								cli.Serve(&mqtt.Message{
+									Topic:   s.(*shadow).topic(testCase.responseTopic),
+									Payload: bres,
+								})
+								return nil
+							},
+						},
+					}
+					var err error
+					s, err = New(ctx, cli, WithIncrementalUpdate(inc))
+					if err != nil {
+						t.Fatal(err)
+					}
+					cli.Handle(s)
+
+					doc, err := s.Desire(ctx, testCase.input)
+					if err != nil {
+						setClientToken(err, "")
+						if !reflect.DeepEqual(testCase.err, err) {
+							t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+						}
+					} else {
+						if !reflect.DeepEqual(testCase.expected, doc) {
+							t.Errorf("Expected document: %v, got: %v", testCase.expected, doc)
+						}
+					}
+				})
 			}
 		})
 	}
