@@ -97,7 +97,7 @@ func main() {
 		fmt.Printf("async error: %v\n", err)
 	})
 	s.OnDelta(func(delta map[string]interface{}) {
-		fmt.Printf("delta: %+v\n", delta)
+		fmt.Printf("delta:%s", prettyDump(delta))
 	})
 	cli.Handle(s)
 
@@ -106,28 +106,52 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("document: %+v\n", doc)
+	fmt.Printf("document:%s", prettyDump(doc))
 
-	fmt.Print("> update report\n")
+	time.Sleep(time.Second)
+
+	fmt.Print("\n> update report\n")
 	doc, err = s.Report(ctx, sampleState{Value: 2, Struct: sampleStruct{Values: []int{1, 2}}})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("document: %+v\n", doc)
+	fmt.Printf("document:%s", prettyDump(doc))
 
-	fmt.Print("> get document\n")
+	time.Sleep(time.Second)
+
+	fmt.Print("\n> get document\n")
 	doc, err = s.Get(ctx)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("document: %+v\n", doc)
+	fmt.Printf("document:%s", prettyDump(doc))
 
-	fmt.Print("> delete\n")
+	time.Sleep(time.Second)
+
+	fmt.Print("\n> remove one attribute from report\n")
+	doc, err = s.Report(ctx, map[string]interface{}{"Value": nil})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("document:%s", prettyDump(doc))
+
+	time.Sleep(time.Second)
+
+	fmt.Print("\n> add an another attribute to report\n")
+	doc, err = s.Report(ctx, map[string]interface{}{"Value2": 1})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("document:%s", prettyDump(doc))
+
+	time.Sleep(time.Second)
+
+	fmt.Print("\n> delete\n")
 	err = s.Delete(ctx)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("document: %+v\n", s.Document())
+	fmt.Printf("document:%s\n\n", prettyDump(s.Document()))
 }
 
 type sampleStruct struct {

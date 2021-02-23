@@ -51,10 +51,11 @@ type ThingState struct {
 
 // ThingDocument represents Thing Shadow Document.
 type ThingDocument struct {
-	State       ThingState `json:"state"`
-	Version     int        `json:"version,omitempty"`
-	Timestamp   int        `json:"timestamp,omitempty"`
-	ClientToken string     `json:"clientToken,omitempty"`
+	State       ThingState         `json:"state"`
+	Metadata    ThingStateMetadata `json:"metadata"`
+	Version     int                `json:"version,omitempty"`
+	Timestamp   int                `json:"timestamp,omitempty"`
+	ClientToken string             `json:"clientToken,omitempty"`
 }
 
 type thingStateRaw struct {
@@ -66,6 +67,7 @@ type thingStateRaw struct {
 
 type thingDocumentRaw struct {
 	State       thingStateRaw `json:"state"`
+	Metadata    thingStateRaw `json:"metadata"`
 	Version     int           `json:"version,omitempty"`
 	Timestamp   int           `json:"timestamp,omitempty"`
 	ClientToken string        `json:"clientToken,omitempty"`
@@ -73,6 +75,7 @@ type thingDocumentRaw struct {
 
 type thingDelta struct {
 	State     map[string]interface{} `json:"state"`
+	Metadata  NestedMetadata         `json:"metadata"`
 	Version   int                    `json:"version,omitempty"`
 	Timestamp int                    `json:"timestamp,omitempty"`
 }
@@ -87,7 +90,13 @@ func (s *ThingDocument) update(state *thingDocumentRaw) error {
 	if err := updateStateRaw(s.State.Desired, state.State.Desired); err != nil {
 		return ioterr.New(err, "updating desired state")
 	}
+	if err := updateStateMetadataRaw(s.Metadata.Desired, state.Metadata.Desired); err != nil {
+		return ioterr.New(err, "updating desired state")
+	}
 	if err := updateStateRaw(s.State.Reported, state.State.Reported); err != nil {
+		return ioterr.New(err, "updating reported state")
+	}
+	if err := updateStateMetadataRaw(s.Metadata.Reported, state.Metadata.Reported); err != nil {
 		return ioterr.New(err, "updating reported state")
 	}
 	return nil
@@ -101,20 +110,39 @@ func (s *ThingDocument) updateDelta(state *thingDelta) bool {
 	s.Version = state.Version
 	s.Timestamp = state.Timestamp
 	s.State.Delta = state.State
+	s.Metadata.Delta = state.Metadata
 	return true
 }
 
-func updateStateRaw(state map[string]interface{}, update json.RawMessage) error {
+func updateStateRawCommon(state map[string]interface{}, update json.RawMessage) bool {
 	if !hasUpdate(update) {
-		return nil
+		return true
 	}
 	if update == nil {
 		for k := range state {
 			delete(state, k)
 		}
+		return true
+	}
+	return false
+}
+
+func updateStateRaw(state map[string]interface{}, update json.RawMessage) error {
+	if updateStateRawCommon(state, update) {
 		return nil
 	}
 	var u map[string]interface{}
+	if err := json.Unmarshal([]byte(update), &u); err != nil {
+		return ioterr.New(err, "unmarshaling update")
+	}
+	return updateState(state, u)
+}
+
+func updateStateMetadataRaw(state map[string]interface{}, update json.RawMessage) error {
+	if updateStateRawCommon(state, update) {
+		return nil
+	}
+	var u NestedMetadata
 	if err := json.Unmarshal([]byte(update), &u); err != nil {
 		return ioterr.New(err, "unmarshaling update")
 	}
