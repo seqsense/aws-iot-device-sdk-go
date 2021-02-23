@@ -20,6 +20,14 @@ type Options struct {
 	IncrementalUpdate bool
 }
 
+// DefaultOptions is a default Device Shadow options.
+var DefaultOptions = Options{
+	// Report() and Desire() take diff between local Thing Document and given state to
+	// reduce data size to be sent.
+	// If you want to send full state, use WithIncrementalUpdate(false).
+	IncrementalUpdate: true,
+}
+
 // Option is a functional option of UpdateJob.
 type Option func(options *Options) error
 

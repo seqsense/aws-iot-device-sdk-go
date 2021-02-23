@@ -168,18 +168,16 @@ func (s *shadow) deleteAccepted(msg *mqtt.Message) {
 
 // New creates Thing Shadow interface.
 func New(ctx context.Context, cli awsiotdev.Device, opt ...Option) (Shadow, error) {
-	opts := &Options{
-		IncrementalUpdate: true,
-	}
+	opts := DefaultOptions
 	for _, o := range opt {
-		if err := o(opts); err != nil {
+		if err := o(&opts); err != nil {
 			return nil, ioterr.New(err, "applying option")
 		}
 	}
 	s := &shadow{
 		cli:       cli,
 		thingName: cli.ThingName(),
-		opts:      opts,
+		opts:      &opts,
 		doc: &ThingDocument{
 			State: ThingState{
 				Desired:  map[string]interface{}{},
