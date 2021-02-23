@@ -232,3 +232,7 @@ func unmarshalStateImpl(b []byte) (interface{}, error) {
 		return v2, nil
 	}
 }
+
+func (n *NestedState) MapTo(v interface{}) error {
+	return nil
+}

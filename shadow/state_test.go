@@ -143,3 +143,46 @@ func TestErrorResponse(t *testing.T) {
 		t.Error("Error string should contain error message")
 	}
 }
+
+func TestNestedState_MapTo(t *testing.T) {
+	testCases := map[string]struct {
+		input     NestedState
+		container interface{}
+		expected  interface{}
+	}{
+		"OneByOne": {
+			input: NestedState{
+				"A": NestedState{
+					"B": 1,
+				},
+				"C": 2,
+			},
+			container: &struct {
+				A struct{ B int }
+				C int
+			}{},
+			expected: &struct {
+				A struct{ B int }
+				C int
+			}{
+				A: struct{ B int }{
+					B: 1,
+				},
+				C: 2,
+			},
+		},
+	}
+
+	for name, tt := range testCases {
+		tt := tt
+		t.Run(name, func(t *testing.T) {
+			err := tt.input.MapTo(tt.container)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(tt.expected, tt.container) {
+				t.Errorf("Expected:\n%v\ngot:\n%v", tt.expected, tt.container)
+			}
+		})
+	}
+}
