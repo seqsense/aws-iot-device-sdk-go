@@ -15,6 +15,7 @@
 package shadow
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -39,6 +40,7 @@ func TestStateDiff(t *testing.T) {
 		input   interface{}
 		diff    interface{}
 		hasDiff bool
+		err     error
 	}{
 		"Map2Map": {
 			base:    map[string]int{"a": 1, "b": 2, "c": 3},
@@ -56,6 +58,18 @@ func TestStateDiff(t *testing.T) {
 			input:   map[string]interface{}{"B": 2, "A": 1, "S": nil},
 			diff:    map[string]interface{}{"S": nil},
 			hasDiff: true,
+		},
+		"Map2Nil": {
+			base:    map[string]int{"a": 1, "b": 2, "c": 3},
+			input:   nil,
+			diff:    nil,
+			hasDiff: true,
+		},
+		"Nil2Nil": {
+			base:    nil,
+			input:   nil,
+			diff:    nil,
+			hasDiff: false,
 		},
 		"Nil2Struct": {
 			base:    nil,
@@ -97,11 +111,27 @@ func TestStateDiff(t *testing.T) {
 			diff:    map[string]interface{}{"A": 1, "B": 3, "S": "test"},
 			hasDiff: true,
 		},
+		"WrongType": {
+			base:  map[string]interface{}{"A": 1, "B": 3, "S": "test"},
+			input: map[int]interface{}{1: 1, 3: 3, 4: "test"},
+			err:   ErrUnsupportedMapKeyType,
+		},
+		"WrongType2": {
+			base:  map[int]interface{}{1: 1, 3: 3, 4: "test"},
+			input: map[string]interface{}{"A": 1, "B": 3, "S": "test"},
+			err:   ErrUnsupportedMapKeyType,
+		},
 	}
 	for name, tt := range testCases {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			diff, hasDiff := stateDiff(tt.base, tt.input)
+			diff, hasDiff, err := stateDiff(tt.base, tt.input)
+			if tt.err != nil {
+				if !errors.Is(tt.err, err) {
+					t.Errorf("Expected error: '%v', got: '%v'", tt.err, err)
+				}
+				return
+			}
 			if hasDiff != tt.hasDiff {
 				t.Errorf("Expected: hasDiff=%v, got: hasDiff=%v", tt.hasDiff, hasDiff)
 			}
@@ -117,6 +147,7 @@ func TestAttributeKeys(t *testing.T) {
 		input    interface{}
 		keys     []string
 		hasChild bool
+		err      error
 	}{
 		"Slice": {
 			input: []int{1, 2, 3},
@@ -148,7 +179,14 @@ func TestAttributeKeys(t *testing.T) {
 	for name, tt := range testCases {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			keys, hasChild := attributeKeys(tt.input)
+			keys, hasChild, err := attributeKeys(tt.input)
+			if tt.err != nil {
+				if !errors.Is(tt.err, err) {
+					t.Errorf("Expected error: '%v', got: '%v'", tt.err, err)
+				}
+				return
+			}
+
 			if hasChild != tt.hasChild {
 				t.Errorf("Expected: hasChild=%v, got: hasChild=%v", tt.hasChild, hasChild)
 			}
@@ -161,10 +199,10 @@ func TestAttributeKeys(t *testing.T) {
 }
 
 func TestAttributeByKey(t *testing.T) {
-
 	testCases := map[string]struct {
 		input    interface{}
 		keyValue map[string]interface{}
+		err      error
 	}{
 		"Map": {
 			input:    map[string]int{"a": 1, "b": 2},
@@ -187,7 +225,13 @@ func TestAttributeByKey(t *testing.T) {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
 			for k, v := range tt.keyValue {
-				a, _ := attributeByKey(tt.input, k)
+				a, err := attributeByKey(tt.input, k)
+				if tt.err != nil {
+					if !errors.Is(tt.err, err) {
+						t.Errorf("Expected error: '%v', got: '%v'", tt.err, err)
+					}
+					return
+				}
 				if !reflect.DeepEqual(v, a) {
 					t.Errorf("Expected: %+v, got: %+v", v, a)
 				}

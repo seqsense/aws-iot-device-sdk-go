@@ -19,17 +19,28 @@ import (
 	"reflect"
 )
 
-func stateDiff(base, in interface{}) (interface{}, bool) {
-	keys, hasChild := attributeKeys(base)
+var errInvalidAttribute = errors.New("invalid attribute key")
+
+// ErrUnsupportedMapKeyType is returned if map key type is not string.
+var ErrUnsupportedMapKeyType = errors.New("unsupported map key type")
+
+func stateDiff(base, in interface{}) (interface{}, bool, error) {
+	keys, hasChild, err := attributeKeys(base)
+	if err != nil {
+		return nil, false, err
+	}
 	if !hasChild {
 		if reflect.DeepEqual(base, in) {
-			return nil, false
+			return nil, false, nil
 		}
-		return in, true
+		return in, true, nil
 	}
-	keysIn, hasChildIn := attributeKeys(in)
+	keysIn, hasChildIn, err := attributeKeys(in)
+	if err != nil {
+		return nil, false, err
+	}
 	if !hasChildIn {
-		return in, true
+		return in, true, nil
 	}
 	keysInMap := make(map[string]struct{})
 	for _, k := range keysIn {
@@ -41,38 +52,33 @@ func stateDiff(base, in interface{}) (interface{}, bool) {
 			continue
 		}
 		delete(keysInMap, k)
-		a, err := attributeByKey(base, k)
-		if err != nil {
-			return in, true
-		}
+		a, _ := attributeByKey(base, k)
 		b, err := attributeByKey(in, k)
 		if err != nil {
-			continue
+			return nil, false, err
 		}
-		d, difer := stateDiff(a, b)
+		d, difer, err := stateDiff(a, b)
+		if err != nil {
+			return nil, false, err
+		}
 		if difer {
 			out[k] = d
 		}
 	}
 	for k := range keysInMap {
-		b, err := attributeByKey(in, k)
-		if err != nil {
-			continue
-		}
+		b, _ := attributeByKey(in, k)
 		out[k] = b
 	}
 	if len(out) == 0 {
-		return nil, false
+		return nil, false, nil
 	}
-	return out, true
+	return out, true, nil
 }
 
-var errInvalidAttribute = errors.New("invalid attribute key")
-
-func attributeKeys(a interface{}) ([]string, bool) {
+func attributeKeys(a interface{}) ([]string, bool, error) {
 	v := reflect.ValueOf(a)
 	if !v.IsValid() {
-		return nil, false
+		return nil, false, nil
 	}
 	t := v.Type()
 	switch t.Kind() {
@@ -80,19 +86,22 @@ func attributeKeys(a interface{}) ([]string, bool) {
 		out := make([]string, v.Len())
 		keys := v.MapKeys()
 		for i := range out {
+			if keys[i].Kind() != reflect.String {
+				return nil, false, ErrUnsupportedMapKeyType
+			}
 			out[i] = keys[i].String()
 		}
-		return out, true
+		return out, true, nil
 	case reflect.Struct:
 		out := make([]string, v.NumField())
 		for i := range out {
 			out[i] = t.Field(i).Name
 		}
-		return out, true
+		return out, true, nil
 	case reflect.Ptr:
 		return attributeKeys(v.Elem().Interface())
 	}
-	return nil, false
+	return nil, false, nil
 }
 
 func attributeByKey(a interface{}, k string) (interface{}, error) {

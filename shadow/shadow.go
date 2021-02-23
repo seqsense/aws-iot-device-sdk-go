@@ -228,7 +228,11 @@ func New(ctx context.Context, cli awsiotdev.Device, opt ...Option) (Shadow, erro
 func (s *shadow) Report(ctx context.Context, state interface{}) (*ThingDocument, error) {
 	if s.opts.IncrementalUpdate {
 		var hasDiff bool
-		state, hasDiff = stateDiff(s.doc.State.Reported, state)
+		var err error
+		state, hasDiff, err = stateDiff(s.doc.State.Reported, state)
+		if err != nil {
+			return nil, err
+		}
 		if !hasDiff {
 			s.mu.Lock()
 			doc := s.doc.clone()
@@ -289,9 +293,11 @@ func (s *shadow) Report(ctx context.Context, state interface{}) (*ThingDocument,
 func (s *shadow) Desire(ctx context.Context, state interface{}) (*ThingDocument, error) {
 	if s.opts.IncrementalUpdate {
 		var hasDiff bool
-		fmt.Printf("state %+v\ndesire %+v\n", s.doc.State.Desired, state)
-		state, hasDiff = stateDiff(s.doc.State.Desired, state)
-		fmt.Printf("%+v %v\n", state, hasDiff)
+		var err error
+		state, hasDiff, err = stateDiff(s.doc.State.Desired, state)
+		if err != nil {
+			return nil, err
+		}
 		if !hasDiff {
 			s.mu.Lock()
 			doc := s.doc.clone()
