@@ -69,6 +69,12 @@ func TestStateDiff(t *testing.T) {
 			diff:    map[string]interface{}{"B": 3, "C": 0},
 			hasDiff: true,
 		},
+		"Map2StructPtr": {
+			base:    map[string]interface{}{"A": 1, "B": 2, "S": "test"},
+			input:   &testStruct{A: 1, B: 3, S: "test"},
+			diff:    map[string]interface{}{"B": 3, "C": 0},
+			hasDiff: true,
+		},
 		"Map2NestedStruct_TypeChange": {
 			base:    map[string]interface{}{"A": 1, "B": 2, "S": 3},
 			input:   testStructNested{A: 1, B: 3, S: testSubStruct{S1: 2}},
@@ -78,6 +84,11 @@ func TestStateDiff(t *testing.T) {
 		"Map2Struct_Equal": {
 			base:    map[string]interface{}{"B": 2, "A": 1, "C": 0, "S": "test"},
 			input:   testStruct{A: 1, B: 2, S: "test"},
+			hasDiff: false,
+		},
+		"Map2StructPtr_Equal": {
+			base:    map[string]interface{}{"B": 2, "A": 1, "C": 0, "S": "test"},
+			input:   &testStruct{A: 1, B: 2, S: "test"},
 			hasDiff: false,
 		},
 		"Nil2Map": {
@@ -116,10 +127,12 @@ func TestAttributeKeys(t *testing.T) {
 			hasChild: true,
 		},
 		"Struct": {
-			input: struct {
-				A, B, C int
-				S       string
-			}{},
+			input:    testStruct{},
+			keys:     []string{"A", "B", "C", "S"},
+			hasChild: true,
+		},
+		"StructPtr": {
+			input:    &testStruct{},
 			keys:     []string{"A", "B", "C", "S"},
 			hasChild: true,
 		},
@@ -159,6 +172,10 @@ func TestAttributeByKey(t *testing.T) {
 		},
 		"Struct": {
 			input:    testStruct{A: 2, S: "test"},
+			keyValue: map[string]interface{}{"A": 2, "B": 0, "C": 0, "S": "test"},
+		},
+		"StructPtr": {
+			input:    &testStruct{A: 2, S: "test"},
 			keyValue: map[string]interface{}{"A": 2, "B": 0, "C": 0, "S": "test"},
 		},
 		"NestedStruct": {
