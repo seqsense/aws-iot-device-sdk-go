@@ -272,6 +272,22 @@ func BenchmarkStateDiff(b *testing.B) {
 				Array:   []string{"value1", "value2", "value3", "value4"},
 			},
 		},
+		"Map2StructPtr": {
+			base: map[string]interface{}{
+				"String":  "test data",
+				"Integer": 1234,
+				"Array":   []string{"value1", "value2", "value3", "value4"},
+			},
+			input: &struct {
+				String  string
+				Integer int
+				Array   []string
+			}{
+				String:  "test data2",
+				Integer: 1235,
+				Array:   []string{"value1", "value2", "value3", "value4"},
+			},
+		},
 	}
 	for name, tt := range testCases {
 		b.Run(name, func(b *testing.B) {
