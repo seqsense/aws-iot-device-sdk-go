@@ -42,7 +42,7 @@ type Shadow interface {
 	// Delete thing shadow.
 	Delete(ctx context.Context) error
 	// OnDelta sets handler of state deltas.
-	OnDelta(func(delta map[string]interface{}))
+	OnDelta(func(delta NestedState))
 	// OnError sets handler of asynchronous errors.
 	OnError(func(error))
 }
@@ -60,7 +60,7 @@ type shadow struct {
 	name      string
 	doc       *ThingDocument
 	mu        sync.Mutex
-	onDelta   func(delta map[string]interface{})
+	onDelta   func(delta NestedState)
 	onError   func(err error)
 
 	chResps map[string]chan interface{}
@@ -180,14 +180,14 @@ func New(ctx context.Context, cli awsiotdev.Device, opt ...Option) (Shadow, erro
 		name:      opts.Name,
 		doc: &ThingDocument{
 			State: ThingState{
-				Desired:  map[string]interface{}{},
-				Reported: map[string]interface{}{},
-				Delta:    map[string]interface{}{},
+				Desired:  NestedState{},
+				Reported: NestedState{},
+				Delta:    NestedState{},
 			},
 			Metadata: ThingStateMetadata{
-				Desired:  map[string]interface{}{},
-				Reported: map[string]interface{}{},
-				Delta:    map[string]interface{}{},
+				Desired:  NestedMetadata{},
+				Reported: NestedMetadata{},
+				Delta:    NestedMetadata{},
 			},
 		},
 
@@ -418,13 +418,13 @@ func (s *shadow) Document() *ThingDocument {
 	return s.doc.clone()
 }
 
-func (s *shadow) OnDelta(cb func(delta map[string]interface{})) {
+func (s *shadow) OnDelta(cb func(delta NestedState)) {
 	s.mu.Lock()
 	s.onDelta = cb
 	s.mu.Unlock()
 }
 
-func (s *shadow) handleDelta(delta map[string]interface{}) {
+func (s *shadow) handleDelta(delta NestedState) {
 	s.mu.Lock()
 	cb := s.onDelta
 	s.mu.Unlock()

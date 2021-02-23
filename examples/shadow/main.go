@@ -96,7 +96,7 @@ func main() {
 	s.OnError(func(err error) {
 		fmt.Printf("async error: %v\n", err)
 	})
-	s.OnDelta(func(delta map[string]interface{}) {
+	s.OnDelta(func(delta shadow.NestedState) {
 		fmt.Printf("delta:%s", prettyDump(delta))
 	})
 	cli.Handle(s)
