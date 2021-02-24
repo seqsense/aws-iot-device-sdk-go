@@ -105,22 +105,31 @@ func attributeKeys(a interface{}) ([]string, bool, error) {
 }
 
 func attributeByKey(a interface{}, k string) (interface{}, error) {
-	v := reflect.ValueOf(a)
+	ret, err := attributeByKeyImpl(reflect.ValueOf(a), k)
+	if err != nil {
+		return nil, err
+	}
+	return ret.Interface(), nil
+}
+
+func attributeByKeyImpl(v reflect.Value, k string) (reflect.Value, error) {
 	if !v.IsValid() {
-		return nil, errInvalidAttribute
+		return reflect.Value{}, errInvalidAttribute
 	}
 	t := v.Type()
 	switch t.Kind() {
 	case reflect.Struct:
-		return v.FieldByName(k).Interface(), nil
+		return v.FieldByName(k), nil
 	case reflect.Map:
 		val := v.MapIndex(reflect.ValueOf(k))
 		if !val.IsValid() {
-			return nil, nil
+			return reflect.Value{}, nil
 		}
-		return val.Interface(), nil
+		return val, nil
 	case reflect.Ptr:
-		return attributeByKey(v.Elem().Interface(), k)
+		return attributeByKeyImpl(v.Elem(), k)
+	case reflect.Interface:
+		return attributeByKeyImpl(v.Elem(), k)
 	}
-	return nil, errInvalidAttribute
+	return reflect.Value{}, errInvalidAttribute
 }
