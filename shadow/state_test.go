@@ -171,12 +171,67 @@ func TestNestedState_MapTo(t *testing.T) {
 				C: 2,
 			},
 		},
+		"ExtraField": {
+			input: NestedState{
+				"A": NestedState{
+					"B": 1,
+				},
+				"C": 2,
+				"D": 2,
+			},
+			container: &struct {
+				A struct{ B int }
+				C int
+			}{},
+			expected: &struct {
+				A struct{ B int }
+				C int
+			}{
+				A: struct{ B int }{
+					B: 1,
+				},
+				C: 2,
+			},
+		},
+		"MissingField": {
+			input: NestedState{
+				"A": NestedState{
+					"B": 1,
+				},
+			},
+			container: &struct {
+				A struct{ B int }
+				C int
+			}{},
+			expected: &struct {
+				A struct{ B int }
+				C int
+			}{
+				A: struct{ B int }{
+					B: 1,
+				},
+				C: 0,
+			},
+		},
+		"Array": {
+			input: NestedState{
+				"A": []int{1, 2, 3, 4, 5},
+			},
+			container: &struct {
+				A []int
+			}{},
+			expected: &struct {
+				A []int
+			}{
+				A: []int{1, 2, 3, 4, 5},
+			},
+		},
 	}
 
 	for name, tt := range testCases {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			err := tt.input.MapTo(tt.container)
+			err := tt.input.MapTo(&tt.container)
 			if err != nil {
 				t.Fatal(err)
 			}

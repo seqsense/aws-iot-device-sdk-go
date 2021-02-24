@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 )
@@ -233,6 +234,27 @@ func unmarshalStateImpl(b []byte) (interface{}, error) {
 	}
 }
 
-func (n *NestedState) MapTo(v interface{}) error {
+// MapTo copies NestedState to the given typed struct.
+func (n NestedState) MapTo(dst interface{}) error {
+	return n.mapToImpl(reflect.ValueOf(dst).Elem())
+}
+
+func (n NestedState) mapToImpl(dst reflect.Value) error {
+	for k, v := range n {
+		switch v := v.(type) {
+		case NestedState:
+			dst2, err := attributeByKeyImpl(dst, k)
+			if err != nil {
+				continue
+			}
+			if err := v.mapToImpl(dst2); err != nil {
+				return err
+			}
+		default:
+			if err := setAttributeByKeyImpl(dst, k, v); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
