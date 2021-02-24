@@ -30,11 +30,54 @@ func stateDiff(base, in interface{}) (interface{}, bool, error) {
 		return nil, false, err
 	}
 	if !hasChild {
-		if reflect.DeepEqual(base, in) {
+		baseVal := reflect.ValueOf(base)
+		inVal := reflect.ValueOf(in)
+		if !baseVal.IsValid() {
+			if !inVal.IsValid() {
+				// Both nil
+				return nil, false, nil
+			}
+			// One is nil
+			return in, true, nil
+		} else if !inVal.IsValid() {
+			// One is nil
+			return in, true, nil
+		}
+		switch baseVal.Type().Kind() {
+		case reflect.Array, reflect.Slice:
+			// Compare slice/array
+			switch inVal.Type().Kind() {
+			case reflect.Array, reflect.Slice:
+				if baseVal.Len() != inVal.Len() {
+					// Size differs
+					return in, true, nil
+				}
+				for i := 0; i < baseVal.Len(); i++ {
+					_, hasDiff, err := stateDiff(
+						baseVal.Index(i).Interface(),
+						inVal.Index(i).Interface(),
+					)
+					if err != nil {
+						return nil, false, err
+					}
+					if hasDiff {
+						return in, true, nil
+					}
+				}
+			default:
+				// Type differs
+				return in, true, nil
+			}
 			return nil, false, nil
+		default:
+			// Compare primitive value
+			if reflect.DeepEqual(base, in) {
+				return nil, false, nil
+			}
 		}
 		return in, true, nil
 	}
+
 	keysIn, hasChildIn, err := attributeKeys(in)
 	if err != nil {
 		return nil, false, err
@@ -42,6 +85,7 @@ func stateDiff(base, in interface{}) (interface{}, bool, error) {
 	if !hasChildIn {
 		return in, true, nil
 	}
+
 	keysInMap := make(map[string]struct{})
 	for _, k := range keysIn {
 		keysInMap[k] = struct{}{}

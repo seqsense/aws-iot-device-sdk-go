@@ -121,6 +121,36 @@ func TestStateDiff(t *testing.T) {
 			input: map[string]interface{}{"A": 1, "B": 3, "S": "test"},
 			err:   ErrUnsupportedMapKeyType,
 		},
+		"InterfaceSlice": {
+			base: map[string]interface{}{"A": []interface{}{1, 2, 4, 5}},
+			input: struct{ A []int }{
+				A: []int{1, 2, 3, 4, 5},
+			},
+			diff:    map[string]interface{}{"A": []interface{}{1, 2, 3, 4, 5}},
+			hasDiff: true,
+		},
+		"InterfaceSliceEqual": {
+			base: map[string]interface{}{"A": []interface{}{1, 2, 3, 4, 5}},
+			input: struct{ A []int }{
+				A: []int{1, 2, 3, 4, 5},
+			},
+			hasDiff: false,
+		},
+		"InterfaceArray": {
+			base: map[string]interface{}{"A": []interface{}{1, 2, 4, 5}},
+			input: struct{ A [5]int }{
+				A: [5]int{1, 2, 3, 4, 5},
+			},
+			diff:    map[string]interface{}{"A": []interface{}{1, 2, 3, 4, 5}},
+			hasDiff: true,
+		},
+		"InterfaceArrayEqual": {
+			base: map[string]interface{}{"A": []interface{}{1, 2, 3, 4, 5}},
+			input: struct{ A [5]int }{
+				A: [5]int{1, 2, 3, 4, 5},
+			},
+			hasDiff: false,
+		},
 	}
 	for name, tt := range testCases {
 		tt := tt
