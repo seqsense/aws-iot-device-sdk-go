@@ -57,7 +57,7 @@ type shadow struct {
 	mqtt.ServeMux
 	cli       mqtt.Client
 	thingName string
-	name      string
+	opts      *Options
 	doc       *ThingDocument
 	mu        sync.Mutex
 	onDelta   func(delta map[string]interface{})
@@ -75,8 +75,8 @@ func (s *shadow) token() string {
 
 func (s *shadow) topic(operation string) string {
 	prefix := "$aws/things/" + s.thingName + "/shadow"
-	if s.name != "" {
-		prefix += "/name/" + s.name
+	if s.opts.Name != "" {
+		prefix += "/name/" + s.opts.Name
 	}
 	return prefix + "/" + operation
 }
@@ -168,16 +168,16 @@ func (s *shadow) deleteAccepted(msg *mqtt.Message) {
 
 // New creates Thing Shadow interface.
 func New(ctx context.Context, cli awsiotdev.Device, opt ...Option) (Shadow, error) {
-	opts := &Options{}
+	opts := DefaultOptions
 	for _, o := range opt {
-		if err := o(opts); err != nil {
+		if err := o(&opts); err != nil {
 			return nil, ioterr.New(err, "applying option")
 		}
 	}
 	s := &shadow{
 		cli:       cli,
 		thingName: cli.ThingName(),
-		name:      opts.Name,
+		opts:      &opts,
 		doc: &ThingDocument{
 			State: ThingState{
 				Desired:  map[string]interface{}{},
@@ -226,6 +226,20 @@ func New(ctx context.Context, cli awsiotdev.Device, opt ...Option) (Shadow, erro
 }
 
 func (s *shadow) Report(ctx context.Context, state interface{}) (*ThingDocument, error) {
+	if s.opts.IncrementalUpdate {
+		var hasDiff bool
+		var err error
+		state, hasDiff, err = stateDiff(s.doc.State.Reported, state)
+		if err != nil {
+			return nil, err
+		}
+		if !hasDiff {
+			s.mu.Lock()
+			doc := s.doc.clone()
+			s.mu.Unlock()
+			return doc, nil
+		}
+	}
 	rawState, err := json.Marshal(state)
 	if err != nil {
 		return nil, ioterr.New(err, "marshaling state")
@@ -277,6 +291,20 @@ func (s *shadow) Report(ctx context.Context, state interface{}) (*ThingDocument,
 }
 
 func (s *shadow) Desire(ctx context.Context, state interface{}) (*ThingDocument, error) {
+	if s.opts.IncrementalUpdate {
+		var hasDiff bool
+		var err error
+		state, hasDiff, err = stateDiff(s.doc.State.Desired, state)
+		if err != nil {
+			return nil, err
+		}
+		if !hasDiff {
+			s.mu.Lock()
+			doc := s.doc.clone()
+			s.mu.Unlock()
+			return doc, nil
+		}
+	}
 	rawState, err := json.Marshal(state)
 	if err != nil {
 		return nil, ioterr.New(err, "marshaling state")

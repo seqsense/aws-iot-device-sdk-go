@@ -16,7 +16,16 @@ package shadow
 
 // Options stores Device Shadow options.
 type Options struct {
-	Name string
+	Name              string
+	IncrementalUpdate bool
+}
+
+// DefaultOptions is a default Device Shadow options.
+var DefaultOptions = Options{
+	// Report() and Desire() take diff between local Thing Document and given state to
+	// reduce data size to be sent.
+	// If you want to send full state, use WithIncrementalUpdate(false).
+	IncrementalUpdate: true,
 }
 
 // Option is a functional option of UpdateJob.
@@ -26,6 +35,15 @@ type Option func(options *Options) error
 func WithName(name string) Option {
 	return func(o *Options) error {
 		o.Name = name
+		return nil
+	}
+}
+
+// WithIncrementalUpdate enables increamental update of state document.
+// Enabled by default.
+func WithIncrementalUpdate(enable bool) Option {
+	return func(o *Options) error {
+		o.IncrementalUpdate = enable
 		return nil
 	}
 }
