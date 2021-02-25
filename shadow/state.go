@@ -26,6 +26,12 @@ import (
 // ErrVersionConflict means thing state update was aborted due to version conflict.
 var ErrVersionConflict = errors.New("version conflict")
 
+// ErrUnsupportedMapKeyType is returned if map key type is not string.
+var ErrUnsupportedMapKeyType = errors.New("unsupported map key type")
+
+// ErrIncompatibleMapping is returned if state can't be converted into struct.
+var ErrIncompatibleMapping = errors.New("unable to convert state to struct")
+
 type simpleRequest struct {
 	ClientToken string `json:"clientToken"`
 }
@@ -250,9 +256,50 @@ func (n NestedState) mapToImpl(dst reflect.Value) error {
 			if err := v.mapToImpl(dst2); err != nil {
 				return err
 			}
+		case []interface{}:
+			dst2, err := attributeByKeyImpl(dst, k)
+			if err != nil {
+				continue
+			}
+			switch dst2.Kind() {
+			case reflect.Slice:
+				n := len(v)
+				if dst2.Cap() < n {
+					dst2.Set(reflect.MakeSlice(dst2.Type(), n, n))
+				} else {
+					dst2.SetLen(n)
+				}
+			case reflect.Array:
+				if dst2.Len() != len(v) {
+					return fmt.Errorf("invalid array length: %w", ErrUnsupportedMapKeyType)
+				}
+			default:
+				return fmt.Errorf("%s: %w", dst2.Kind(), ErrUnsupportedMapKeyType)
+			}
+			for i := range v {
+				dst3 := dst2.Index(i)
+				switch v := v[i].(type) {
+				case NestedState:
+					if err := v.mapToImpl(dst3); err != nil {
+						return err
+					}
+				default:
+					val := reflect.ValueOf(v)
+					switch {
+					case dst3.Type() == val.Type():
+						dst3.Set(val)
+					case val.Type().ConvertibleTo(dst3.Type()):
+						dst3.Set(val.Convert(dst3.Type()))
+					default:
+						return fmt.Errorf("can't convert %s to %s: %w", val.Kind(), dst3.Kind(), ErrUnsupportedMapKeyType)
+					}
+				}
+			}
 		default:
 			if err := setAttributeByKeyImpl(dst, k, v); err != nil {
-				return err
+				if err != errInvalidAttribute {
+					return err
+				}
 			}
 		}
 	}

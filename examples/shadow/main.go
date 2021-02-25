@@ -126,6 +126,13 @@ func main() {
 	}
 	fmt.Printf("document:%s", prettyDump(doc))
 
+	// Read Desire state as sampleState struct
+	var typedState sampleState
+	if err := doc.State.Desired.MapTo(&typedState); err != nil {
+		panic(err)
+	}
+	fmt.Printf("\ndocument.State.Desired (typed): %+v\n", typedState)
+
 	time.Sleep(time.Second)
 
 	fmt.Print("\n> remove one attribute from report\n")

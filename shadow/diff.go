@@ -21,9 +21,6 @@ import (
 
 var errInvalidAttribute = errors.New("invalid attribute key")
 
-// ErrUnsupportedMapKeyType is returned if map key type is not string.
-var ErrUnsupportedMapKeyType = errors.New("unsupported map key type")
-
 func stateDiff(base, in interface{}) (interface{}, bool, error) {
 	keys, hasChild, err := attributeKeys(base)
 	if err != nil {
@@ -170,9 +167,7 @@ func attributeByKeyImpl(v reflect.Value, k string) (reflect.Value, error) {
 			return reflect.Value{}, nil
 		}
 		return val, nil
-	case reflect.Ptr:
-		return attributeByKeyImpl(v.Elem(), k)
-	case reflect.Interface:
+	case reflect.Ptr, reflect.Interface:
 		return attributeByKeyImpl(v.Elem(), k)
 	}
 	return reflect.Value{}, errInvalidAttribute
@@ -185,21 +180,18 @@ func setAttributeByKeyImpl(v reflect.Value, k string, val interface{}) error {
 	t := v.Type()
 	switch t.Kind() {
 	case reflect.Struct:
-		f := v.FieldByName(k)
-		if f.CanSet() {
-			f.Set(reflect.ValueOf(val))
-		}
-		return nil
+		return setAttributeByKeyImpl(v.FieldByName(k), k, val)
 	case reflect.Map:
-		f := v.MapIndex(reflect.ValueOf(k))
-		if f.CanSet() {
-			f.Set(reflect.ValueOf(val))
+		return setAttributeByKeyImpl(v.MapIndex(reflect.ValueOf(k)), k, val)
+	case reflect.Ptr, reflect.Interface:
+		return setAttributeByKeyImpl(v.Elem(), k, val)
+	default:
+		vval := reflect.ValueOf(val)
+		if v.Type() == vval.Type() {
+			v.Set(vval)
+		} else {
+			v.Set(vval.Convert(v.Type()))
 		}
 		return nil
-	case reflect.Ptr:
-		return setAttributeByKeyImpl(v.Elem(), k, val)
-	case reflect.Interface:
-		return setAttributeByKeyImpl(v.Elem(), k, val)
 	}
-	return errInvalidAttribute
 }

@@ -213,9 +213,9 @@ func TestNestedState_MapTo(t *testing.T) {
 				C: 0,
 			},
 		},
-		"Array": {
+		"SliceConvert": {
 			input: NestedState{
-				"A": []int{1, 2, 3, 4, 5},
+				"A": []interface{}{1.0, 2.0, 3, 4.0, 5},
 			},
 			container: &struct {
 				A []int
@@ -224,6 +224,38 @@ func TestNestedState_MapTo(t *testing.T) {
 				A []int
 			}{
 				A: []int{1, 2, 3, 4, 5},
+			},
+		},
+		"Slice": {
+			input: NestedState{
+				"A": []interface{}{1, 2, 3, 4, 5},
+			},
+			container: &struct {
+				A []int
+			}{},
+			expected: &struct {
+				A []int
+			}{
+				A: []int{1, 2, 3, 4, 5},
+			},
+		},
+		"StructSlice": {
+			input: NestedState{
+				"A": []interface{}{
+					NestedState{"B": 1},
+					NestedState{"B": 2},
+				},
+			},
+			container: &struct {
+				A []struct{ B int }
+			}{},
+			expected: &struct {
+				A []struct{ B int }
+			}{
+				A: []struct{ B int }{
+					{B: 1},
+					{B: 2},
+				},
 			},
 		},
 	}
