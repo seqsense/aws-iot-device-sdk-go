@@ -77,16 +77,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cli.Handle(mqtt.HandlerFunc(func(m *mqtt.Message) {
-		fmt.Printf("message dropped: %v\n", *m)
-	}))
 
-	if _, err := cli.Connect(ctx,
-		thingName,
-		mqtt.WithKeepAlive(30),
-	); err != nil {
-		panic(err)
-	}
+	// Multiplex message handler to route messages to multiple features.
+	var mux mqtt.ServeMux
+	cli.Handle(&mux)
 
 	j, err := jobs.New(ctx, cli)
 	if err != nil {
@@ -95,7 +89,14 @@ func main() {
 	j.OnError(func(err error) {
 		fmt.Printf("async error: %v\n", err)
 	})
-	cli.Handle(j)
+	mux.Handle("#", j) // Handle messages for Shadow.
+
+	if _, err := cli.Connect(ctx,
+		thingName,
+		mqtt.WithKeepAlive(30),
+	); err != nil {
+		panic(err)
+	}
 
 	processJob := func(jbs map[jobs.JobExecutionState][]jobs.JobExecutionSummary) {
 		if q, ok := jbs[jobs.Queued]; ok && len(q) > 0 {

@@ -78,16 +78,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cli.Handle(mqtt.HandlerFunc(func(m *mqtt.Message) {
-		fmt.Printf("Message dropped: %v\n", *m)
-	}))
 
-	if _, err := cli.Connect(ctx,
-		thingName,
-		mqtt.WithKeepAlive(30),
-	); err != nil {
-		panic(err)
-	}
+	// Multiplex message handler to route messages to multiple features.
+	var mux mqtt.ServeMux
+	cli.Handle(&mux)
 
 	s, err := shadow.New(ctx, cli, shadow.WithName(shadowName))
 	if err != nil {
@@ -99,7 +93,14 @@ func main() {
 	s.OnDelta(func(delta map[string]interface{}) {
 		fmt.Printf("delta:%s", prettyDump(delta))
 	})
-	cli.Handle(s)
+	mux.Handle("#", s) // Handle messages for Shadow.
+
+	if _, err := cli.Connect(ctx,
+		thingName,
+		mqtt.WithKeepAlive(30),
+	); err != nil {
+		panic(err)
+	}
 
 	fmt.Print("> update desire\n")
 	doc, err := s.Desire(ctx, sampleState{Value: 1, Struct: sampleStruct{Values: []int{1, 2}}})

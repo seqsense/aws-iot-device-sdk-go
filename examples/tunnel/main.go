@@ -80,12 +80,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if _, err := cli.Connect(ctx,
-		thingName,
-		mqtt.WithKeepAlive(30),
-	); err != nil {
-		panic(err)
-	}
+
+	// Multiplex message handler to route messages to multiple features.
+	var mux mqtt.ServeMux
+	cli.Handle(&mux)
 
 	t, err := tunnel.New(ctx, cli, map[string]tunnel.Dialer{
 		"ssh": func() (io.ReadWriteCloser, error) {
@@ -95,7 +93,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cli.Handle(t)
+	mux.Handle("#", t) // Handle messages for Shadow.
+
+	if _, err := cli.Connect(ctx,
+		thingName,
+		mqtt.WithKeepAlive(30),
+	); err != nil {
+		panic(err)
+	}
 
 	select {}
 }
