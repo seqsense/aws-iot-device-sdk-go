@@ -126,7 +126,9 @@ func main() {
 	}
 	fmt.Printf("document:%s", prettyDump(doc))
 
-	// Read Desire state as sampleState struct
+	// Document stores thing state as map[string]interface{}.
+	// even if you pass a custom struct to Desire() and Report().
+	// MapTo() converts state to the given struct.
 	var typedState sampleState
 	if err := doc.State.Desired.MapTo(&typedState); err != nil {
 		panic(err)
