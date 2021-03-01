@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/at-wat/mqtt-go"
+	"github.com/mitchellh/mapstructure"
 	awsiotdev "github.com/seqsense/aws-iot-device-sdk-go/v5"
 	"github.com/seqsense/aws-iot-device-sdk-go/v5/shadow"
 )
@@ -127,10 +128,10 @@ func main() {
 	fmt.Printf("document:%s", prettyDump(doc))
 
 	// Document stores thing state as map[string]interface{}.
-	// even if you pass a custom struct to Desire() and Report().
-	// MapTo() converts state to the given struct.
+	// You may want to use github.com/mitchellh/mapstructure to
+	// converts state to the given struct.
 	var typedState sampleState
-	if err := doc.State.Desired.MapTo(&typedState); err != nil {
+	if err := mapstructure.Decode(doc.State.Desired, &typedState); err != nil {
 		panic(err)
 	}
 	fmt.Printf("\ndocument.State.Desired (typed): %+v\n", typedState)

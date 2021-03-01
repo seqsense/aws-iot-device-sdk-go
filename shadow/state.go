@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 )
@@ -238,70 +237,4 @@ func unmarshalStateImpl(b []byte) (interface{}, error) {
 		}
 		return v2, nil
 	}
-}
-
-// MapTo copies NestedState to the given typed struct.
-func (n NestedState) MapTo(dst interface{}) error {
-	return n.mapToImpl(reflect.ValueOf(dst).Elem())
-}
-
-func (n NestedState) mapToImpl(dst reflect.Value) error {
-	for k, v := range n {
-		switch v := v.(type) {
-		case NestedState:
-			dst2, err := attributeByKeyImpl(dst, k)
-			if err != nil {
-				continue
-			}
-			if err := v.mapToImpl(dst2); err != nil {
-				return err
-			}
-		case []interface{}:
-			dst2, err := attributeByKeyImpl(dst, k)
-			if err != nil {
-				continue
-			}
-			switch dst2.Kind() {
-			case reflect.Slice:
-				n := len(v)
-				if dst2.Cap() < n {
-					dst2.Set(reflect.MakeSlice(dst2.Type(), n, n))
-				} else {
-					dst2.SetLen(n)
-				}
-			case reflect.Array:
-				if dst2.Len() != len(v) {
-					return fmt.Errorf("invalid array length: %w", ErrUnsupportedMapKeyType)
-				}
-			default:
-				return fmt.Errorf("%s: %w", dst2.Kind(), ErrUnsupportedMapKeyType)
-			}
-			for i := range v {
-				dst3 := dst2.Index(i)
-				switch v := v[i].(type) {
-				case NestedState:
-					if err := v.mapToImpl(dst3); err != nil {
-						return err
-					}
-				default:
-					val := reflect.ValueOf(v)
-					switch {
-					case dst3.Type() == val.Type():
-						dst3.Set(val)
-					case val.Type().ConvertibleTo(dst3.Type()):
-						dst3.Set(val.Convert(dst3.Type()))
-					default:
-						return fmt.Errorf("can't convert %s to %s: %w", val.Kind(), dst3.Kind(), ErrUnsupportedMapKeyType)
-					}
-				}
-			}
-		default:
-			if err := setAttributeByKeyImpl(dst, k, v); err != nil {
-				if err != errInvalidAttribute {
-					return err
-				}
-			}
-		}
-	}
-	return nil
 }
