@@ -26,7 +26,7 @@ import (
 
 func TestThingDocument_update(t *testing.T) {
 	doc := &ThingDocument{
-		State:     ThingState{Desired: map[string]interface{}{"key": "value_init"}},
+		State:     ThingState{Desired: NestedState{"key": "value_init"}},
 		Version:   2,
 		Timestamp: 12345,
 	}
@@ -40,7 +40,7 @@ func TestThingDocument_update(t *testing.T) {
 	}
 
 	expected0 := &ThingDocument{
-		State:     ThingState{Desired: map[string]interface{}{"key": "value_init"}},
+		State:     ThingState{Desired: NestedState{"key": "value_init"}},
 		Version:   2,
 		Timestamp: 12345,
 	}
@@ -60,7 +60,7 @@ func TestThingDocument_update(t *testing.T) {
 	}
 
 	expected1 := &ThingDocument{
-		State:     ThingState{Desired: map[string]interface{}{"key": "new value"}},
+		State:     ThingState{Desired: NestedState{"key": "new value"}},
 		Version:   4,
 		Timestamp: 12346,
 	}
@@ -80,7 +80,7 @@ func TestThingDocument_update(t *testing.T) {
 	}
 
 	expected2 := &ThingDocument{
-		State:     ThingState{Desired: map[string]interface{}{}},
+		State:     ThingState{Desired: NestedState{}},
 		Version:   5,
 		Timestamp: 12347,
 	}
@@ -101,7 +101,7 @@ func TestThingDocument_update(t *testing.T) {
 
 	expected3 := &ThingDocument{
 		State: ThingState{
-			Desired: map[string]interface{}{"key": map[string]interface{}{"key": "value"}},
+			Desired: NestedState{"key": NestedState{"key": "value"}},
 		},
 		Version:   6,
 		Timestamp: 12348,

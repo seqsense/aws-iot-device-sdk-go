@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/at-wat/mqtt-go"
+	"github.com/mitchellh/mapstructure"
 	awsiotdev "github.com/seqsense/aws-iot-device-sdk-go/v5"
 	"github.com/seqsense/aws-iot-device-sdk-go/v5/shadow"
 )
@@ -90,7 +91,7 @@ func main() {
 	s.OnError(func(err error) {
 		fmt.Printf("async error: %v\n", err)
 	})
-	s.OnDelta(func(delta map[string]interface{}) {
+	s.OnDelta(func(delta shadow.NestedState) {
 		fmt.Printf("delta:%s", prettyDump(delta))
 	})
 	mux.Handle("#", s) // Handle messages for Shadow.
@@ -126,6 +127,15 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("document:%s", prettyDump(doc))
+
+	// Document stores thing state as map[string]interface{}.
+	// You may want to use github.com/mitchellh/mapstructure to
+	// converts state to the given struct.
+	var typedState sampleState
+	if err := mapstructure.Decode(doc.State.Desired, &typedState); err != nil {
+		panic(err)
+	}
+	fmt.Printf("\ndocument.State.Desired (typed): %+v\n", typedState)
 
 	time.Sleep(time.Second)
 

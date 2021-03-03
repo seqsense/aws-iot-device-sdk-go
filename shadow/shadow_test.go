@@ -103,12 +103,12 @@ func TestHandlers(t *testing.T) {
 		s := &shadow{
 			doc: &ThingDocument{
 				State: ThingState{
-					Desired: map[string]interface{}{"key": "value_init"},
+					Desired: NestedState{"key": "value_init"},
 				},
 				Version:   2,
 				Timestamp: 12345,
 			},
-			onDelta: func(delta map[string]interface{}) {
+			onDelta: func(delta NestedState) {
 				t.Error("onDelta must not be called on rejected")
 			},
 			onError: func(err error) {
@@ -117,7 +117,7 @@ func TestHandlers(t *testing.T) {
 		}
 		expectedDoc := &ThingDocument{
 			State: ThingState{
-				Desired: map[string]interface{}{"key": "value_init"},
+				Desired: NestedState{"key": "value_init"},
 			},
 			Version:   2,
 			Timestamp: 12345,
@@ -141,16 +141,16 @@ func TestHandlers(t *testing.T) {
 	t.Run("Accepted", func(t *testing.T) {
 		t.Run("Get", func(t *testing.T) {
 			chErr := make(chan error, 1)
-			chDelta := make(chan map[string]interface{}, 1)
+			chDelta := make(chan NestedState, 1)
 			s := &shadow{
 				doc: &ThingDocument{
 					State: ThingState{
-						Desired: map[string]interface{}{"key": "value_init"},
+						Desired: NestedState{"key": "value_init"},
 					},
 					Version:   2,
 					Timestamp: 12345,
 				},
-				onDelta: func(delta map[string]interface{}) {
+				onDelta: func(delta NestedState) {
 					chDelta <- delta
 				},
 				onError: func(err error) {
@@ -159,8 +159,8 @@ func TestHandlers(t *testing.T) {
 			}
 			expectedDoc := &ThingDocument{
 				State: ThingState{
-					Desired: map[string]interface{}{"key2": "value2"},
-					Delta:   map[string]interface{}{"key2": "value2"},
+					Desired: NestedState{"key2": "value2"},
+					Delta:   NestedState{"key2": "value2"},
 				},
 				Version:   3,
 				Timestamp: 12346,
@@ -199,12 +199,12 @@ func TestHandlers(t *testing.T) {
 			s := &shadow{
 				doc: &ThingDocument{
 					State: ThingState{
-						Desired: map[string]interface{}{"key": "value_init"},
+						Desired: NestedState{"key": "value_init"},
 					},
 					Version:   2,
 					Timestamp: 12345,
 				},
-				onDelta: func(delta map[string]interface{}) {
+				onDelta: func(delta NestedState) {
 					t.Error("Delete must not trigger onDelta")
 				},
 				onError: func(err error) {
@@ -227,16 +227,16 @@ func TestHandlers(t *testing.T) {
 	t.Run("Update", func(t *testing.T) {
 		t.Run("Delta", func(t *testing.T) {
 			chErr := make(chan error, 1)
-			chDelta := make(chan map[string]interface{}, 1)
+			chDelta := make(chan NestedState, 1)
 			s := &shadow{
 				doc: &ThingDocument{
 					State: ThingState{
-						Desired: map[string]interface{}{"key2": "value2"},
+						Desired: NestedState{"key2": "value2"},
 					},
 					Version:   2,
 					Timestamp: 12345,
 				},
-				onDelta: func(delta map[string]interface{}) {
+				onDelta: func(delta NestedState) {
 					chDelta <- delta
 				},
 				onError: func(err error) {
@@ -245,8 +245,8 @@ func TestHandlers(t *testing.T) {
 			}
 			expectedDoc := &ThingDocument{
 				State: ThingState{
-					Desired: map[string]interface{}{"key2": "value2"},
-					Delta:   map[string]interface{}{"key2": "value2"},
+					Desired: NestedState{"key2": "value2"},
+					Delta:   NestedState{"key2": "value2"},
 				},
 				Version:   3,
 				Timestamp: 12346,
@@ -281,16 +281,16 @@ func TestHandlers(t *testing.T) {
 		})
 		t.Run("Accepted", func(t *testing.T) {
 			chErr := make(chan error, 1)
-			chDelta := make(chan map[string]interface{}, 1)
+			chDelta := make(chan NestedState, 1)
 			s := &shadow{
 				doc: &ThingDocument{
 					State: ThingState{
-						Reported: map[string]interface{}{"key1": "value1"},
+						Reported: NestedState{"key1": "value1"},
 					},
 					Version:   2,
 					Timestamp: 12345,
 				},
-				onDelta: func(delta map[string]interface{}) {
+				onDelta: func(delta NestedState) {
 					chDelta <- delta
 				},
 				onError: func(err error) {
@@ -299,7 +299,7 @@ func TestHandlers(t *testing.T) {
 			}
 			expectedDoc := &ThingDocument{
 				State: ThingState{
-					Reported: map[string]interface{}{
+					Reported: NestedState{
 						"key1": "value1",
 						"key2": "value2",
 					},
@@ -336,12 +336,12 @@ func TestHandlers(t *testing.T) {
 			s := &shadow{
 				doc: &ThingDocument{
 					State: ThingState{
-						Desired: map[string]interface{}{"key2": "value2"},
+						Desired: NestedState{"key2": "value2"},
 					},
 					Version:   2,
 					Timestamp: 12345,
 				},
-				onDelta: func(delta map[string]interface{}) {
+				onDelta: func(delta NestedState) {
 					t.Error("Old delta must be discarded")
 				},
 				onError: func(err error) {
@@ -350,7 +350,7 @@ func TestHandlers(t *testing.T) {
 			}
 			expectedDoc := &ThingDocument{
 				State: ThingState{
-					Desired: map[string]interface{}{"key2": "value2"},
+					Desired: NestedState{"key2": "value2"},
 				},
 				Version:   2,
 				Timestamp: 12345,
@@ -429,12 +429,12 @@ func TestOnDelta(t *testing.T) {
 	}
 	cli.Handle(s)
 
-	expected := map[string]interface{}{
+	expected := NestedState{
 		"key": "value",
 	}
 
 	done := make(chan struct{})
-	s.OnDelta(func(delta map[string]interface{}) {
+	s.OnDelta(func(delta NestedState) {
 		if !reflect.DeepEqual(expected, delta) {
 			t.Fatalf("Expected delta:\n%+v\ngot:\n%+v", expected, delta)
 		}
@@ -442,7 +442,7 @@ func TestOnDelta(t *testing.T) {
 	})
 
 	req := &thingDelta{
-		State: map[string]interface{}{
+		State: NestedState{
 			"key": "value",
 		},
 		Version: 10,
@@ -475,31 +475,31 @@ func TestGet(t *testing.T) {
 			initial: &ThingDocument{
 				Version: 5,
 				State: ThingState{
-					Delta: map[string]interface{}{"key": "value2"},
+					Delta: NestedState{"key": "value2"},
 				},
 				Metadata: ThingStateMetadata{
-					Delta: map[string]interface{}{"key": Metadata{Timestamp: 1234}},
+					Delta: NestedMetadata{"key": Metadata{Timestamp: 1234}},
 				},
 			},
 			response: &ThingDocument{
 				Version: 5,
 				State: ThingState{
-					Desired:  map[string]interface{}{"key": "value2"},
-					Reported: map[string]interface{}{"key": "value"},
-					Delta:    map[string]interface{}{"key": "value2"},
+					Desired:  NestedState{"key": "value2"},
+					Reported: NestedState{"key": "value"},
+					Delta:    NestedState{"key": "value2"},
 				},
 				Metadata: ThingStateMetadata{
-					Desired:  map[string]interface{}{"key": Metadata{Timestamp: 1234}},
-					Reported: map[string]interface{}{"key": Metadata{Timestamp: 1235}},
+					Desired:  NestedMetadata{"key": Metadata{Timestamp: 1234}},
+					Reported: NestedMetadata{"key": Metadata{Timestamp: 1235}},
 				},
 			},
 			responseTopic: "get/accepted",
 			expected: &ThingDocument{
 				Version: 5,
 				State: ThingState{
-					Desired:  map[string]interface{}{"key": "value2"},
-					Reported: map[string]interface{}{"key": "value"},
-					Delta:    map[string]interface{}{"key": "value2"},
+					Desired:  NestedState{"key": "value2"},
+					Reported: NestedState{"key": "value"},
+					Delta:    NestedState{"key": "value2"},
 				},
 				Metadata: ThingStateMetadata{
 					Desired:  NestedMetadata{"key": Metadata{Timestamp: 1234}},
@@ -583,30 +583,30 @@ func TestDesire(t *testing.T) {
 		inc := inc
 		t.Run(name, func(t *testing.T) {
 			testCases := map[string]struct {
-				input         map[string]interface{}
+				input         NestedState
 				response      interface{}
 				responseTopic string
 				expected      interface{}
 				err           error
 			}{
 				"Success": {
-					input: map[string]interface{}{"key": "value"},
+					input: NestedState{"key": "value"},
 					response: &ThingDocument{
 						Version: 5,
 						State: ThingState{
-							Desired: map[string]interface{}{"key": "value"},
+							Desired: NestedState{"key": "value"},
 						},
 						Metadata: ThingStateMetadata{
-							Desired: map[string]interface{}{"key": Metadata{Timestamp: 1234}},
+							Desired: NestedMetadata{"key": Metadata{Timestamp: 1234}},
 						},
 					},
 					responseTopic: "update/accepted",
 					expected: &ThingDocument{
 						Version: 5,
 						State: ThingState{
-							Desired:  map[string]interface{}{"key": "value"},
-							Reported: map[string]interface{}{},
-							Delta:    map[string]interface{}{},
+							Desired:  NestedState{"key": "value"},
+							Reported: NestedState{},
+							Delta:    NestedState{},
 						},
 						Metadata: ThingStateMetadata{
 							Desired:  NestedMetadata{"key": Metadata{Timestamp: 1234}},
@@ -616,7 +616,7 @@ func TestDesire(t *testing.T) {
 					},
 				},
 				"Error": {
-					input: map[string]interface{}{"key": "value"},
+					input: NestedState{"key": "value"},
 					response: &ErrorResponse{
 						Code:    400,
 						Message: "Reason",
@@ -690,30 +690,30 @@ func TestReport(t *testing.T) {
 		inc := inc
 		t.Run(name, func(t *testing.T) {
 			testCases := map[string]struct {
-				input         map[string]interface{}
+				input         NestedState
 				response      interface{}
 				responseTopic string
 				expected      interface{}
 				err           error
 			}{
 				"Success": {
-					input: map[string]interface{}{"key": "value"},
+					input: NestedState{"key": "value"},
 					response: &ThingDocument{
 						Version: 5,
 						State: ThingState{
-							Reported: map[string]interface{}{"key": "value"},
+							Reported: NestedState{"key": "value"},
 						},
 						Metadata: ThingStateMetadata{
-							Reported: map[string]interface{}{"key": Metadata{Timestamp: 1234}},
+							Reported: NestedMetadata{"key": Metadata{Timestamp: 1234}},
 						},
 					},
 					responseTopic: "update/accepted",
 					expected: &ThingDocument{
 						Version: 5,
 						State: ThingState{
-							Reported: map[string]interface{}{"key": "value"},
-							Desired:  map[string]interface{}{},
-							Delta:    map[string]interface{}{},
+							Reported: NestedState{"key": "value"},
+							Desired:  NestedState{},
+							Delta:    NestedState{},
 						},
 						Metadata: ThingStateMetadata{
 							Reported: NestedMetadata{"key": Metadata{Timestamp: 1234}},
@@ -723,7 +723,7 @@ func TestReport(t *testing.T) {
 					},
 				},
 				"Error": {
-					input: map[string]interface{}{"key": "value"},
+					input: NestedState{"key": "value"},
 					response: &ErrorResponse{
 						Code:    400,
 						Message: "Reason",

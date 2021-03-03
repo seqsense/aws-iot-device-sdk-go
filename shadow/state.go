@@ -25,6 +25,12 @@ import (
 // ErrVersionConflict means thing state update was aborted due to version conflict.
 var ErrVersionConflict = errors.New("version conflict")
 
+// ErrUnsupportedMapKeyType is returned if map key type is not string.
+var ErrUnsupportedMapKeyType = errors.New("unsupported map key type")
+
+// ErrIncompatibleMapping is returned if state can't be converted into struct.
+var ErrIncompatibleMapping = errors.New("unable to convert state to struct")
+
 type simpleRequest struct {
 	ClientToken string `json:"clientToken"`
 }
@@ -44,9 +50,9 @@ func (e *ErrorResponse) Error() string {
 
 // ThingState represents Thing Shadow State.
 type ThingState struct {
-	Desired  map[string]interface{} `json:"desired,omitempty"`
-	Reported map[string]interface{} `json:"reported,omitempty"`
-	Delta    map[string]interface{} `json:"delta,omitempty"`
+	Desired  NestedState `json:"desired,omitempty"`
+	Reported NestedState `json:"reported,omitempty"`
+	Delta    NestedState `json:"delta,omitempty"`
 }
 
 // ThingDocument represents Thing Shadow Document.
@@ -74,10 +80,10 @@ type thingDocumentRaw struct {
 }
 
 type thingDelta struct {
-	State     map[string]interface{} `json:"state"`
-	Metadata  NestedMetadata         `json:"metadata"`
-	Version   int                    `json:"version,omitempty"`
-	Timestamp int                    `json:"timestamp,omitempty"`
+	State     NestedState    `json:"state"`
+	Metadata  NestedMetadata `json:"metadata"`
+	Version   int            `json:"version,omitempty"`
+	Timestamp int            `json:"timestamp,omitempty"`
 }
 
 func (s *ThingDocument) update(state *thingDocumentRaw) error {
@@ -127,18 +133,18 @@ func updateStateRawCommon(state map[string]interface{}, update json.RawMessage) 
 	return false
 }
 
-func updateStateRaw(state map[string]interface{}, update json.RawMessage) error {
+func updateStateRaw(state NestedState, update json.RawMessage) error {
 	if updateStateRawCommon(state, update) {
 		return nil
 	}
-	var u map[string]interface{}
+	var u NestedState
 	if err := json.Unmarshal([]byte(update), &u); err != nil {
 		return ioterr.New(err, "unmarshaling update")
 	}
 	return updateState(state, u)
 }
 
-func updateStateMetadataRaw(state map[string]interface{}, update json.RawMessage) error {
+func updateStateMetadataRaw(state NestedMetadata, update json.RawMessage) error {
 	if updateStateRawCommon(state, update) {
 		return nil
 	}
@@ -158,8 +164,8 @@ func updateState(state map[string]interface{}, update map[string]interface{}) er
 	}
 	for key, val := range update {
 		switch v := val.(type) {
-		case map[string]interface{}:
-			if s, ok := state[key].(map[string]interface{}); ok {
+		case NestedState:
+			if s, ok := state[key].(NestedState); ok {
 				if err := updateState(s, v); err != nil {
 					return ioterr.New(err, "updating state")
 				}
@@ -179,4 +185,56 @@ func updateState(state map[string]interface{}, update map[string]interface{}) er
 
 func hasUpdate(s json.RawMessage) bool {
 	return len(s) != 0
+}
+
+// NestedState is JSON unmarshaller for state metadata.
+type NestedState map[string]interface{}
+
+func (n *NestedState) UnmarshalJSON(b []byte) error {
+	if *n == nil {
+		*n = make(map[string]interface{})
+	}
+	j := make(map[string]json.RawMessage)
+	if err := json.Unmarshal(b, &j); err != nil {
+		return err
+	}
+	for k, v := range j {
+		v2, err := unmarshalStateImpl(v)
+		if err != nil {
+			return err
+		}
+		(*n)[k] = v2
+	}
+	return nil
+}
+
+func unmarshalStateImpl(b []byte) (interface{}, error) {
+	switch {
+	case b[0] == '[' && b[len(b)-1] == ']':
+		var v2 []json.RawMessage
+		if err := json.Unmarshal(b, &v2); err != nil {
+			return nil, err
+		}
+		var v5 []interface{}
+		for _, v3 := range v2 {
+			v4, err := unmarshalStateImpl(v3)
+			if err != nil {
+				return nil, err
+			}
+			v5 = append(v5, v4)
+		}
+		return v5, nil
+	case b[0] == '{':
+		var v2 NestedState
+		if err := json.Unmarshal(b, &v2); err != nil {
+			return nil, err
+		}
+		return v2, nil
+	default:
+		var v2 interface{}
+		if err := json.Unmarshal(b, &v2); err != nil {
+			return nil, err
+		}
+		return v2, nil
+	}
 }

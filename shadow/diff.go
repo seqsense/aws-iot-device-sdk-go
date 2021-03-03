@@ -21,9 +21,6 @@ import (
 
 var errInvalidAttribute = errors.New("invalid attribute key")
 
-// ErrUnsupportedMapKeyType is returned if map key type is not string.
-var ErrUnsupportedMapKeyType = errors.New("unsupported map key type")
-
 func stateDiff(base, in interface{}) (interface{}, bool, error) {
 	keys, hasChild, err := attributeKeys(base)
 	if err != nil {
@@ -170,9 +167,7 @@ func attributeByKeyImpl(v reflect.Value, k string) (reflect.Value, error) {
 			return reflect.Value{}, nil
 		}
 		return val, nil
-	case reflect.Ptr:
-		return attributeByKeyImpl(v.Elem(), k)
-	case reflect.Interface:
+	case reflect.Ptr, reflect.Interface:
 		return attributeByKeyImpl(v.Elem(), k)
 	}
 	return reflect.Value{}, errInvalidAttribute
