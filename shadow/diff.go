@@ -172,26 +172,3 @@ func attributeByKeyImpl(v reflect.Value, k string) (reflect.Value, error) {
 	}
 	return reflect.Value{}, errInvalidAttribute
 }
-
-func setAttributeByKeyImpl(v reflect.Value, k string, val interface{}) error {
-	if !v.IsValid() {
-		return errInvalidAttribute
-	}
-	t := v.Type()
-	switch t.Kind() {
-	case reflect.Struct:
-		return setAttributeByKeyImpl(v.FieldByName(k), k, val)
-	case reflect.Map:
-		return setAttributeByKeyImpl(v.MapIndex(reflect.ValueOf(k)), k, val)
-	case reflect.Ptr, reflect.Interface:
-		return setAttributeByKeyImpl(v.Elem(), k, val)
-	default:
-		vval := reflect.ValueOf(val)
-		if v.Type() == vval.Type() {
-			v.Set(vval)
-		} else {
-			v.Set(vval.Convert(v.Type()))
-		}
-		return nil
-	}
-}
