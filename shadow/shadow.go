@@ -99,7 +99,7 @@ func (s *shadow) handleResponse(r interface{}) {
 }
 
 func (s *shadow) getAccepted(msg *mqtt.Message) {
-	doc := &ThingDocument{}
+	doc := newThingDocument()
 	if err := json.Unmarshal(msg.Payload, doc); err != nil {
 		s.handleError(ioterr.New(err, "unmarshaling thing document"))
 		return
@@ -178,18 +178,7 @@ func New(ctx context.Context, cli awsiotdev.Device, opt ...Option) (Shadow, erro
 		cli:       cli,
 		thingName: cli.ThingName(),
 		opts:      &opts,
-		doc: &ThingDocument{
-			State: ThingState{
-				Desired:  NestedState{},
-				Reported: NestedState{},
-				Delta:    NestedState{},
-			},
-			Metadata: ThingStateMetadata{
-				Desired:  NestedMetadata{},
-				Reported: NestedMetadata{},
-				Delta:    NestedMetadata{},
-			},
-		},
+		doc:       newThingDocument(),
 
 		chResps: make(map[string]chan interface{}),
 	}

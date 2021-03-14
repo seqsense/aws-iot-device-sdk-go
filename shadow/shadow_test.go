@@ -147,6 +147,9 @@ func TestHandlers(t *testing.T) {
 					State: ThingState{
 						Desired: NestedState{"key": "value_init"},
 					},
+					Metadata: ThingStateMetadata{
+						Delta: NestedMetadata{},
+					},
 					Version:   2,
 					Timestamp: 12345,
 				},
@@ -159,8 +162,14 @@ func TestHandlers(t *testing.T) {
 			}
 			expectedDoc := &ThingDocument{
 				State: ThingState{
-					Desired: NestedState{"key2": "value2"},
-					Delta:   NestedState{"key2": "value2"},
+					Desired:  NestedState{"key2": "value2"},
+					Reported: NestedState{},
+					Delta:    NestedState{"key2": "value2"},
+				},
+				Metadata: ThingStateMetadata{
+					Desired:  NestedMetadata{},
+					Reported: NestedMetadata{},
+					Delta:    NestedMetadata{},
 				},
 				Version:   3,
 				Timestamp: 12346,
