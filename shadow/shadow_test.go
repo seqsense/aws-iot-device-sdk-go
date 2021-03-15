@@ -436,6 +436,7 @@ func TestOnDelta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	s.(*shadow).doc.Version = 9
 	cli.Handle(s)
 
 	expected := NestedState{

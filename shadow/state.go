@@ -62,6 +62,8 @@ type ThingDocument struct {
 	Version     int                `json:"version,omitempty"`
 	Timestamp   int                `json:"timestamp,omitempty"`
 	ClientToken string             `json:"clientToken,omitempty"`
+
+	MaybeIncomplete bool `json:"-"`
 }
 
 type thingStateRaw struct {
@@ -128,6 +130,12 @@ func (s *ThingDocument) updateDelta(state *thingDelta) bool {
 		// Received an old version; just ignore it.
 		return false
 	}
+
+	if s.Version+1 != state.Version {
+		// Versions were dropped.
+		s.MaybeIncomplete = true
+	}
+
 	s.Version = state.Version
 	s.Timestamp = state.Timestamp
 	s.State.Delta = state.State
