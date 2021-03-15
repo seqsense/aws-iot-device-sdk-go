@@ -27,9 +27,9 @@ type testStruct struct {
 	S       string
 }
 type testStructWithTag struct {
-	AX      int    `json:"A"`
+	AX      int    `json:"A,random_tag=aaa"`
 	BX      int    `json:"B"`
-	CX      int    `json:"C"`
+	C       int    `json:",random_tag=bbb"`
 	SX      string `json:"S"`
 	Garbage int    `json:"-"`
 }
