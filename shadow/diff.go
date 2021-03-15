@@ -143,16 +143,17 @@ func attributeKeys(a interface{}) ([]string, bool, error) {
 		}
 		return out, true, nil
 	case reflect.Struct:
-		out := make([]string, v.NumField())
-		for i := range out {
+		n := v.NumField()
+		out := make([]string, 0, n)
+		for i := 0; i < n; i++ {
 			jsonName, ok := jsonFieldName(t.Field(i).Tag)
 			if !ok {
 				continue
 			}
 			if jsonName == "" {
-				out[i] = t.Field(i).Name
+				out = append(out, t.Field(i).Name)
 			} else {
-				out[i] = jsonName
+				out = append(out, jsonName)
 			}
 		}
 		return out, true, nil
