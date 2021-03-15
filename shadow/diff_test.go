@@ -26,6 +26,12 @@ type testStruct struct {
 	A, B, C int
 	S       string
 }
+type testStructWithTag struct {
+	AX int    `json:"A"`
+	BX int    `json:"B"`
+	CX int    `json:"C"`
+	SX string `json:"S"`
+}
 type testSubStruct struct {
 	S1, S2 int
 }
@@ -83,9 +89,21 @@ func TestStateDiff(t *testing.T) {
 			diff:    map[string]interface{}{"B": 3, "C": 0},
 			hasDiff: true,
 		},
+		"Map2StructWithTag": {
+			base:    map[string]interface{}{"A": 1, "B": 2, "S": "test"},
+			input:   testStructWithTag{AX: 1, BX: 3, SX: "test"},
+			diff:    map[string]interface{}{"B": 3, "C": 0},
+			hasDiff: true,
+		},
 		"Map2StructPtr": {
 			base:    map[string]interface{}{"A": 1, "B": 2, "S": "test"},
 			input:   &testStruct{A: 1, B: 3, S: "test"},
+			diff:    map[string]interface{}{"B": 3, "C": 0},
+			hasDiff: true,
+		},
+		"Map2StructWithTagPtr": {
+			base:    map[string]interface{}{"A": 1, "B": 2, "S": "test"},
+			input:   &testStructWithTag{AX: 1, BX: 3, SX: "test"},
 			diff:    map[string]interface{}{"B": 3, "C": 0},
 			hasDiff: true,
 		},
@@ -100,9 +118,19 @@ func TestStateDiff(t *testing.T) {
 			input:   testStruct{A: 1, B: 2, S: "test"},
 			hasDiff: false,
 		},
+		"Map2StructWithTag_Equal": {
+			base:    map[string]interface{}{"B": 2, "A": 1, "C": 0, "S": "test"},
+			input:   testStructWithTag{AX: 1, BX: 2, SX: "test"},
+			hasDiff: false,
+		},
 		"Map2StructPtr_Equal": {
 			base:    map[string]interface{}{"B": 2, "A": 1, "C": 0, "S": "test"},
 			input:   &testStruct{A: 1, B: 2, S: "test"},
+			hasDiff: false,
+		},
+		"Map2StructWithTagPtr_Equal": {
+			base:    map[string]interface{}{"B": 2, "A": 1, "C": 0, "S": "test"},
+			input:   &testStructWithTag{AX: 1, BX: 2, SX: "test"},
 			hasDiff: false,
 		},
 		"Nil2Map": {
@@ -208,8 +236,18 @@ func TestAttributeKeys(t *testing.T) {
 			keys:     []string{"A", "B", "C", "S"},
 			hasChild: true,
 		},
+		"StructWithTag": {
+			input:    testStructWithTag{},
+			keys:     []string{"A", "B", "C", "S"},
+			hasChild: true,
+		},
 		"StructPtr": {
 			input:    &testStruct{},
+			keys:     []string{"A", "B", "C", "S"},
+			hasChild: true,
+		},
+		"StructWithTagPtr": {
+			input:    &testStructWithTag{},
 			keys:     []string{"A", "B", "C", "S"},
 			hasChild: true,
 		},
@@ -258,8 +296,16 @@ func TestAttributeByKey(t *testing.T) {
 			input:    testStruct{A: 2, S: "test"},
 			keyValue: map[string]interface{}{"A": 2, "B": 0, "C": 0, "S": "test"},
 		},
+		"StructWithTag": {
+			input:    testStructWithTag{AX: 2, SX: "test"},
+			keyValue: map[string]interface{}{"A": 2, "B": 0, "C": 0, "S": "test"},
+		},
 		"StructPtr": {
 			input:    &testStruct{A: 2, S: "test"},
+			keyValue: map[string]interface{}{"A": 2, "B": 0, "C": 0, "S": "test"},
+		},
+		"StructWithTagPtr": {
+			input:    &testStructWithTag{AX: 2, SX: "test"},
 			keyValue: map[string]interface{}{"A": 2, "B": 0, "C": 0, "S": "test"},
 		},
 		"NestedStruct": {
