@@ -102,11 +102,16 @@ func stateDiff(base, in interface{}) (interface{}, bool, error) {
 			continue
 		}
 		delete(keysInMap, k)
-		a, _ := baseMatcher.byKey(k)
-		b, err := inMatcher.byKey(k)
+		a, _, _ := baseMatcher.byKey(k)
+		b, bInfo, err := inMatcher.byKey(k)
 		if err != nil {
 			return nil, false, err
 		}
+
+		if bInfo.omitempty && bInfo.val.IsZero() {
+			continue
+		}
+
 		d, difer, err := stateDiff(a, b)
 		if err != nil {
 			return nil, false, err
@@ -116,7 +121,10 @@ func stateDiff(base, in interface{}) (interface{}, bool, error) {
 		}
 	}
 	for k := range keysInMap {
-		b, _ := inMatcher.byKey(k)
+		b, bInfo, _ := inMatcher.byKey(k)
+		if bInfo.omitempty && bInfo.val.IsZero() {
+			continue
+		}
 		out[k] = b
 	}
 	if len(out) == 0 {
@@ -146,7 +154,7 @@ func attributeKeys(a interface{}) ([]string, bool, error) {
 		n := v.NumField()
 		out := make([]string, 0, n)
 		for i := 0; i < n; i++ {
-			jsonName, ok := jsonFieldName(t.Field(i).Tag)
+			jsonName, _, ok := jsonFieldInfo(t.Field(i).Tag)
 			if !ok {
 				continue
 			}
@@ -164,7 +172,12 @@ func attributeKeys(a interface{}) ([]string, bool, error) {
 }
 
 type attributeMatcher struct {
-	byName map[string]reflect.Value
+	byName map[string]attributeInfo
+}
+
+type attributeInfo struct {
+	val       reflect.Value
+	omitempty bool
 }
 
 func newAttributeMatcher(val reflect.Value) (*attributeMatcher, error) {
@@ -174,10 +187,10 @@ func newAttributeMatcher(val reflect.Value) (*attributeMatcher, error) {
 	t := val.Type()
 	switch t.Kind() {
 	case reflect.Struct:
-		a := &attributeMatcher{byName: make(map[string]reflect.Value)}
+		a := &attributeMatcher{byName: make(map[string]attributeInfo)}
 		n := t.NumField()
 		for i := 0; i < n; i++ {
-			jsonName, ok := jsonFieldName(t.Field(i).Tag)
+			jsonName, omitempty, ok := jsonFieldInfo(t.Field(i).Tag)
 			if !ok {
 				continue
 			}
@@ -187,14 +200,17 @@ func newAttributeMatcher(val reflect.Value) (*attributeMatcher, error) {
 			} else {
 				name = jsonName
 			}
-			a.byName[name] = val.Field(i)
+			a.byName[name] = attributeInfo{
+				val:       val.Field(i),
+				omitempty: omitempty,
+			}
 		}
 		return a, nil
 	case reflect.Map:
-		a := &attributeMatcher{byName: make(map[string]reflect.Value)}
+		a := &attributeMatcher{byName: make(map[string]attributeInfo)}
 		for _, key := range val.MapKeys() {
 			name := key.String()
-			a.byName[name] = val.MapIndex(key)
+			a.byName[name] = attributeInfo{val: val.MapIndex(key)}
 		}
 		return a, nil
 	case reflect.Ptr, reflect.Interface:
@@ -203,28 +219,34 @@ func newAttributeMatcher(val reflect.Value) (*attributeMatcher, error) {
 	return nil, errInvalidAttribute
 }
 
-func (a *attributeMatcher) byKey(k string) (interface{}, error) {
+func (a *attributeMatcher) byKey(k string) (interface{}, attributeInfo, error) {
 	val, ok := a.byName[k]
 	if !ok {
-		return reflect.Value{}, errInvalidAttribute
+		return reflect.Value{}, attributeInfo{}, errInvalidAttribute
 	}
-	return val.Interface(), nil
+	return val.val.Interface(), val, nil
 }
 
-func jsonFieldName(t reflect.StructTag) (string, bool) {
+func jsonFieldInfo(t reflect.StructTag) (string, bool, bool) {
 	tag, ok := t.Lookup("json")
 	if !ok {
 		// Use struct field name.
-		return "", true
+		return "", false, true
 	}
 	if tag == "-" {
 		// Field is ignored.
-		return "", false
+		return "", false, false
 	}
 	tags := strings.Split(tag, ",")
+	var omitempty bool
+	for _, tag := range tags {
+		if tag == "omitempty" {
+			omitempty = true
+		}
+	}
 	if tags[0] == "" {
 		// Use struct field name.
-		return "", true
+		return "", omitempty, true
 	}
-	return tags[0], true
+	return tags[0], omitempty, true
 }

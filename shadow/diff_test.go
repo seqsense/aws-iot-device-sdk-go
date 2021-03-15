@@ -33,6 +33,11 @@ type testStructWithTag struct {
 	SX      string `json:"S"`
 	Garbage int    `json:"-"`
 }
+type testStructWithOmitempty struct {
+	A    int `json:",omitempty"`
+	B, C int
+	S    string
+}
 type testSubStruct struct {
 	S1, S2 int
 }
@@ -93,6 +98,18 @@ func TestStateDiff(t *testing.T) {
 		"Map2StructWithTag": {
 			base:    map[string]interface{}{"A": 1, "B": 2, "S": "test"},
 			input:   testStructWithTag{AX: 1, BX: 3, SX: "test"},
+			diff:    map[string]interface{}{"B": 3, "C": 0},
+			hasDiff: true,
+		},
+		"Map2StructWithoutOmitempty": {
+			base:    map[string]interface{}{"A": 1, "B": 2, "S": "test"},
+			input:   testStruct{A: 0, B: 3, S: "test"},
+			diff:    map[string]interface{}{"A": 0, "B": 3, "C": 0},
+			hasDiff: true,
+		},
+		"Map2StructWithOmitempty": {
+			base:    map[string]interface{}{"A": 1, "B": 2, "S": "test"},
+			input:   testStructWithOmitempty{A: 0, B: 3, S: "test"},
 			diff:    map[string]interface{}{"B": 3, "C": 0},
 			hasDiff: true,
 		},
@@ -322,7 +339,7 @@ func TestAttributeMatcher(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				a, err := matcher.byKey(k)
+				a, _, err := matcher.byKey(k)
 				if tt.err != nil {
 					if !errors.Is(tt.err, err) {
 						t.Errorf("Expected error: '%v', got: '%v'", tt.err, err)
