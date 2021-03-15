@@ -454,7 +454,11 @@ func TestOnDelta(t *testing.T) {
 		State: NestedState{
 			"key": "value",
 		},
-		Version: 10,
+		Metadata: NestedMetadata{
+			"key": Metadata{Timestamp: 1},
+		},
+		Version:   10,
+		Timestamp: 1,
 	}
 	breq, err := json.Marshal(req)
 	if err != nil {
@@ -469,6 +473,25 @@ func TestOnDelta(t *testing.T) {
 	case <-done:
 	case <-ctx.Done():
 		t.Fatal("Timeout")
+	}
+
+	doc := s.Document()
+	expectedDoc := &ThingDocument{
+		State: ThingState{
+			Desired:  NestedState{"key": "value"},
+			Delta:    NestedState{"key": "value"},
+			Reported: NestedState{},
+		},
+		Metadata: ThingStateMetadata{
+			Desired:  NestedMetadata{"key": Metadata{Timestamp: 1}},
+			Delta:    NestedMetadata{"key": Metadata{Timestamp: 1}},
+			Reported: NestedMetadata{},
+		},
+		Version:   10,
+		Timestamp: 1,
+	}
+	if !reflect.DeepEqual(expectedDoc, doc) {
+		t.Errorf("Expected document:\n%+v\ngot:\n%+v", expectedDoc, doc)
 	}
 }
 

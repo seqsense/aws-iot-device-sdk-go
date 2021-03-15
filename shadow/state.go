@@ -132,6 +132,10 @@ func (s *ThingDocument) updateDelta(state *thingDelta) bool {
 	s.Timestamp = state.Timestamp
 	s.State.Delta = state.State
 	s.Metadata.Delta = state.Metadata
+
+	updateState(s.State.Desired, state.State)
+	updateState(s.Metadata.Desired, state.Metadata)
+
 	return true
 }
 
@@ -156,7 +160,8 @@ func updateStateRaw(state NestedState, update json.RawMessage) error {
 	if err := json.Unmarshal([]byte(update), &u); err != nil {
 		return ioterr.New(err, "unmarshaling update")
 	}
-	return updateState(state, u)
+	updateState(state, u)
+	return nil
 }
 
 func updateStateMetadataRaw(state NestedMetadata, update json.RawMessage) error {
@@ -167,23 +172,23 @@ func updateStateMetadataRaw(state NestedMetadata, update json.RawMessage) error 
 	if err := json.Unmarshal([]byte(update), &u); err != nil {
 		return ioterr.New(err, "unmarshaling update")
 	}
-	return updateState(state, u)
+	updateState(state, u)
+	return nil
 }
 
-func updateState(state map[string]interface{}, update map[string]interface{}) error {
+func updateState(state map[string]interface{}, update map[string]interface{}) {
 	if len(update) == 0 {
 		for k := range state {
 			delete(state, k)
 		}
-		return nil
+		return
 	}
 	for key, val := range update {
 		switch v := val.(type) {
 		case NestedState:
 			if s, ok := state[key].(NestedState); ok {
-				if err := updateState(s, v); err != nil {
-					return ioterr.New(err, "updating state")
-				}
+				updateState(s, v)
+				return
 			} else {
 				state[key] = v
 			}
@@ -195,7 +200,7 @@ func updateState(state map[string]interface{}, update map[string]interface{}) er
 			state[key] = v
 		}
 	}
-	return nil
+	return
 }
 
 func hasUpdate(s json.RawMessage) bool {
