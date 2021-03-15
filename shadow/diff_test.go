@@ -282,7 +282,7 @@ func TestAttributeKeys(t *testing.T) {
 	}
 }
 
-func TestAttributeByKey(t *testing.T) {
+func TestAttributeMatcher(t *testing.T) {
 	testCases := map[string]struct {
 		input    interface{}
 		keyValue map[string]interface{}
@@ -317,7 +317,11 @@ func TestAttributeByKey(t *testing.T) {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
 			for k, v := range tt.keyValue {
-				a, err := attributeByKey(tt.input, k)
+				matcher, err := newAttributeMatcher(reflect.ValueOf(tt.input))
+				if err != nil {
+					t.Fatal(err)
+				}
+				a, err := matcher.byKey(k)
 				if tt.err != nil {
 					if !errors.Is(tt.err, err) {
 						t.Errorf("Expected error: '%v', got: '%v'", tt.err, err)
