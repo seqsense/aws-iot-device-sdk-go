@@ -17,6 +17,7 @@ package shadow
 import (
 	"errors"
 	"reflect"
+	"strings"
 )
 
 var errInvalidAttribute = errors.New("invalid attribute key")
@@ -87,17 +88,30 @@ func stateDiff(base, in interface{}) (interface{}, bool, error) {
 	for _, k := range keysIn {
 		keysInMap[k] = struct{}{}
 	}
+	baseMatcher, err := newAttributeMatcher(reflect.ValueOf(base))
+	if err != nil {
+		return nil, false, err
+	}
+	inMatcher, err := newAttributeMatcher(reflect.ValueOf(in))
+	if err != nil {
+		return nil, false, err
+	}
 	out := make(map[string]interface{})
 	for _, k := range keys {
 		if _, ok := keysInMap[k]; !ok {
 			continue
 		}
 		delete(keysInMap, k)
-		a, _ := attributeByKey(base, k)
-		b, err := attributeByKey(in, k)
+		a, _, _ := baseMatcher.byKey(k)
+		b, bInfo, err := inMatcher.byKey(k)
 		if err != nil {
 			return nil, false, err
 		}
+
+		if bInfo.omitempty && bInfo.val.IsZero() {
+			continue
+		}
+
 		d, difer, err := stateDiff(a, b)
 		if err != nil {
 			return nil, false, err
@@ -107,7 +121,10 @@ func stateDiff(base, in interface{}) (interface{}, bool, error) {
 		}
 	}
 	for k := range keysInMap {
-		b, _ := attributeByKey(in, k)
+		b, bInfo, _ := inMatcher.byKey(k)
+		if bInfo.omitempty && bInfo.val.IsZero() {
+			continue
+		}
 		out[k] = b
 	}
 	if len(out) == 0 {
@@ -134,9 +151,18 @@ func attributeKeys(a interface{}) ([]string, bool, error) {
 		}
 		return out, true, nil
 	case reflect.Struct:
-		out := make([]string, v.NumField())
-		for i := range out {
-			out[i] = t.Field(i).Name
+		n := v.NumField()
+		out := make([]string, 0, n)
+		for i := 0; i < n; i++ {
+			jsonName, _, ok := jsonFieldInfo(t.Field(i).Tag)
+			if !ok {
+				continue
+			}
+			if jsonName == "" {
+				out = append(out, t.Field(i).Name)
+			} else {
+				out = append(out, jsonName)
+			}
 		}
 		return out, true, nil
 	case reflect.Ptr:
@@ -145,30 +171,82 @@ func attributeKeys(a interface{}) ([]string, bool, error) {
 	return nil, false, nil
 }
 
-func attributeByKey(a interface{}, k string) (interface{}, error) {
-	ret, err := attributeByKeyImpl(reflect.ValueOf(a), k)
-	if err != nil {
-		return nil, err
-	}
-	return ret.Interface(), nil
+type attributeMatcher struct {
+	byName map[string]attributeInfo
 }
 
-func attributeByKeyImpl(v reflect.Value, k string) (reflect.Value, error) {
-	if !v.IsValid() {
-		return reflect.Value{}, errInvalidAttribute
+type attributeInfo struct {
+	val       reflect.Value
+	omitempty bool
+}
+
+func newAttributeMatcher(val reflect.Value) (*attributeMatcher, error) {
+	if !val.IsValid() {
+		return nil, errInvalidAttribute
 	}
-	t := v.Type()
+	t := val.Type()
 	switch t.Kind() {
 	case reflect.Struct:
-		return v.FieldByName(k), nil
-	case reflect.Map:
-		val := v.MapIndex(reflect.ValueOf(k))
-		if !val.IsValid() {
-			return reflect.Value{}, nil
+		a := &attributeMatcher{byName: make(map[string]attributeInfo)}
+		n := t.NumField()
+		for i := 0; i < n; i++ {
+			jsonName, omitempty, ok := jsonFieldInfo(t.Field(i).Tag)
+			if !ok {
+				continue
+			}
+			var name string
+			if jsonName == "" {
+				name = t.Field(i).Name
+			} else {
+				name = jsonName
+			}
+			a.byName[name] = attributeInfo{
+				val:       val.Field(i),
+				omitempty: omitempty,
+			}
 		}
-		return val, nil
+		return a, nil
+	case reflect.Map:
+		a := &attributeMatcher{byName: make(map[string]attributeInfo)}
+		for _, key := range val.MapKeys() {
+			name := key.String()
+			a.byName[name] = attributeInfo{val: val.MapIndex(key)}
+		}
+		return a, nil
 	case reflect.Ptr, reflect.Interface:
-		return attributeByKeyImpl(v.Elem(), k)
+		return newAttributeMatcher(val.Elem())
 	}
-	return reflect.Value{}, errInvalidAttribute
+	return nil, errInvalidAttribute
+}
+
+func (a *attributeMatcher) byKey(k string) (interface{}, attributeInfo, error) {
+	val, ok := a.byName[k]
+	if !ok {
+		return reflect.Value{}, attributeInfo{}, errInvalidAttribute
+	}
+	return val.val.Interface(), val, nil
+}
+
+func jsonFieldInfo(t reflect.StructTag) (string, bool, bool) {
+	tag, ok := t.Lookup("json")
+	if !ok {
+		// Use struct field name.
+		return "", false, true
+	}
+	if tag == "-" {
+		// Field is ignored.
+		return "", false, false
+	}
+	tags := strings.Split(tag, ",")
+	var omitempty bool
+	for _, tag := range tags {
+		if tag == "omitempty" {
+			omitempty = true
+		}
+	}
+	if tags[0] == "" {
+		// Use struct field name.
+		return "", omitempty, true
+	}
+	return tags[0], omitempty, true
 }
