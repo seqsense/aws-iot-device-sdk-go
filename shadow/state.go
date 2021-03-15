@@ -86,6 +86,21 @@ type thingDelta struct {
 	Timestamp int            `json:"timestamp,omitempty"`
 }
 
+func newThingDocument() *ThingDocument {
+	return &ThingDocument{
+		State: ThingState{
+			Desired:  NestedState{},
+			Reported: NestedState{},
+			Delta:    NestedState{},
+		},
+		Metadata: ThingStateMetadata{
+			Desired:  NestedMetadata{},
+			Reported: NestedMetadata{},
+			Delta:    NestedMetadata{},
+		},
+	}
+}
+
 func (s *ThingDocument) update(state *thingDocumentRaw) error {
 	if s.Version > state.Version {
 		// Received an old version; just ignore it.
