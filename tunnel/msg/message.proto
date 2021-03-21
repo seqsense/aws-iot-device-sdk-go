@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = ".;msg";
+option go_package = "github.com/seqsense/aws-iot-device-sdk-go/tunnel/msg";
 
 package msg;
 
