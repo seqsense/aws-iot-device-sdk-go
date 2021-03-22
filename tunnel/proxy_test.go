@@ -285,8 +285,8 @@ func TestProxyDestination(t *testing.T) {
 			if !errors.As(err, &ie) {
 				t.Errorf("Expected error type: %T, got: %T", ie, err)
 			}
-			if !errors.Is(err, io.ErrUnexpectedEOF) {
-				t.Errorf("Expected error: %v, got: %v", io.ErrUnexpectedEOF, err)
+			if !errors.Is(err, proto.Error) {
+				t.Errorf("Expected error: %v, got: %v", proto.Error, err)
 			}
 		}
 	})
@@ -520,8 +520,8 @@ func TestProxySource(t *testing.T) {
 			if !errors.As(err, &ie) {
 				t.Errorf("Expected error type: %T, got: %T", ie, err)
 			}
-			if !errors.Is(err, io.ErrUnexpectedEOF) {
-				t.Errorf("Expected error: %v, got: %v", io.ErrUnexpectedEOF, err)
+			if !errors.Is(err, proto.Error) {
+				t.Errorf("Expected error: %v, got: %v", proto.Error, err)
 			}
 		}
 
