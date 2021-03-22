@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -436,39 +437,158 @@ func TestOnDelta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	s.(*shadow).doc.Version = 9
 	cli.Handle(s)
 
-	expected := NestedState{
-		"key": "value",
-	}
-
-	done := make(chan struct{})
-	s.OnDelta(func(delta NestedState) {
-		if !reflect.DeepEqual(expected, delta) {
-			t.Fatalf("Expected delta:\n%+v\ngot:\n%+v", expected, delta)
-		}
-		close(done)
-	})
-
-	req := &thingDelta{
-		State: NestedState{
-			"key": "value",
+	testSeq := []struct {
+		expectedDelta NestedState
+		req           *thingDelta
+		expectedDoc   *ThingDocument
+	}{
+		{
+			expectedDelta: NestedState{
+				"key": "value",
+			},
+			req: &thingDelta{
+				State: NestedState{
+					"key": "value",
+				},
+				Metadata: NestedMetadata{
+					"key": Metadata{Timestamp: 1},
+				},
+				Version:   10,
+				Timestamp: 1,
+			},
+			expectedDoc: &ThingDocument{
+				State: ThingState{
+					Desired:  NestedState{"key": "value"},
+					Delta:    NestedState{"key": "value"},
+					Reported: NestedState{},
+				},
+				Metadata: ThingStateMetadata{
+					Desired:  NestedMetadata{"key": Metadata{Timestamp: 1}},
+					Delta:    NestedMetadata{"key": Metadata{Timestamp: 1}},
+					Reported: NestedMetadata{},
+				},
+				Version:   10,
+				Timestamp: 1,
+			},
 		},
-		Version: 10,
+		{
+			expectedDelta: NestedState{
+				"key2": "value2",
+			},
+			req: &thingDelta{
+				State: NestedState{
+					"key2": "value2",
+				},
+				Metadata: NestedMetadata{
+					"key2": Metadata{Timestamp: 2},
+				},
+				Version:   11,
+				Timestamp: 2,
+			},
+			expectedDoc: &ThingDocument{
+				State: ThingState{
+					Desired: NestedState{
+						"key":  "value",
+						"key2": "value2",
+					},
+					Delta: NestedState{
+						"key2": "value2",
+					},
+					Reported: NestedState{},
+				},
+				Metadata: ThingStateMetadata{
+					Desired: NestedMetadata{
+						"key":  Metadata{Timestamp: 1},
+						"key2": Metadata{Timestamp: 2},
+					},
+					Delta: NestedMetadata{
+						"key2": Metadata{Timestamp: 2},
+					},
+					Reported: NestedMetadata{},
+				},
+				Version:   11,
+				Timestamp: 2,
+			},
+		},
+		{
+			expectedDelta: NestedState{
+				"key": "value3",
+			},
+			req: &thingDelta{
+				State: NestedState{
+					"key": "value3",
+				},
+				Metadata: NestedMetadata{
+					"key": Metadata{Timestamp: 4},
+				},
+				Version:   13,
+				Timestamp: 4,
+			},
+			expectedDoc: &ThingDocument{
+				State: ThingState{
+					Desired: NestedState{
+						"key":  "value3",
+						"key2": "value2",
+					},
+					Delta: NestedState{
+						"key": "value3",
+					},
+					Reported: NestedState{},
+				},
+				Metadata: ThingStateMetadata{
+					Desired: NestedMetadata{
+						"key":  Metadata{Timestamp: 4},
+						"key2": Metadata{Timestamp: 2},
+					},
+					Delta: NestedMetadata{
+						"key": Metadata{Timestamp: 4},
+					},
+					Reported: NestedMetadata{},
+				},
+				Version:         13,
+				Timestamp:       4,
+				MaybeIncomplete: true,
+			},
+		},
 	}
-	breq, err := json.Marshal(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cli.Serve(&mqtt.Message{
-		Topic:   s.(*shadow).topic("update/delta"),
-		Payload: breq,
-	})
 
-	select {
-	case <-done:
-	case <-ctx.Done():
-		t.Fatal("Timeout")
+	for i, seq := range testSeq {
+		expectedDelta := seq.expectedDelta
+		req := seq.req
+		expectedDoc := seq.expectedDoc
+
+		t.Run(fmt.Sprintf("Seq%d", i), func(t *testing.T) {
+			done := make(chan struct{})
+			s.OnDelta(func(delta NestedState) {
+				if !reflect.DeepEqual(expectedDelta, delta) {
+					t.Fatalf("Expected delta:\n%+v\ngot:\n%+v", expectedDelta, delta)
+				}
+				close(done)
+			})
+
+			breq, err := json.Marshal(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cli.Serve(&mqtt.Message{
+				Topic:   s.(*shadow).topic("update/delta"),
+				Payload: breq,
+			})
+
+			select {
+			case <-done:
+			case <-ctx.Done():
+				t.Fatal("Timeout")
+			}
+
+			doc := s.Document()
+			if !reflect.DeepEqual(expectedDoc, doc) {
+				t.Errorf("Expected document:\n%+v\ngot:\n%+v", expectedDoc, doc)
+			}
+		})
 	}
 }
 
