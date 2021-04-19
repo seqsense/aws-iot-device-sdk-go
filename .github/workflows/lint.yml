@@ -21,4 +21,4 @@ jobs:
           go install golang.org/x/lint/golint
           echo $(go env GOPATH)/bin >> ${GITHUB_PATH}
       - name: Lint
-        run: golint ./...
+        run: golint ./... >&2
