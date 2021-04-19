@@ -20,5 +20,7 @@ jobs:
           go get golang.org/x/lint/golint
           go install golang.org/x/lint/golint
           echo $(go env GOROOT)/bin >> ${GITHUB_PATH}
+          echo $(go env GOROOT)/bin
+          ls -lh $(go env GOROOT)/bin
       - name: Lint
         run: golint ./...
