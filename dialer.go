@@ -25,10 +25,6 @@ import (
 	presigner "github.com/seqsense/aws-iot-device-sdk-go/v5/presigner"
 )
 
-type LintError struct {
-	Test int
-}
-
 type presignDialer struct {
 	signer   *presigner.Presigner
 	endpoint string
