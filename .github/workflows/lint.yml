@@ -17,6 +17,7 @@ jobs:
         uses: actions/setup-go@v2
       - name: Install golint
         run: |
+          go get golang.org/x/lint/golint
           go install golang.org/x/lint/golint
           echo $(go env GOROOT)/bin >> ${GITHUB_PATH}
       - name: Lint
