@@ -5,7 +5,7 @@ require (
 	github.com/aws/aws-sdk-go v1.38.30
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/uuid v1.2.0
-	golang.org/x/net v0.0.0-20210331212208-0fccb6fa2b5c
+	golang.org/x/net v0.0.0-20210505214959-0714010a04ed
 	google.golang.org/protobuf v1.26.0
 )
 
