@@ -20,10 +20,15 @@
                 "^github.com/aws/aws-sdk-go",
                 "^github.com/golang/protobuf"
             ],
-            "separateMinorPatch": true,
-            "patch": {
-                "automerge": true
-            }
+            "separateMinorPatch": true
+        },
+        {
+            "packagePatterns": [
+                "^github.com/aws/aws-sdk-go",
+                "^github.com/golang/protobuf"
+            ],
+            "matchUpdateTypes": ["patch"],
+            "automerge": true
         }
     ],
     "timezone": "Asia/Tokyo"
