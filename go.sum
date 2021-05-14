@@ -1,7 +1,7 @@
 github.com/at-wat/mqtt-go v0.13.0 h1:zzx1V4n0f5sB+yPsGuGMiuGpSthH98Sw/qGrfgqlzlY=
 github.com/at-wat/mqtt-go v0.13.0/go.mod h1:lBRvx9cQlHbcXTCmzwHyHXXJw6fmt4DLUh2+5MkeFkw=
-github.com/aws/aws-sdk-go v1.38.30 h1:X+JDSwkpSQfoLqH4fBLmS0rou8W/cdCCCD5lntTk9Vs=
-github.com/aws/aws-sdk-go v1.38.30/go.mod h1:hcU610XS61/+aQV88ixoOzUoG7v3b31pl2zKMmprdro=
+github.com/aws/aws-sdk-go v1.38.39 h1:n4jkKlE3DfZBN800njuHmOEQlDht4aO/kE2VNk0/6T4=
+github.com/aws/aws-sdk-go v1.38.39/go.mod h1:hcU610XS61/+aQV88ixoOzUoG7v3b31pl2zKMmprdro=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
