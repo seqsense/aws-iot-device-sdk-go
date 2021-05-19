@@ -36,6 +36,7 @@ type Metadata struct {
 // NestedMetadata is JSON unmarshaller for state metadata.
 type NestedMetadata map[string]interface{}
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (n *NestedMetadata) UnmarshalJSON(b []byte) error {
 	if *n == nil {
 		*n = make(map[string]interface{})

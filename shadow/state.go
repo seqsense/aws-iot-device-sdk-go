@@ -197,9 +197,8 @@ func updateState(state map[string]interface{}, update map[string]interface{}) {
 			if s, ok := state[key].(NestedState); ok {
 				updateState(s, v)
 				return
-			} else {
-				state[key] = v
 			}
+			state[key] = v
 		case nil:
 			if _, ok := state[key]; ok {
 				delete(state, key)
@@ -218,6 +217,7 @@ func hasUpdate(s json.RawMessage) bool {
 // NestedState is JSON unmarshaller for state metadata.
 type NestedState map[string]interface{}
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (n *NestedState) UnmarshalJSON(b []byte) error {
 	if *n == nil {
 		*n = make(map[string]interface{})
