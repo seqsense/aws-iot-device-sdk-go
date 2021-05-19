@@ -7,15 +7,15 @@ on:
     branches:
       - master
     tags:
-      - '*'
+      - 'v*'
 
 jobs:
   tunnel-server:
     runs-on: ubuntu-latest
     steps:
       - name: Set image tag
-        if: startsWith(github.ref, 'refs/tags')
-        run: echo "IMAGE_TAG=${GITHUB_REF#refs/tags/}" | tee -a ${GITHUB_ENV}
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: echo "IMAGE_TAG=${GITHUB_REF#refs/tags/v}" | tee -a ${GITHUB_ENV}
 
       - name: Checkout
         uses: actions/checkout@v2
