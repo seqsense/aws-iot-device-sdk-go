@@ -1,19 +1,18 @@
 # =====================
-FROM golang:1.16-alpine3.12 as go-builder
+FROM golang:1.16-alpine as go-builder
 
 ENV CGO_ENABLED=0
 
-COPY go.mod /go/src/github.com/seqsense/aws-iot-device-sdk-go/go.mod
-COPY go.sum /go/src/github.com/seqsense/aws-iot-device-sdk-go/go.sum
+COPY go.mod go.sum /go/src/github.com/seqsense/aws-iot-device-sdk-go/
 RUN cd /go/src/github.com/seqsense/aws-iot-device-sdk-go/ && go mod download
 
 COPY . /go/src/github.com/seqsense/aws-iot-device-sdk-go
 WORKDIR /go/src/github.com/seqsense/aws-iot-device-sdk-go/tunnel/cmd/secure-tunnel-server
-RUN go build -tags netgo -installsuffix netgo
+RUN go build -tags netgo -installsuffix netgo -ldflags "-extldflags -static"
 RUN cp secure-tunnel-server /usr/local/bin/
 
 # =====================
-FROM alpine:3.13
+FROM scratch
 
 COPY --from=go-builder /usr/local/bin/secure-tunnel-server /usr/local/bin/
 

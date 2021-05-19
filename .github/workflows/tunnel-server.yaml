@@ -1,0 +1,52 @@
+name: tunnel-server
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+
+jobs:
+  tunnel-server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Setup Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Available platforms
+        run: echo ${{ steps.buildx.outputs.platforms }}
+
+      - name: Set image tag
+        if: startsWith(github.ref, 'refs/tags')
+        run: echo "IMAGE_TAG=${GITHUB_REF#refs/tags}" | tee -a ${GITHUB_ENV}
+
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Docker build
+        run: |
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --output "type=image,push=false" \
+            --tag ghcr.io/${{ github.repository_owner }}/aws-iot-secure-tunnel-server:${IMAGE_TAG:-devel} \
+            --file ./tunnel/cmd/secure-tunnel-server/Dockerfile .
+
+      - name: Login to GitHub Container Registry
+        if: startsWith(github.ref, 'refs/tags')
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CONTAINER_REGISTRY_TOKEN }}
+      - name: Push to GitHub Container Registry
+        if: startsWith(github.ref, 'refs/tags')
+        run: |
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --output "type=image,push=true" \
+            --tag ghcr.io/${{ github.repository_owner }}/aws-iot-secure-tunnel-server:${IMAGE_TAG} \
+            --file ./tunnel/cmd/secure-tunnel-server/Dockerfile .
