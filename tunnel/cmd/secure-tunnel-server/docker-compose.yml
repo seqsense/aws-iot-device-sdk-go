@@ -10,6 +10,9 @@ services:
       # - "-generate-test-token"  # uncomment to generate token at beginning
     environment:
       - AWS_IOT_ENDPOINT
+      # - AWS_SDK_LOAD_CONFIG=true  # uncomment to use local credentials file
+    volumes:
+      # - "${HOME}/.aws/credentials:/root/.aws/credentials:ro"  # uncomment to use local credentials file
   tlsoffloading:
     build: tlsoffloading
     ports:
