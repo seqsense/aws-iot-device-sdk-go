@@ -64,7 +64,11 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to create MQTT client (%s)", err.Error())
 		}
-		if _, err := cli.Connect(context.Background(),
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if _, err := cli.Connect(ctx,
 			fmt.Sprintf("secure-tunnel-server-%d", rand.Int()),
 			mqtt.WithKeepAlive(30),
 		); err != nil {
