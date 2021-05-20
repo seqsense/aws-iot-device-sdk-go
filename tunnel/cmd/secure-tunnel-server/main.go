@@ -19,6 +19,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -117,6 +118,14 @@ func main() {
 
 	servers[*apiAddr].Handler.(*http.ServeMux).Handle("/", apiHandler)
 	servers[*tunnelAddr].Handler.(*http.ServeMux).Handle("/tunnel", tunnelHandler)
+
+	healthcheckHandler := func(w http.ResponseWriter, _ *http.Request) {
+		io.WriteString(w, "ok")
+	}
+	servers[*apiAddr].Handler.(*http.ServeMux).HandleFunc("/healthcheck", healthcheckHandler)
+	if *apiAddr != *tunnelAddr {
+		servers[*tunnelAddr].Handler.(*http.ServeMux).HandleFunc("/healthcheck", healthcheckHandler)
+	}
 
 	var wg sync.WaitGroup
 	chErr := make(chan error, len(servers))
