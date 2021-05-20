@@ -15,16 +15,20 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 )
 
-func TestApp(t *testing.T) {
-	var ports [3]int
+func getPorts(t *testing.T, i int) []int {
+	ports := make([]int, i)
 	for i := range ports {
 		conn, err := net.Listen("tcp", ":0")
 		if err != nil {
@@ -33,6 +37,11 @@ func TestApp(t *testing.T) {
 		ports[i] = conn.Addr().(*net.TCPAddr).Port
 		conn.Close()
 	}
+	return ports
+}
+
+func TestApp(t *testing.T) {
+	ports := getPorts(t, 3)
 
 	testCases := map[string]struct {
 		opts []string
@@ -94,4 +103,70 @@ func TestApp(t *testing.T) {
 			<-chExit
 		})
 	}
+}
+
+func TestApp_generateTestToken(t *testing.T) {
+	ports := getPorts(t, 1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	chExit := make(chan struct{})
+
+	buf := &bytes.Buffer{}
+	log.SetOutput(buf)
+	origFlags := log.Flags()
+	log.SetFlags(0)
+	defer func() {
+		log.SetOutput(os.Stdout)
+		log.SetFlags(origFlags)
+	}()
+
+	go func() {
+		app(ctx,
+			[]string{
+				"test",
+				fmt.Sprintf("-tunnel-addr=:%d", ports[0]),
+				fmt.Sprintf("-api-addr=:%d", ports[0]),
+				"-generate-test-token",
+			},
+		)
+		close(chExit)
+	}()
+
+	select {
+	case <-time.After(100 * time.Millisecond):
+	case <-chExit:
+		t.Fatal("Application exit")
+	}
+	cancel()
+
+	raw := buf.Bytes()
+	data := raw[bytes.Index(raw, []byte{'{'}):]
+	t.Log(string(data))
+	out := struct {
+		DestinationAccessToken string `json:"destinationAccessToken"`
+		SourceAccessToken      string `json:"sourceAccessToken"`
+		TunnelARN              string `json:"tunnelArn"`
+		TunnelID               string `json:"tunnelId"`
+	}{}
+	err := json.Unmarshal(data, &out)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(out.DestinationAccessToken) == 0 {
+		t.Errorf("DestinationAccessToken must be returned")
+	}
+	if len(out.SourceAccessToken) == 0 {
+		t.Errorf("SourceAccessToken must be returned")
+	}
+	if len(out.TunnelARN) == 0 {
+		t.Errorf("TunnelArn must be returned")
+	}
+	if len(out.TunnelID) == 0 {
+		t.Errorf("TunnelId must be returned")
+	}
+
+	<-chExit
 }
