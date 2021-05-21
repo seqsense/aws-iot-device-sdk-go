@@ -22,7 +22,7 @@ jobs:
       - name: Docker build
         run: |
           docker build \
-            -t aws-iot-secure-tunnel-server:${IMAGE_TAG:-devel} \
+            -t aws-iot-secure-tunnel-server \
             -f ./tunnel/cmd/secure-tunnel-server/Dockerfile .
 
       - name: Login to GitHub Container Registry
@@ -35,9 +35,11 @@ jobs:
       - name: Push to GitHub Container Registry
         if: startsWith(github.ref, 'refs/tags')
         run: |
-          image=ghcr.io/${{ github.repository_owner }}/aws-iot-secure-tunnel-server:${IMAGE_TAG:-devel}
-          docker tag aws-iot-secure-tunnel-server:${IMAGE_TAG:-devel} ${image}
-          docker push ${image}
+          image=ghcr.io/${{ github.repository_owner }}/aws-iot-secure-tunnel-server
+          docker tag aws-iot-secure-tunnel-server ${image}:${IMAGE_TAG:-devel}
+          docker tag aws-iot-secure-tunnel-server ${image}:latest
+          docker push ${image}:${IMAGE_TAG:-devel}
+          docker push ${image}:latest
           docker logout ghcr.io
 
       - name: Login to ECR public
@@ -50,7 +52,9 @@ jobs:
       - name: Push to ECR public
         if: startsWith(github.ref, 'refs/tags')
         run: |
-          image=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/aws-iot-secure-tunnel-server:${IMAGE_TAG:-devel}
-          docker tag aws-iot-secure-tunnel-server:${IMAGE_TAG:-devel} ${image}
-          docker push ${image}
+          image=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/aws-iot-secure-tunnel-server
+          docker tag aws-iot-secure-tunnel-server ${image}:${IMAGE_TAG:-devel}
+          docker tag aws-iot-secure-tunnel-server ${image}:latest
+          docker push ${image}:${IMAGE_TAG:-devel}
+          docker push ${image}:latest
           docker logout ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
