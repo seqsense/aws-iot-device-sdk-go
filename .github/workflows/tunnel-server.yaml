@@ -52,7 +52,7 @@ jobs:
       - name: Push to ECR public
         if: startsWith(github.ref, 'refs/tags')
         run: |
-          image=public.ecr.aws/aws-iot-secure-tunnel-server
+          image=public.ecr.aws/${{ secrets.AWS_ECR_PUBLIC_ALIAS }}/aws-iot-secure-tunnel-server
           docker tag aws-iot-secure-tunnel-server ${image}:${IMAGE_TAG:-devel}
           docker tag aws-iot-secure-tunnel-server ${image}:latest
           docker push ${image}:${IMAGE_TAG:-devel}
