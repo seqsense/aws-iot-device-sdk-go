@@ -17,6 +17,6 @@ RUN apk add --no-cache ca-certificates
 FROM scratch
 
 COPY --from=go-builder /usr/local/bin/secure-tunnel-server /usr/local/bin/
-COPY --from=go-builder /usr/share/ca-certificates /usr/share/ca-certificates
+COPY --from=go-builder /etc/ssl /etc/ssl
 
 CMD ["/usr/local/bin/secure-tunnel-server"]
