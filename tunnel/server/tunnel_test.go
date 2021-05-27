@@ -22,6 +22,9 @@ import (
 func TestAddRemove(t *testing.T) {
 	h := NewTunnelHandler()
 
+	closed := make(chan struct{})
+	close(closed)
+
 	tis := []*tunnelInfo{
 		{
 			thingName:       "t1",
@@ -34,12 +37,14 @@ func TestAddRemove(t *testing.T) {
 			destAccessToken: "tokenRemoved1",
 			srcAccessToken:  "tokenRemoved2",
 			cancel:          func() {},
+			chDone:          closed,
 		},
 		{
 			thingName:       "t2",
 			destAccessToken: "token3",
 			srcAccessToken:  "token4",
 			cancel:          func() {},
+			chDone:          closed,
 		},
 	}
 	for _, ti := range tis {
@@ -71,5 +76,13 @@ func TestAddRemove(t *testing.T) {
 	}
 	if !reflect.DeepEqual(srcTokenExpected, h.srcToken) {
 		t.Errorf("Expected tunnels: %v, got: %v", srcTokenExpected, h.srcToken)
+	}
+
+	h.Clean()
+	tunnelsAfterCleanExpected := map[string]*tunnelInfo{
+		"00000000": tis[0],
+	}
+	if !reflect.DeepEqual(tunnelsAfterCleanExpected, h.tunnels) {
+		t.Errorf("Expected tunnels after clean: %v, got: %v", tunnelsAfterCleanExpected, h.tunnels)
 	}
 }
