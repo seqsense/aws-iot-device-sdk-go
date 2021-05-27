@@ -21,7 +21,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"golang.org/x/net/websocket"
@@ -36,8 +35,8 @@ const (
 	userAgent                 = "aws-iot-device-sdk-go/tunnel"
 )
 
-// ErrUnsupportedSchema indicate that the requested protocol schema is not supported.
-var ErrUnsupportedSchema = errors.New("unsupported schema")
+// ErrUnsupportedScheme indicate that the requested protocol scheme is not supported.
+var ErrUnsupportedScheme = errors.New("unsupported scheme")
 
 func endpointHost(region string) string {
 	return fmt.Sprintf(defaultEndpointHostFormat, region)
@@ -87,14 +86,8 @@ func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (*websocke
 		}
 	}
 
-	var defaultPort int
-	switch opt.Scheme {
-	case "wss":
-		defaultPort = 443
-	case "ws":
-		defaultPort = 80
-	default:
-		return nil, nil, ioterr.New(ErrUnsupportedSchema, opt.Scheme)
+	if err := opt.validate(); err != nil {
+		return nil, nil, err
 	}
 
 	wsc, err := websocket.NewConfig(
@@ -107,7 +100,7 @@ func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (*websocke
 	if opt.Scheme == "wss" {
 		wsc.TlsConfig = &tls.Config{
 			// Remove protocol default port number from the URI to avoid TLS certificate validation error.
-			ServerName:         strings.TrimSuffix(endpoint, fmt.Sprintf(":%d", defaultPort)),
+			ServerName:         serverNameFromEndpoint(opt.Scheme, endpoint),
 			InsecureSkipVerify: opt.InsecureSkipVerify,
 		}
 	}
@@ -147,6 +140,15 @@ type ProxyOptions struct {
 	Scheme             string
 	ErrorHandler       ErrorHandler
 	PingPeriod         time.Duration
+}
+
+func (o *ProxyOptions) validate() error {
+	switch o.Scheme {
+	case "wss", "ws":
+	default:
+		return ioterr.New(ErrUnsupportedScheme, o.Scheme)
+	}
+	return nil
 }
 
 // WithErrorHandler sets a ErrorHandler.

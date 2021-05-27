@@ -596,3 +596,34 @@ func (acceptFunc) Close() error {
 func (acceptFunc) Addr() net.Addr {
 	panic("not implemented")
 }
+
+func TestProxyOption_validate(t *testing.T) {
+	t.Run("Valid", func(t *testing.T) {
+		opts := []*ProxyOptions{
+			{Scheme: "ws"},
+			{Scheme: "wss"},
+		}
+		for _, o := range opts {
+			o := o
+			t.Run(o.Scheme, func(t *testing.T) {
+				if err := o.validate(); err != nil {
+					t.Errorf("Validation failed: %v", err)
+				}
+			})
+		}
+	})
+	t.Run("Invalid", func(t *testing.T) {
+		opts := []*ProxyOptions{
+			{Scheme: "http"},
+			{Scheme: ""},
+		}
+		for _, o := range opts {
+			o := o
+			t.Run(o.Scheme, func(t *testing.T) {
+				if err := o.validate(); err == nil {
+					t.Error("Validation must fail")
+				}
+			})
+		}
+	})
+}
