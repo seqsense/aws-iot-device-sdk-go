@@ -68,6 +68,23 @@ func (h *TunnelHandler) remove(id string) error {
 	return nil
 }
 
+func (h *TunnelHandler) Clean() {
+	h.mu.Lock()
+	removed := make([]string, 0, len(h.tunnels))
+	for id, tunnel := range h.tunnels {
+		select {
+		case <-tunnel.chDone:
+			removed = append(removed, id)
+		default:
+		}
+	}
+	h.mu.Unlock()
+
+	for _, id := range removed {
+		h.remove(id)
+	}
+}
+
 func (h *TunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a, ok := r.Header["Access-Token"]
 	if !ok || len(a) != 1 {
@@ -77,6 +94,7 @@ func (h *TunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var ti *tunnelInfo
 	var chRead, chWrite chan []byte
+	var chDone <-chan struct{}
 
 	q := r.URL.Query()
 	mode := tunnel.ClientMode(q.Get("local-proxy-mode"))
@@ -88,6 +106,7 @@ func (h *TunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if ok {
 			chRead = ti.chDestSrc
 			chWrite = ti.chSrcDest
+			chDone = ti.chDone
 		}
 	case tunnel.Destination:
 		h.mu.Lock()
@@ -96,10 +115,16 @@ func (h *TunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if ok {
 			chRead = ti.chSrcDest
 			chWrite = ti.chDestSrc
+			chDone = ti.chDone
 		}
 	default:
 		http.Error(w, "Invalid local-proxy-mode", http.StatusBadRequest)
 		return
+	}
+	select {
+	case <-chDone:
+		ok = false
+	default:
 	}
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
