@@ -16,10 +16,12 @@ package tunnel
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"golang.org/x/net/websocket"
@@ -33,6 +35,9 @@ const (
 	websocketProtocol         = "aws.iot.securetunneling-1.0"
 	userAgent                 = "aws-iot-device-sdk-go/tunnel"
 )
+
+// ErrUnsupportedSchema indicate that the requested protocol schema is not supported.
+var ErrUnsupportedSchema = errors.New("unsupported schema")
 
 func endpointHost(region string) string {
 	return fmt.Sprintf(defaultEndpointHostFormat, region)
@@ -82,6 +87,16 @@ func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (*websocke
 		}
 	}
 
+	var defaultPort int
+	switch opt.Scheme {
+	case "wss":
+		defaultPort = 443
+	case "ws":
+		defaultPort = 80
+	default:
+		return nil, nil, ioterr.New(ErrUnsupportedSchema, opt.Scheme)
+	}
+
 	wsc, err := websocket.NewConfig(
 		fmt.Sprintf("%s://%s/tunnel?local-proxy-mode=%s", opt.Scheme, endpoint, mode),
 		fmt.Sprintf("https://%s", endpoint),
@@ -91,7 +106,8 @@ func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (*websocke
 	}
 	if opt.Scheme == "wss" {
 		wsc.TlsConfig = &tls.Config{
-			ServerName:         endpoint,
+			// Remove protocol default port number from the URI to avoid TLS certificate validation error.
+			ServerName:         strings.TrimSuffix(endpoint, fmt.Sprintf(":%d", defaultPort)),
 			InsecureSkipVerify: opt.InsecureSkipVerify,
 		}
 	}
