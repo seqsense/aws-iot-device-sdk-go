@@ -135,6 +135,23 @@ func app(ctx context.Context, args []string) {
 		}(s)
 	}
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		tick := time.NewTicker(time.Minute)
+		defer tick.Stop()
+
+		for {
+			select {
+			case <-tick.C:
+				tunnelHandler.Clean()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	select {
 	case err := <-chErr:
 		switch err {
