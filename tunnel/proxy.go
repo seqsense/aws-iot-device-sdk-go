@@ -16,6 +16,7 @@ package tunnel
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -33,6 +34,9 @@ const (
 	websocketProtocol         = "aws.iot.securetunneling-1.0"
 	userAgent                 = "aws-iot-device-sdk-go/tunnel"
 )
+
+// ErrUnsupportedScheme indicate that the requested protocol scheme is not supported.
+var ErrUnsupportedScheme = errors.New("unsupported scheme")
 
 func endpointHost(region string) string {
 	return fmt.Sprintf(defaultEndpointHostFormat, region)
@@ -82,6 +86,10 @@ func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (*websocke
 		}
 	}
 
+	if err := opt.validate(); err != nil {
+		return nil, nil, err
+	}
+
 	wsc, err := websocket.NewConfig(
 		fmt.Sprintf("%s://%s/tunnel?local-proxy-mode=%s", opt.Scheme, endpoint, mode),
 		fmt.Sprintf("https://%s", endpoint),
@@ -91,7 +99,8 @@ func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (*websocke
 	}
 	if opt.Scheme == "wss" {
 		wsc.TlsConfig = &tls.Config{
-			ServerName:         endpoint,
+			// Remove protocol default port number from the URI to avoid TLS certificate validation error.
+			ServerName:         serverNameFromEndpoint(opt.Scheme, endpoint),
 			InsecureSkipVerify: opt.InsecureSkipVerify,
 		}
 	}
@@ -131,6 +140,15 @@ type ProxyOptions struct {
 	Scheme             string
 	ErrorHandler       ErrorHandler
 	PingPeriod         time.Duration
+}
+
+func (o *ProxyOptions) validate() error {
+	switch o.Scheme {
+	case "wss", "ws":
+	default:
+		return ioterr.New(ErrUnsupportedScheme, o.Scheme)
+	}
+	return nil
 }
 
 // WithErrorHandler sets a ErrorHandler.
