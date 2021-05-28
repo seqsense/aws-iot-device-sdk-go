@@ -1,0 +1,21 @@
+builds:
+  - id: tunnel/localproxy
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    main: ./tunnel/cmd/localproxy/
+    binary: localproxy
+archives:
+  - builds:
+      - tunnel/localproxy
+    name_template: "iot_secure_tunnel_{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - none*
+checksum:
+  name_template: 'checksums.txt'
