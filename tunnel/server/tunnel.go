@@ -68,6 +68,7 @@ func (h *TunnelHandler) remove(id string) error {
 	return nil
 }
 
+// Clean releases expired tunnel info objects.
 func (h *TunnelHandler) Clean() {
 	h.mu.Lock()
 	removed := make([]string, 0, len(h.tunnels))
@@ -85,6 +86,7 @@ func (h *TunnelHandler) Clean() {
 	}
 }
 
+// ServeHTTP implements http.Handler.
 func (h *TunnelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a, ok := r.Header["Access-Token"]
 	if !ok || len(a) != 1 {
