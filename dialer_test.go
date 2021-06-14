@@ -36,19 +36,12 @@ import (
 	"golang.org/x/net/websocket"
 
 	"github.com/at-wat/mqtt-go"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 
 	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 	"github.com/seqsense/aws-iot-device-sdk-go/v5/presigner"
 )
-
-type dummyConfigProvider struct{}
-
-func (*dummyConfigProvider) ClientConfig(serviceName string, cfgs ...*aws.Config) client.Config {
-	return client.Config{}
-}
 
 func TestNewDialer(t *testing.T) {
 	t.Run("ValidURL", func(t *testing.T) {
@@ -76,7 +69,7 @@ func TestNewDialer(t *testing.T) {
 		for name, c := range cases {
 			c := c
 			t.Run(name, func(t *testing.T) {
-				d, err := NewDialer(&dummyConfigProvider{}, c.url)
+				d, err := NewDialer(aws.Config{}, c.url)
 				if !errors.Is(err, c.err) {
 					var ie *ioterr.Error
 					if !errors.As(err, &ie) {
@@ -91,7 +84,7 @@ func TestNewDialer(t *testing.T) {
 		}
 	})
 	t.Run("InvalidURL", func(t *testing.T) {
-		_, err := NewDialer(&dummyConfigProvider{}, ":aaa")
+		_, err := NewDialer(aws.Config{}, ":aaa")
 		var ie *ioterr.Error
 		if !errors.As(err, &ie) {
 			t.Errorf("Expected error type: %T, actual: %T", ie, err)
@@ -109,8 +102,11 @@ func TestPresignDialer(t *testing.T) {
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "1111111111111111111111111111111111111111")
 	os.Setenv("AWS_REGION", "world-1")
 
-	sess := session.Must(session.NewSession())
-	ps := presigner.New(sess)
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ps := presigner.New(cfg)
 
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
