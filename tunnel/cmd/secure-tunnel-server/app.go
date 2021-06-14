@@ -28,7 +28,7 @@ import (
 	"time"
 
 	mqtt "github.com/at-wat/mqtt-go"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/config"
 	awsiot "github.com/seqsense/aws-iot-device-sdk-go/v5"
 	"github.com/seqsense/aws-iot-device-sdk-go/v5/tunnel/server"
 )
@@ -47,8 +47,12 @@ func app(ctx context.Context, args []string) {
 
 	var notifier *server.Notifier
 	if *mqttEndpoint != "" {
-		sess := session.Must(session.NewSession())
-		dialer, err := awsiot.NewPresignDialer(sess, *mqttEndpoint,
+		cfg, err := config.LoadDefaultConfig(context.TODO())
+		if err != nil {
+			log.Fatalf("Failed to load AWS config (%s)", err.Error())
+		}
+
+		dialer, err := awsiot.NewPresignDialer(cfg, *mqttEndpoint,
 			mqtt.WithConnStateHandler(func(s mqtt.ConnState, err error) {
 				log.Printf("MQTT connection state changed (%s)", s)
 			}),

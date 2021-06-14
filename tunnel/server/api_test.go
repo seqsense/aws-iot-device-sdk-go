@@ -15,6 +15,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -23,12 +24,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
-	ist "github.com/aws/aws-sdk-go/service/iotsecuretunneling"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	ist "github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling"
+	ist_types "github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling/types"
 
 	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 )
@@ -69,22 +68,21 @@ func TestAPI(t *testing.T) {
 		}
 	}()
 
-	sess := session.Must(session.NewSession(&aws.Config{
-		Region:           aws.String("nothing"),
-		DisableSSL:       aws.Bool(true),
+	cfg := aws.Config{
+		Region:           "nothing",
 		EndpointResolver: newEndpointForFunc(ln.Addr().(*net.TCPAddr).Port),
-		Credentials: credentials.NewStaticCredentials(
+		Credentials: credentials.NewStaticCredentialsProvider(
 			"ASIAZZZZZZZZZZZZZZZZ",
 			"0000000000000000000000000000000000000000",
 			"",
 		),
-	}))
-	api := ist.New(sess)
-	out, err := api.OpenTunnel(&ist.OpenTunnelInput{
+	}
+	api := ist.NewFromConfig(cfg)
+	out, err := api.OpenTunnel(context.TODO(), &ist.OpenTunnelInput{
 		Description: aws.String("desc"),
-		DestinationConfig: &ist.DestinationConfig{
-			Services: []*string{
-				aws.String("ssh"),
+		DestinationConfig: &ist_types.DestinationConfig{
+			Services: []string{
+				"ssh",
 			},
 			ThingName: aws.String("thing"),
 		},
@@ -100,36 +98,34 @@ func TestAPI_Validate(t *testing.T) {
 
 	var err error
 	var ie *ioterr.Error
-	var re request.ErrInvalidParams
 
 	_, err = h.openTunnel(&ist.OpenTunnelInput{
-		Tags: []*ist.Tag{},
+		Tags: []ist_types.Tag{},
 	})
 	if !errors.As(err, &ie) {
 		t.Errorf("Expected error type: %T, got: %T", ie, err)
 	}
-	if !errors.As(err, &re) {
-		t.Errorf("Expected error type: %T, got: %T", re, err)
+	if !errors.Is(err, errInvalidRequest) {
+		t.Errorf("Expected error: '%v', got: '%v'", errInvalidRequest, err)
 	}
 
 	_, err = h.closeTunnel(&ist.CloseTunnelInput{})
 	if !errors.As(err, &ie) {
 		t.Errorf("Expected error type: %T, got: %T", ie, err)
 	}
-	if !errors.As(err, &re) {
-		t.Errorf("Expected error type: %T, got: %T", re, err)
+	if !errors.Is(err, errInvalidRequest) {
+		t.Errorf("Expected error: '%v', got: '%v'", errInvalidRequest, err)
 	}
 }
 
-func newEndpointForFunc(port int) endpoints.Resolver {
-	return endpoints.ResolverFunc(func(service, region string, opts ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
-		return endpoints.ResolvedEndpoint{
-			URL:                fmt.Sprintf("http://localhost:%d", port),
-			PartitionID:        "clone",
-			SigningRegion:      region,
-			SigningName:        service,
-			SigningNameDerived: true,
-			SigningMethod:      "v4",
+func newEndpointForFunc(port int) aws.EndpointResolver {
+	return aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
+		return aws.Endpoint{
+			URL:           fmt.Sprintf("http://localhost:%d", port),
+			PartitionID:   "clone",
+			SigningRegion: region,
+			SigningName:   service,
+			SigningMethod: "v4",
 		}, nil
 	})
 }
