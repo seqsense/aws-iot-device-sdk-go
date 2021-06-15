@@ -52,16 +52,16 @@ func New(c aws.Config) *Presigner {
 
 // PresignWssNow generates presigned AWS IoT websocket URL for specified endpoint hostname.
 // The URL is valid from now until 24 hours later which is the limit of AWS IoT Websocket connection.
-func (a *Presigner) PresignWssNow(endpoint string) (string, error) {
-	return a.PresignWss(endpoint, time.Hour*24, time.Now())
+func (a *Presigner) PresignWssNow(ctx context.Context, endpoint string) (string, error) {
+	return a.PresignWss(ctx, endpoint, time.Hour*24, time.Now())
 }
 
 // PresignWss generates presigned AWS IoT websocket URL for specified endpoint hostname.
-func (a *Presigner) PresignWss(endpoint string, expire time.Duration, from time.Time) (string, error) {
+func (a *Presigner) PresignWss(ctx context.Context, endpoint string, expire time.Duration, from time.Time) (string, error) {
 	if a.cfg.Region == "" {
 		return "", errors.New("Region is not specified")
 	}
-	cred, err := a.cfg.Credentials.Retrieve(context.TODO())
+	cred, err := a.cfg.Credentials.Retrieve(ctx)
 	if err != nil {
 		return "", ioterr.New(err, "getting credentials")
 	}
@@ -82,7 +82,7 @@ func (a *Presigner) PresignWss(endpoint string, expire time.Duration, from time.
 		URL:    originalURL,
 	}
 	presignedURL, _, err := signer.PresignHTTP(
-		context.TODO(), cred, req, emptyPayloadHash, serviceName, a.cfg.Region, from,
+		ctx, cred, req, emptyPayloadHash, serviceName, a.cfg.Region, from,
 	)
 	if err != nil {
 		return "", ioterr.New(err, "presigning URL")

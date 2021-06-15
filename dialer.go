@@ -15,6 +15,7 @@
 package awsiotdev
 
 import (
+	"context"
 	"net/url"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -41,7 +42,7 @@ func NewPresignDialer(cfg aws.Config, endpoint string, opts ...mqtt.DialOption) 
 }
 
 func (d *presignDialer) Dial() (*mqtt.BaseClient, error) {
-	url, err := d.signer.PresignWssNow(d.endpoint)
+	url, err := d.signer.PresignWssNow(context.TODO(), d.endpoint)
 	if err != nil {
 		return nil, ioterr.New(err, "presigning wss URL")
 	}
