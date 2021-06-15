@@ -41,12 +41,12 @@ func NewPresignDialer(cfg aws.Config, endpoint string, opts ...mqtt.DialOption) 
 	}, nil
 }
 
-func (d *presignDialer) Dial() (*mqtt.BaseClient, error) {
-	url, err := d.signer.PresignWssNow(context.TODO(), d.endpoint)
+func (d *presignDialer) DialContext(ctx context.Context) (*mqtt.BaseClient, error) {
+	url, err := d.signer.PresignWssNow(ctx, d.endpoint)
 	if err != nil {
 		return nil, ioterr.New(err, "presigning wss URL")
 	}
-	cli, err := mqtt.Dial(url, d.opts...)
+	cli, err := mqtt.DialContext(ctx, url, d.opts...)
 	if err != nil {
 		return nil, ioterr.New(err, "dialing")
 	}

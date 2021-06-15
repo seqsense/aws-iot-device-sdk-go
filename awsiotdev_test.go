@@ -15,6 +15,7 @@
 package awsiotdev
 
 import (
+	"context"
 	"testing"
 
 	"github.com/at-wat/mqtt-go"
@@ -22,7 +23,7 @@ import (
 
 func TestNew(t *testing.T) {
 	const name = "thing_name1"
-	d, err := New(name, mqtt.DialerFunc(func() (*mqtt.BaseClient, error) {
+	d, err := New(name, mqtt.DialerFunc(func(ctx context.Context) (*mqtt.BaseClient, error) {
 		return &mqtt.BaseClient{}, nil
 	}))
 	if err != nil {

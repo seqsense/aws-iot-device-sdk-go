@@ -145,7 +145,7 @@ func TestPresignDialer(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		chAccept <- true
-		conn, err := d.Dial()
+		conn, err := d.DialContext(context.Background())
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -153,7 +153,7 @@ func TestPresignDialer(t *testing.T) {
 	})
 	t.Run("Error", func(t *testing.T) {
 		chAccept <- false
-		conn, err := d.Dial()
+		conn, err := d.DialContext(context.Background())
 		if err == nil {
 			_ = conn.Close()
 			t.Fatalf("Dial should fail")
