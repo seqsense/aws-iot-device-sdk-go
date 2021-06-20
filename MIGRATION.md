@@ -24,7 +24,10 @@
     )
 
     sess := session.Must(session.NewSession())
-    dialer. err := awsiotdev_v5.NewPresignDialer(sess, endpoint)
+    dialer, err := awsiotdev_v5.NewPresignDialer(sess, endpoint)
+    if err != nil {
+      // error handling
+    }
 
     d, err := awsiotdev.New(thingName, &mqtt.NoContextDialer{dialer})
     ```
