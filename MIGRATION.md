@@ -2,7 +2,7 @@
 
 ## v6
 
-- aws/aws-iot-sdk is updated to aws/aws-iot-sdk-v2
+- aws/aws-sdk-go is updated to aws/aws-sdk-go-v2
   - 🔄Update presign dialer constructor argument:
     ```diff
     -sess, err := session.NewSession()
@@ -13,7 +13,7 @@
     -dialer, err := awsiotdev.NewPresignDialer(sess, endpoint)
     +dialer, err := awsiotdev.NewPresignDialer(cfg, endpoint)
     ```
-  - 🔄If you want to use aws/aws-iot-sdk (v1), with aws-iot-device-sdk-go v6:
+  - 🔄If you want to use aws/aws-sdk-go (v1), with aws-iot-device-sdk-go v6:
     ```go
     import (
       "github.com/at-wat/mqtt-go"
