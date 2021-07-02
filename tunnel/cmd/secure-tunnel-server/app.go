@@ -29,8 +29,8 @@ import (
 
 	mqtt "github.com/at-wat/mqtt-go"
 	"github.com/aws/aws-sdk-go-v2/config"
-	awsiot "github.com/seqsense/aws-iot-device-sdk-go/v5"
-	"github.com/seqsense/aws-iot-device-sdk-go/v5/tunnel/server"
+	awsiot "github.com/seqsense/aws-iot-device-sdk-go/v6"
+	"github.com/seqsense/aws-iot-device-sdk-go/v6/tunnel/server"
 )
 
 func app(ctx context.Context, args []string) {

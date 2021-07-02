@@ -29,7 +29,7 @@ import (
 	ist "github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling"
 	ist_types "github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling/types"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v6/internal/ioterr"
 )
 
 func TestAPI(t *testing.T) {

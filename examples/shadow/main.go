@@ -22,8 +22,8 @@ import (
 
 	"github.com/at-wat/mqtt-go"
 	"github.com/mitchellh/mapstructure"
-	awsiotdev "github.com/seqsense/aws-iot-device-sdk-go/v5"
-	"github.com/seqsense/aws-iot-device-sdk-go/v5/shadow"
+	awsiotdev "github.com/seqsense/aws-iot-device-sdk-go/v6"
+	"github.com/seqsense/aws-iot-device-sdk-go/v6/shadow"
 )
 
 func main() {
