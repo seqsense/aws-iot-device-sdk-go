@@ -15,12 +15,13 @@
 package presigner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/config"
 )
 
 func TestPresignWss(t *testing.T) {
@@ -32,9 +33,14 @@ func TestPresignWss(t *testing.T) {
 
 	const expected = "wss://test.iot.world-1.amazonaws.com/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKAAAAAAAAAAAAAAAAAA%2F19700101%2Fworld-1%2Fiotdevicegateway%2Faws4_request&X-Amz-Date=19700101T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=4cfbc8acc899f7aac3153cd17c94204d6989f86d8cb1173e46143512270c89c2&X-Amz-Security-Token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-	sess := session.Must(session.NewSession())
-	ps := New(sess)
-	wssURL, err := ps.PresignWss("test.iot.world-1.amazonaws.com", time.Hour*24, time.Unix(0, 0))
+	ctx := context.TODO()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ps := New(cfg)
+	wssURL, err := ps.PresignWss(ctx, "test.iot.world-1.amazonaws.com", time.Hour*24, time.Unix(0, 0))
 	if err != nil {
 		t.Error(err)
 	}
@@ -53,9 +59,14 @@ func TestPresignWss_WithoutSessionToken(t *testing.T) {
 
 	const expected = "wss://test.iot.world-1.amazonaws.com/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKAAAAAAAAAAAAAAAAAA%2F19700101%2Fworld-1%2Fiotdevicegateway%2Faws4_request&X-Amz-Date=19700101T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=4cfbc8acc899f7aac3153cd17c94204d6989f86d8cb1173e46143512270c89c2"
 
-	sess := session.Must(session.NewSession())
-	ps := New(sess)
-	wssURL, err := ps.PresignWss("test.iot.world-1.amazonaws.com", time.Hour*24, time.Unix(0, 0))
+	ctx := context.TODO()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ps := New(cfg)
+	wssURL, err := ps.PresignWss(ctx, "test.iot.world-1.amazonaws.com", time.Hour*24, time.Unix(0, 0))
 	if err != nil {
 		t.Error(err)
 	}
@@ -67,9 +78,14 @@ func TestPresignWss_WithoutSessionToken(t *testing.T) {
 }
 
 func ExamplePresigner_PresignWssNow() {
-	sess := session.Must(session.NewSession())
-	ps := New(sess)
-	wssURL, err := ps.PresignWssNow("test.iot.world-1.amazonaws.com")
+	ctx := context.TODO()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		panic(err)
+	}
+	ps := New(cfg)
+	wssURL, err := ps.PresignWssNow(ctx, "test.iot.world-1.amazonaws.com")
 	if err != nil {
 		panic(err)
 	}

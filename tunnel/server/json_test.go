@@ -1,4 +1,4 @@
-// Copyright 2020 SEQSENSE, Inc.
+// Copyright 2021 SEQSENSE, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package awsiotdev
+package server
 
 import (
-	"context"
+	"bytes"
 	"testing"
-
-	"github.com/at-wat/mqtt-go"
 )
 
-func TestNew(t *testing.T) {
-	const name = "thing_name1"
-	d, err := New(name, mqtt.DialerFunc(func(ctx context.Context) (*mqtt.BaseClient, error) {
-		return &mqtt.BaseClient{}, nil
-	}))
+func TestResponse_MarshalJSON(t *testing.T) {
+	type Struct1 struct {
+		FieldA int
+		FieldB string
+	}
+	value := Struct1{
+		FieldA: 1,
+		FieldB: "abc",
+	}
+
+	b, err := (&response{value: value}).MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if d.ThingName() != name {
-		t.Errorf("ThingName differs, expected: %s, got: %s", name, d.ThingName())
+	expected := []byte(`{"fieldA":1,"fieldB":"abc"}`)
+	if !bytes.Equal(expected, b) {
+		t.Errorf("Expected: %v\nGot:      %v", expected, b)
 	}
 }

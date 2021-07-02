@@ -19,79 +19,78 @@ This presigner wrapper works around the AWS IoT websocket's problem in presigned
 package presigner
 
 import (
-	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 
 	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 )
 
+const (
+	serviceName      = "iotdevicegateway"
+	emptyPayloadHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+)
+
 // Presigner is an AWS v4 signer wrapper for AWS IoT.
 type Presigner struct {
-	clientConfig client.Config
+	cfg aws.Config
 }
 
-const serviceName = "iotdevicegateway"
-
 // New returns new AWS v4 signer wrapper for AWS IoT.
-func New(p client.ConfigProvider, cfgs ...*aws.Config) *Presigner {
+func New(c aws.Config) *Presigner {
 	return &Presigner{
-		clientConfig: p.ClientConfig(serviceName, cfgs...),
+		cfg: c,
 	}
 }
 
 // PresignWssNow generates presigned AWS IoT websocket URL for specified endpoint hostname.
 // The URL is valid from now until 24 hours later which is the limit of AWS IoT Websocket connection.
-func (a *Presigner) PresignWssNow(endpoint string) (string, error) {
-	return a.PresignWss(endpoint, time.Hour*24, time.Now())
+func (a *Presigner) PresignWssNow(ctx context.Context, endpoint string) (string, error) {
+	return a.PresignWss(ctx, endpoint, time.Hour*24, time.Now())
 }
 
 // PresignWss generates presigned AWS IoT websocket URL for specified endpoint hostname.
-func (a *Presigner) PresignWss(endpoint string, expire time.Duration, from time.Time) (string, error) {
-	if a.clientConfig.SigningRegion == "" {
+func (a *Presigner) PresignWss(ctx context.Context, endpoint string, expire time.Duration, from time.Time) (string, error) {
+	if a.cfg.Region == "" {
 		return "", errors.New("Region is not specified")
 	}
-	cred, err := a.clientConfig.Config.Credentials.Get()
+	cred, err := a.cfg.Credentials.Retrieve(ctx)
 	if err != nil {
 		return "", ioterr.New(err, "getting credentials")
 	}
 	sessionToken := cred.SessionToken
+	cred.SessionToken = ""
 
-	signer := v4.NewSigner(
-		credentials.NewStaticCredentials(cred.AccessKeyID, cred.SecretAccessKey, ""),
+	originalURL, err := url.Parse(
+		fmt.Sprintf("wss://%s/mqtt?X-Amz-Expires=%s", endpoint, strconv.FormatInt(int64(expire/time.Second), 10)),
 	)
-
-	body := bytes.NewReader([]byte{})
-
-	originalURL, err := url.Parse(fmt.Sprintf("wss://%s/mqtt", endpoint))
 	if err != nil {
 		return "", ioterr.New(err, "parsing server URL")
 	}
+
+	signer := v4.NewSigner()
 
 	req := &http.Request{
 		Method: "GET",
 		URL:    originalURL,
 	}
-	_, err = signer.Presign(
-		req, body,
-		a.clientConfig.SigningName, a.clientConfig.SigningRegion,
-		expire, from,
+	presignedURL, _, err := signer.PresignHTTP(
+		ctx, cred, req, emptyPayloadHash, serviceName, a.cfg.Region, from,
 	)
 	if err != nil {
 		return "", ioterr.New(err, "presigning URL")
 	}
 
-	ret := req.URL.String()
 	if sessionToken != "" {
-		ret = ret + "&X-Amz-Security-Token=" + url.QueryEscape(sessionToken)
+		presignedURL += "&X-Amz-Security-Token=" + url.QueryEscape(sessionToken)
 	}
-	return ret, nil
+
+	return presignedURL, nil
 }

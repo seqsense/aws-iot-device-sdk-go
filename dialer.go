@@ -15,9 +15,10 @@
 package awsiotdev
 
 import (
+	"context"
 	"net/url"
 
-	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/at-wat/mqtt-go"
 
@@ -32,20 +33,20 @@ type presignDialer struct {
 }
 
 // NewPresignDialer returns WebSockets Dialer with AWS v4 presigned URL.
-func NewPresignDialer(sess client.ConfigProvider, endpoint string, opts ...mqtt.DialOption) (mqtt.Dialer, error) {
+func NewPresignDialer(cfg aws.Config, endpoint string, opts ...mqtt.DialOption) (mqtt.Dialer, error) {
 	return &presignDialer{
-		signer:   presigner.New(sess),
+		signer:   presigner.New(cfg),
 		endpoint: endpoint,
 		opts:     opts,
 	}, nil
 }
 
-func (d *presignDialer) Dial() (*mqtt.BaseClient, error) {
-	url, err := d.signer.PresignWssNow(d.endpoint)
+func (d *presignDialer) DialContext(ctx context.Context) (*mqtt.BaseClient, error) {
+	url, err := d.signer.PresignWssNow(ctx, d.endpoint)
 	if err != nil {
 		return nil, ioterr.New(err, "presigning wss URL")
 	}
-	cli, err := mqtt.Dial(url, d.opts...)
+	cli, err := mqtt.DialContext(ctx, url, d.opts...)
 	if err != nil {
 		return nil, ioterr.New(err, "dialing")
 	}
@@ -54,7 +55,7 @@ func (d *presignDialer) Dial() (*mqtt.BaseClient, error) {
 
 // NewDialer creates default dialer for the given URL for AWS IoT.
 // Supported protocols are mqtts and wss (with presigned URL).
-func NewDialer(sess client.ConfigProvider, urlStr string, opts ...mqtt.DialOption) (mqtt.Dialer, error) {
+func NewDialer(cfg aws.Config, urlStr string, opts ...mqtt.DialOption) (mqtt.Dialer, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, ioterr.New(err, "parsing server URL")
@@ -63,7 +64,7 @@ func NewDialer(sess client.ConfigProvider, urlStr string, opts ...mqtt.DialOptio
 	case "mqtts":
 		return &mqtt.URLDialer{URL: urlStr, Options: opts}, nil
 	case "wss":
-		return NewPresignDialer(sess, u.Host)
+		return NewPresignDialer(cfg, u.Host)
 	default:
 		return nil, ioterr.New(mqtt.ErrUnsupportedProtocol, "new dialer")
 	}

@@ -9,6 +9,10 @@ Implemented features:
 - Jobs
 - Secure tunneling
 
+## Migration guide
+
+- [v6](MIGRATION.md#v6)
+
 ## Contributing
 
 Your contributions like bug reports, bug fixes, feature requests and implementing new features are welcome.

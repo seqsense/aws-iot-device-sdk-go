@@ -17,19 +17,21 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/private/protocol/json/jsonutil"
-	ist "github.com/aws/aws-sdk-go/service/iotsecuretunneling"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ist "github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling"
 
 	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
 	"github.com/seqsense/aws-iot-device-sdk-go/v5/tunnel"
 )
+
+var errInvalidRequest = errors.New("invalid request")
 
 // apiHandler handles iotsecuretunneling API requests.
 type apiHandler struct {
@@ -38,12 +40,22 @@ type apiHandler struct {
 }
 
 func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput, error) {
-	if err := in.Validate(); err != nil {
-		return nil, ioterr.New(err, "validating request")
+	if in.DestinationConfig == nil {
+		return nil, ioterr.New(errInvalidRequest, "validating destinationConfig")
+	}
+	if in.DestinationConfig.ThingName == nil {
+		return nil, ioterr.New(errInvalidRequest, "validating destinationConfig.thingName")
+	}
+	if len(in.DestinationConfig.Services) == 0 {
+		return nil, ioterr.New(errInvalidRequest, "validating destinationConfig.services")
 	}
 	lifetime := 12 * time.Hour
-	if in.TimeoutConfig != nil && in.TimeoutConfig.MaxLifetimeTimeoutMinutes != nil {
-		lifetime = time.Minute * time.Duration(*in.TimeoutConfig.MaxLifetimeTimeoutMinutes)
+	if in.TimeoutConfig != nil {
+		if in.TimeoutConfig.MaxLifetimeTimeoutMinutes < 0 ||
+			in.TimeoutConfig.MaxLifetimeTimeoutMinutes > 720 {
+			return nil, ioterr.New(errInvalidRequest, "validating timeoutConfig.maxLifetimeTimeoutMinutes")
+		}
+		lifetime = time.Minute * time.Duration(in.TimeoutConfig.MaxLifetimeTimeoutMinutes)
 	}
 
 	r1, err := uuid.NewRandom()
@@ -68,7 +80,7 @@ func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput,
 		chSrcDest:       make(chan []byte),
 	}
 	for _, srv := range in.DestinationConfig.Services {
-		ti.services = append(ti.services, *srv)
+		ti.services = append(ti.services, srv)
 	}
 
 	id, err := h.tunnelHandler.add(ti)
@@ -100,10 +112,9 @@ func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput,
 }
 
 func (h *apiHandler) closeTunnel(in *ist.CloseTunnelInput) (*ist.CloseTunnelOutput, error) {
-	if err := in.Validate(); err != nil {
-		return nil, ioterr.New(err, "validating request")
+	if in.TunnelId == nil {
+		return nil, ioterr.New(errInvalidRequest, "validating tunnelId")
 	}
-
 	id := *in.TunnelId
 
 	if err := h.tunnelHandler.remove(id); err != nil {
@@ -148,7 +159,7 @@ func (h *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to handle request", http.StatusBadRequest)
 		return
 	}
-	oj, err := jsonutil.BuildJSON(out)
+	oj, err := (&response{value: out}).MarshalJSON()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to handle request: %v", err), http.StatusBadRequest)
 		return
