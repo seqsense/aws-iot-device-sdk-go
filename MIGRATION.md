@@ -5,6 +5,13 @@
 - aws/aws-sdk-go is updated to aws/aws-sdk-go-v2
   - 🔄Update presign dialer constructor argument:
     ```diff
+     import (
+    -  "github.com/aws/aws-sdk-go/aws/session"
+    -  "github.com/seqsense/aws-iot-device-sdk-go/v5"
+    +  "github.com/aws/aws-sdk-go-v2/config"
+    +  "github.com/seqsense/aws-iot-device-sdk-go/v6"
+     )
+
     -sess, err := session.NewSession()
     +cfg, err := config.LoadDefaultConfig(ctx)
      if err != nil {
