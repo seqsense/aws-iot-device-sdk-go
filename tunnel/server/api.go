@@ -27,8 +27,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ist "github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
-	"github.com/seqsense/aws-iot-device-sdk-go/v5/tunnel"
+	"github.com/seqsense/aws-iot-device-sdk-go/v6/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v6/tunnel"
 )
 
 var errInvalidRequest = errors.New("invalid request")

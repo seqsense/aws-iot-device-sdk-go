@@ -22,8 +22,8 @@ import (
 
 	"github.com/at-wat/mqtt-go"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v5"
-	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v6"
+	"github.com/seqsense/aws-iot-device-sdk-go/v6/internal/ioterr"
 )
 
 // Tunnel is an interface of secure tunneling.

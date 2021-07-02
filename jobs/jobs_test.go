@@ -25,7 +25,7 @@ import (
 	"github.com/at-wat/mqtt-go"
 	mockmqtt "github.com/at-wat/mqtt-go/mock"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v6/internal/ioterr"
 )
 
 var errPublish = errors.New("publish failure")

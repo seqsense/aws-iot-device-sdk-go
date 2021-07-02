@@ -24,8 +24,8 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"github.com/seqsense/aws-iot-device-sdk-go/v5/internal/ioterr"
-	"github.com/seqsense/aws-iot-device-sdk-go/v5/tunnel/msg"
+	"github.com/seqsense/aws-iot-device-sdk-go/v6/internal/ioterr"
+	"github.com/seqsense/aws-iot-device-sdk-go/v6/tunnel/msg"
 )
 
 var (
