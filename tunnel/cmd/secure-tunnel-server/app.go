@@ -75,7 +75,7 @@ func app(ctx context.Context, args []string) error {
 			fmt.Sprintf("secure-tunnel-server-%d", rand.Int()),
 			mqtt.WithKeepAlive(30),
 		); err != nil {
-			return fmt.Errorf("failed to start MQTT reconnect client: %s", err)
+			return fmt.Errorf("failed to start MQTT reconnect client: %w", err)
 		}
 		notifier = server.NewNotifier(cli)
 	} else {

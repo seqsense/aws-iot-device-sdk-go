@@ -179,7 +179,7 @@ func TestApp_generateTestToken(t *testing.T) {
 func TestApp_error(t *testing.T) {
 	ports := getPorts(t, 2)
 	t.Run("DialTimeout", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 		defer cancel()
 
 		os.Clearenv()
@@ -193,8 +193,8 @@ func TestApp_error(t *testing.T) {
 			fmt.Sprintf("-api-addr=:%d", ports[0]),
 			fmt.Sprintf("-mqtt-endpoint=localhost:%d", ports[1]),
 		})
-		if errors.Is(err, context.DeadlineExceeded) {
-			t.Error(err)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("Expected error: '%v', got: '%v'", context.DeadlineExceeded, err)
 		}
 	})
 }
