@@ -39,7 +39,7 @@ func TestPresignWss(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ps := New(cfg)
+	ps := New(&cfg)
 	wssURL, err := ps.PresignWss(ctx, "test.iot.world-1.amazonaws.com", time.Hour*24, time.Unix(0, 0))
 	if err != nil {
 		t.Error(err)
@@ -65,7 +65,7 @@ func TestPresignWss_WithoutSessionToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ps := New(cfg)
+	ps := New(&cfg)
 	wssURL, err := ps.PresignWss(ctx, "test.iot.world-1.amazonaws.com", time.Hour*24, time.Unix(0, 0))
 	if err != nil {
 		t.Error(err)
@@ -84,7 +84,7 @@ func ExamplePresigner_PresignWssNow() {
 	if err != nil {
 		panic(err)
 	}
-	ps := New(cfg)
+	ps := New(&cfg)
 	wssURL, err := ps.PresignWssNow(ctx, "test.iot.world-1.amazonaws.com")
 	if err != nil {
 		panic(err)
