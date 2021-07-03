@@ -33,7 +33,7 @@ type presignDialer struct {
 }
 
 // NewPresignDialer returns WebSockets Dialer with AWS v4 presigned URL.
-func NewPresignDialer(cfg aws.Config, endpoint string, opts ...mqtt.DialOption) (mqtt.Dialer, error) {
+func NewPresignDialer(cfg *aws.Config, endpoint string, opts ...mqtt.DialOption) (mqtt.Dialer, error) {
 	return &presignDialer{
 		signer:   presigner.New(cfg),
 		endpoint: endpoint,
@@ -55,7 +55,7 @@ func (d *presignDialer) DialContext(ctx context.Context) (*mqtt.BaseClient, erro
 
 // NewDialer creates default dialer for the given URL for AWS IoT.
 // Supported protocols are mqtts and wss (with presigned URL).
-func NewDialer(cfg aws.Config, urlStr string, opts ...mqtt.DialOption) (mqtt.Dialer, error) {
+func NewDialer(cfg *aws.Config, urlStr string, opts ...mqtt.DialOption) (mqtt.Dialer, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, ioterr.New(err, "parsing server URL")
