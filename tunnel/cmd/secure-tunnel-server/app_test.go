@@ -23,6 +23,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -195,6 +196,26 @@ func TestApp_error(t *testing.T) {
 		})
 		if !errors.Is(err, context.DeadlineExceeded) {
 			t.Errorf("Expected error: '%v', got: '%v'", context.DeadlineExceeded, err)
+		}
+	})
+	t.Run("InvalidURL", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+
+		os.Clearenv()
+		os.Setenv("AWS_DEFAULT_REGION", "none-none-1")
+		os.Setenv("AWS_ACCESS_KEY_ID", "AKIAAAAAAAAAAAAAAAAA")
+		os.Setenv("SECRET_ACCESS_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
+		err := app(ctx, []string{
+			"test",
+			fmt.Sprintf("-tunnel-addr=:%d", ports[0]),
+			fmt.Sprintf("-api-addr=:%d", ports[0]),
+			"-mqtt-endpoint=%",
+		})
+		var e *url.Error
+		if !errors.As(err, &e) {
+			t.Errorf("Expected error type: %T, got: %T", e, err)
 		}
 	})
 }
