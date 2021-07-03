@@ -18,10 +18,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -79,7 +81,9 @@ func TestApp(t *testing.T) {
 			chExit := make(chan struct{})
 
 			go func() {
-				app(ctx, testCase.opts)
+				if err := app(ctx, testCase.opts); err != nil {
+					t.Error(err)
+				}
 				close(chExit)
 			}()
 
@@ -123,14 +127,16 @@ func TestApp_generateTestToken(t *testing.T) {
 	}()
 
 	go func() {
-		app(ctx,
+		if err := app(ctx,
 			[]string{
 				"test",
 				fmt.Sprintf("-tunnel-addr=:%d", ports[0]),
 				fmt.Sprintf("-api-addr=:%d", ports[0]),
 				"-generate-test-token",
 			},
-		)
+		); err != nil {
+			t.Error(err)
+		}
 		close(chExit)
 	}()
 
@@ -169,4 +175,47 @@ func TestApp_generateTestToken(t *testing.T) {
 	}
 
 	<-chExit
+}
+
+func TestApp_error(t *testing.T) {
+	ports := getPorts(t, 2)
+	t.Run("DialTimeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+
+		os.Clearenv()
+		os.Setenv("AWS_DEFAULT_REGION", "none-none-1")
+		os.Setenv("AWS_ACCESS_KEY_ID", "AKIAAAAAAAAAAAAAAAAA")
+		os.Setenv("SECRET_ACCESS_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
+		err := app(ctx, []string{
+			"test",
+			fmt.Sprintf("-tunnel-addr=:%d", ports[0]),
+			fmt.Sprintf("-api-addr=:%d", ports[0]),
+			fmt.Sprintf("-mqtt-endpoint=localhost:%d", ports[1]),
+		})
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("Expected error: '%v', got: '%v'", context.DeadlineExceeded, err)
+		}
+	})
+	t.Run("InvalidURL", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+
+		os.Clearenv()
+		os.Setenv("AWS_DEFAULT_REGION", "none-none-1")
+		os.Setenv("AWS_ACCESS_KEY_ID", "AKIAAAAAAAAAAAAAAAAA")
+		os.Setenv("SECRET_ACCESS_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
+		err := app(ctx, []string{
+			"test",
+			fmt.Sprintf("-tunnel-addr=:%d", ports[0]),
+			fmt.Sprintf("-api-addr=:%d", ports[0]),
+			"-mqtt-endpoint=%",
+		})
+		var e *url.Error
+		if !errors.As(err, &e) {
+			t.Errorf("Expected error type: %T, got: %T", e, err)
+		}
+	})
 }

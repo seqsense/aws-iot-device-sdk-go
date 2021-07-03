@@ -34,6 +34,10 @@ type presignDialer struct {
 
 // NewPresignDialer returns WebSockets Dialer with AWS v4 presigned URL.
 func NewPresignDialer(cfg *aws.Config, endpoint string, opts ...mqtt.DialOption) (mqtt.Dialer, error) {
+	_, err := url.Parse("wss://" + endpoint)
+	if err != nil {
+		return nil, ioterr.New(err, "parsing endpoint")
+	}
 	return &presignDialer{
 		signer:   presigner.New(cfg),
 		endpoint: endpoint,
