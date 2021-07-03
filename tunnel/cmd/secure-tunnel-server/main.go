@@ -16,9 +16,12 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 )
 
 func main() {
-	app(context.Background(), os.Args)
+	if err := app(context.Background(), os.Args); err != nil {
+		log.Fatal("fatal:", err)
+	}
 }

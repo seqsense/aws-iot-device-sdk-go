@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -79,7 +80,9 @@ func TestApp(t *testing.T) {
 			chExit := make(chan struct{})
 
 			go func() {
-				app(ctx, testCase.opts)
+				if err := app(ctx, testCase.opts); err != nil {
+					t.Error(err)
+				}
 				close(chExit)
 			}()
 
@@ -123,14 +126,16 @@ func TestApp_generateTestToken(t *testing.T) {
 	}()
 
 	go func() {
-		app(ctx,
+		if err := app(ctx,
 			[]string{
 				"test",
 				fmt.Sprintf("-tunnel-addr=:%d", ports[0]),
 				fmt.Sprintf("-api-addr=:%d", ports[0]),
 				"-generate-test-token",
 			},
-		)
+		); err != nil {
+			t.Error(err)
+		}
 		close(chExit)
 	}()
 
@@ -169,4 +174,27 @@ func TestApp_generateTestToken(t *testing.T) {
 	}
 
 	<-chExit
+}
+
+func TestApp_error(t *testing.T) {
+	ports := getPorts(t, 2)
+	t.Run("DialTimeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		os.Clearenv()
+		os.Setenv("AWS_DEFAULT_REGION", "none-none-1")
+		os.Setenv("AWS_ACCESS_KEY_ID", "AKIAAAAAAAAAAAAAAAAA")
+		os.Setenv("SECRET_ACCESS_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
+		err := app(ctx, []string{
+			"test",
+			fmt.Sprintf("-tunnel-addr=:%d", ports[0]),
+			fmt.Sprintf("-api-addr=:%d", ports[0]),
+			fmt.Sprintf("-mqtt-endpoint=localhost:%d", ports[1]),
+		})
+		if errors.Is(err, context.DeadlineExceeded) {
+			t.Error(err)
+		}
+	})
 }

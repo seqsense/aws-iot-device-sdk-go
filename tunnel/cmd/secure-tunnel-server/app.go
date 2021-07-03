@@ -33,7 +33,7 @@ import (
 	"github.com/seqsense/aws-iot-device-sdk-go/v6/tunnel/server"
 )
 
-func app(ctx context.Context, args []string) {
+func app(ctx context.Context, args []string) error {
 	rand.Seed(time.Now().UnixNano())
 
 	f := flag.NewFlagSet(args[0], flag.ExitOnError)
@@ -49,23 +49,23 @@ func app(ctx context.Context, args []string) {
 	if *mqttEndpoint != "" {
 		cfg, err := config.LoadDefaultConfig(context.TODO())
 		if err != nil {
-			log.Fatalf("Failed to load AWS config (%s)", err.Error())
+			return fmt.Errorf("failed to load AWS config: %w", err)
 		}
 
 		dialer, err := awsiot.NewPresignDialer(cfg, *mqttEndpoint,
 			mqtt.WithConnStateHandler(func(s mqtt.ConnState, err error) {
-				log.Printf("MQTT connection state changed (%s)", s)
+				log.Printf("info: MQTT connection state changed (%s)", s)
 			}),
 		)
 		if err != nil {
-			log.Fatalf("Failed to create AWS IoT presign dialer (%s)", err.Error())
+			return fmt.Errorf("failed to create AWS IoT presign dialer: %w", err)
 		}
 		cli, err := mqtt.NewReconnectClient(
 			dialer,
 			mqtt.WithReconnectWait(50*time.Millisecond, 2*time.Second),
 		)
 		if err != nil {
-			log.Fatalf("Failed to create MQTT client (%s)", err.Error())
+			return fmt.Errorf("failed to create MQTT client: %w", err)
 		}
 
 		ctxConnect, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -75,11 +75,11 @@ func app(ctx context.Context, args []string) {
 			fmt.Sprintf("secure-tunnel-server-%d", rand.Int()),
 			mqtt.WithKeepAlive(30),
 		); err != nil {
-			log.Fatalf("Failed to start MQTT reconnect client (%s)", err.Error())
+			return fmt.Errorf("failed to start MQTT reconnect client: %s", err)
 		}
 		notifier = server.NewNotifier(cli)
 	} else {
-		log.Print("MQTT notification is disabled")
+		log.Print("info: MQTT notification is disabled")
 	}
 
 	tunnelHandler := server.NewTunnelHandler()
@@ -161,16 +161,17 @@ func app(ctx context.Context, args []string) {
 		switch err {
 		case http.ErrServerClosed, nil:
 		default:
-			log.Print(err)
+			log.Println("error:", err)
 		}
 	case <-ctx.Done():
 	}
 	for _, s := range servers {
 		if err := s.Close(); err != nil {
-			log.Print(err)
+			log.Println("error:", err)
 		}
 	}
 	wg.Wait()
+	return nil
 }
 
 type noopResponseWriter struct{}
