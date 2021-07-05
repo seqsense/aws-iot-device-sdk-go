@@ -44,6 +44,7 @@ import (
 )
 
 func TestNewDialer(t *testing.T) {
+	cfg := &aws.Config{}
 	t.Run("ValidURL", func(t *testing.T) {
 		cases := map[string]struct {
 			url    string
@@ -57,7 +58,7 @@ func TestNewDialer(t *testing.T) {
 			"WebSockets": {
 				url: "wss://hoge.foo:1234/ep",
 				dialer: &presignDialer{
-					signer:   &presigner.Presigner{},
+					signer:   presigner.New(cfg),
 					endpoint: "hoge.foo:1234",
 				},
 			},
@@ -69,7 +70,7 @@ func TestNewDialer(t *testing.T) {
 		for name, c := range cases {
 			c := c
 			t.Run(name, func(t *testing.T) {
-				d, err := NewDialer(aws.Config{}, c.url)
+				d, err := NewDialer(cfg, c.url)
 				if !errors.Is(err, c.err) {
 					var ie *ioterr.Error
 					if !errors.As(err, &ie) {
@@ -84,7 +85,7 @@ func TestNewDialer(t *testing.T) {
 		}
 	})
 	t.Run("InvalidURL", func(t *testing.T) {
-		_, err := NewDialer(aws.Config{}, ":aaa")
+		_, err := NewDialer(&aws.Config{}, ":aaa")
 		var ie *ioterr.Error
 		if !errors.As(err, &ie) {
 			t.Errorf("Expected error type: %T, actual: %T", ie, err)
@@ -106,7 +107,7 @@ func TestPresignDialer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ps := presigner.New(cfg)
+	ps := presigner.New(&cfg)
 
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {

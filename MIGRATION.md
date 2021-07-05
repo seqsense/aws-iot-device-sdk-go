@@ -18,7 +18,7 @@
        // error handling
      }
     -dialer, err := awsiotdev.NewPresignDialer(sess, endpoint)
-    +dialer, err := awsiotdev.NewPresignDialer(cfg, endpoint)
+    +dialer, err := awsiotdev.NewPresignDialer(&cfg, endpoint)
     ```
   - 🔄If you want to use aws/aws-sdk-go (v1), with aws-iot-device-sdk-go v6:
     ```go

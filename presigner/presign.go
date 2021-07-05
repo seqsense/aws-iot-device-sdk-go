@@ -40,11 +40,11 @@ const (
 
 // Presigner is an AWS v4 signer wrapper for AWS IoT.
 type Presigner struct {
-	cfg aws.Config
+	cfg *aws.Config
 }
 
 // New returns new AWS v4 signer wrapper for AWS IoT.
-func New(c aws.Config) *Presigner {
+func New(c *aws.Config) *Presigner {
 	return &Presigner{
 		cfg: c,
 	}

@@ -52,7 +52,7 @@ func app(ctx context.Context, args []string) error {
 			return fmt.Errorf("failed to load AWS config: %w", err)
 		}
 
-		dialer, err := awsiot.NewPresignDialer(cfg, *mqttEndpoint,
+		dialer, err := awsiot.NewPresignDialer(&cfg, *mqttEndpoint,
 			mqtt.WithConnStateHandler(func(s mqtt.ConnState, err error) {
 				log.Printf("info: MQTT connection state changed (%s)", s)
 			}),
