@@ -57,7 +57,7 @@ func ProxyDestination(dialer Dialer, endpoint, token string, opts ...ProxyOption
 	pingCancel := newPinger(ws, opt.PingPeriod)
 	defer pingCancel()
 
-	return proxyDestination(ws, dialer, opt.ErrorHandler)
+	return proxyDestination(ws, dialer, opt.ErrorHandler, opt.Stat)
 }
 
 // ProxySource proxies TCP connection from local socket to
@@ -72,7 +72,7 @@ func ProxySource(listener net.Listener, endpoint, token string, opts ...ProxyOpt
 	pingCancel := newPinger(ws, opt.PingPeriod)
 	defer pingCancel()
 
-	return proxySource(ws, listener, opt.ErrorHandler)
+	return proxySource(ws, listener, opt.ErrorHandler, opt.Stat)
 }
 
 func openProxyConn(endpoint, mode, token string, opts ...ProxyOption) (*websocket.Conn, *ProxyOptions, error) {
@@ -140,6 +140,7 @@ type ProxyOptions struct {
 	Scheme             string
 	ErrorHandler       ErrorHandler
 	PingPeriod         time.Duration
+	Stat               Stat
 }
 
 func (o *ProxyOptions) validate() error {
@@ -163,6 +164,14 @@ func WithErrorHandler(h ErrorHandler) ProxyOption {
 func WithPingPeriod(d time.Duration) ProxyOption {
 	return func(opt *ProxyOptions) error {
 		opt.PingPeriod = d
+		return nil
+	}
+}
+
+// WithStat enables statistics.
+func WithStat(stat Stat) ProxyOption {
+	return func(opt *ProxyOptions) error {
+		opt.Stat = stat
 		return nil
 	}
 }

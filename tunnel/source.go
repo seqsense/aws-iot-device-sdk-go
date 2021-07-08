@@ -25,7 +25,7 @@ import (
 	"github.com/seqsense/aws-iot-device-sdk-go/v6/tunnel/msg"
 )
 
-func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler) error {
+func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler, stat Stat) error {
 	var muConns sync.Mutex
 	conns := make(map[int32]io.ReadWriteCloser)
 	go func() {
@@ -113,6 +113,12 @@ func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler) error
 					eh.HandleError(ioterr.New(err, "writing message"))
 				}
 			}
+		}
+
+		if stat != nil {
+			stat.Update(func(stat *Statistics) {
+				stat.NumConn = len(conns)
+			})
 		}
 	}
 }

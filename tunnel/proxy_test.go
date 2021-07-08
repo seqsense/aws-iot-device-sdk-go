@@ -18,6 +18,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -34,90 +35,107 @@ var (
 
 func TestProxyDestination(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		tca, tcb := net.Pipe()
-		ca, cb := net.Pipe()
+		test := func(t *testing.T, stat Stat) {
+			tca, tcb := net.Pipe()
+			ca, cb := net.Pipe()
 
-		var wg sync.WaitGroup
-		wg.Add(1)
-		defer wg.Wait()
+			var wg sync.WaitGroup
+			wg.Add(1)
+			defer wg.Wait()
 
-		go func() {
-			defer wg.Done()
-			err := proxyDestination(tca,
-				func() (io.ReadWriteCloser, error) { return cb, nil },
-				nil,
-			)
-			if err != nil {
-				t.Error(err)
+			go func() {
+				defer wg.Done()
+				err := proxyDestination(tca,
+					func() (io.ReadWriteCloser, error) { return cb, nil },
+					nil, stat,
+				)
+				if err != nil {
+					t.Error(err)
+				}
+			}()
+
+			payload1 := "the payload 1"
+			payload2 := "the payload 2"
+
+			// Check source to destination
+			msgs := []*msg.Message{
+				{
+					Type:     msg.Message_STREAM_START,
+					StreamId: 1,
+				},
+				{
+					Type:     msg.Message_DATA,
+					StreamId: 1,
+					Payload:  []byte(payload1),
+				},
 			}
-		}()
+			for _, m := range msgs {
+				b, err := proto.Marshal(m)
+				if err != nil {
+					t.Fatal(err)
+				}
+				l := len(b)
+				_, err = tcb.Write(append(
+					[]byte{byte(l >> 8), byte(l)},
+					b...,
+				))
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			bRecv := make([]byte, 100)
+			n, err := ca.Read(bRecv)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(bRecv[:n]) != payload1 {
+				t.Errorf("payload differs, expected: %s, got: %s", payload1, string(bRecv[:n]))
+			}
 
-		payload1 := "the payload 1"
-		payload2 := "the payload 2"
-
-		// Check source to destination
-		msgs := []*msg.Message{
-			{
-				Type:     msg.Message_STREAM_START,
-				StreamId: 1,
-			},
-			{
+			// Check destination to source
+			if _, err := ca.Write([]byte(payload2)); err != nil {
+				t.Fatal(err)
+			}
+			sz := make([]byte, 2)
+			if _, err := io.ReadFull(tcb, sz); err != nil {
+				t.Fatal(err)
+			}
+			bSent := make([]byte, int(sz[0])<<8|int(sz[1]))
+			if _, err := io.ReadFull(tcb, bSent); err != nil {
+				t.Fatal(err)
+			}
+			m := &msg.Message{}
+			if err := proto.Unmarshal(bSent, m); err != nil {
+				t.Fatalf("unmarshal failed: %v", err)
+			}
+			msgExpected := &msg.Message{
 				Type:     msg.Message_DATA,
 				StreamId: 1,
-				Payload:  []byte(payload1),
-			},
-		}
-		for _, m := range msgs {
-			b, err := proto.Marshal(m)
-			if err != nil {
-				t.Fatal(err)
+				Payload:  []byte(payload2),
 			}
-			l := len(b)
-			_, err = tcb.Write(append(
-				[]byte{byte(l >> 8), byte(l)},
-				b...,
-			))
-			if err != nil {
+			if !proto.Equal(msgExpected, m) {
+				t.Errorf("message differes, expected: %v, got: %v", msgExpected, m)
+			}
+
+			if err := tcb.Close(); err != nil {
 				t.Fatal(err)
 			}
 		}
-		bRecv := make([]byte, 100)
-		n, err := ca.Read(bRecv)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if string(bRecv[:n]) != payload1 {
-			t.Errorf("payload differs, expected: %s, got: %s", payload1, string(bRecv[:n]))
-		}
+		t.Run("WithoutStat", func(t *testing.T) {
+			test(t, nil)
+		})
+		t.Run("WithStat", func(t *testing.T) {
+			stat := NewStat()
+			test(t, stat)
 
-		// Check destination to source
-		if _, err := ca.Write([]byte(payload2)); err != nil {
-			t.Fatal(err)
-		}
-		sz := make([]byte, 2)
-		if _, err := io.ReadFull(tcb, sz); err != nil {
-			t.Fatal(err)
-		}
-		bSent := make([]byte, int(sz[0])<<8|int(sz[1]))
-		if _, err := io.ReadFull(tcb, bSent); err != nil {
-			t.Fatal(err)
-		}
-		m := &msg.Message{}
-		if err := proto.Unmarshal(bSent, m); err != nil {
-			t.Fatalf("unmarshal failed: %v", err)
-		}
-		msgExpected := &msg.Message{
-			Type:     msg.Message_DATA,
-			StreamId: 1,
-			Payload:  []byte(payload2),
-		}
-		if !proto.Equal(msgExpected, m) {
-			t.Errorf("message differes, expected: %v, got: %v", msgExpected, m)
-		}
-
-		if err := tcb.Close(); err != nil {
-			t.Fatal(err)
-		}
+			s := stat.Statistics()
+			expected := Statistics{
+				NumConn: 1,
+			}
+			if !reflect.DeepEqual(expected, s) {
+				t.Errorf("Expected stat: %+v, got: %+v", expected, s)
+			}
+		})
 	})
 	t.Run("DialError", func(t *testing.T) {
 		tca, tcb := net.Pipe()
@@ -134,6 +152,7 @@ func TestProxyDestination(t *testing.T) {
 				ErrorHandlerFunc(func(err error) {
 					chErr <- err
 				}),
+				nil,
 			); err != nil {
 				t.Error(err)
 			}
@@ -181,6 +200,7 @@ func TestProxyDestination(t *testing.T) {
 				ErrorHandlerFunc(func(err error) {
 					chErr <- err
 				}),
+				nil,
 			); err != nil {
 				t.Error(err)
 			}
@@ -244,7 +264,7 @@ func TestProxyDestination(t *testing.T) {
 					}
 				}()
 
-				err := proxyDestination(ca, nil, nil)
+				err := proxyDestination(ca, nil, nil, nil)
 
 				var ie *ioterr.Error
 				if !errors.As(err, &ie) {
@@ -265,6 +285,7 @@ func TestProxyDestination(t *testing.T) {
 		go func() {
 			if err := proxyDestination(ca, nil,
 				ErrorHandlerFunc(func(err error) { chErr <- err }),
+				nil,
 			); err != nil {
 				t.Error(err)
 			}
@@ -294,103 +315,120 @@ func TestProxyDestination(t *testing.T) {
 
 func TestProxySource(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		tca, tcb := net.Pipe()
-		ca, cb := net.Pipe()
+		test := func(t *testing.T, stat Stat) {
+			tca, tcb := net.Pipe()
+			ca, cb := net.Pipe()
 
-		var wg sync.WaitGroup
-		defer wg.Wait()
+			var wg sync.WaitGroup
+			defer wg.Wait()
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			var i int
-			if err := proxySource(tca,
-				acceptFunc(func() (net.Conn, error) {
-					if i > 0 {
-						return nil, errors.New("done")
-					}
-					i++
-					return cb, nil
-				}),
-				nil,
-			); err != nil {
-				t.Error(err)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				var i int
+				if err := proxySource(tca,
+					acceptFunc(func() (net.Conn, error) {
+						if i > 0 {
+							return nil, errors.New("done")
+						}
+						i++
+						return cb, nil
+					}),
+					nil, stat,
+				); err != nil {
+					t.Error(err)
+				}
+			}()
+
+			payload1 := "the payload 1"
+			payload2 := "the payload 2"
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if _, err := ca.Write([]byte(payload1)); err != nil {
+					t.Error(err)
+				}
+			}()
+
+			// Check source to destination
+			msgsExpected := []*msg.Message{
+				{
+					Type:     msg.Message_STREAM_START,
+					StreamId: 1,
+				},
+				{
+					Type:     msg.Message_DATA,
+					StreamId: 1,
+					Payload:  []byte(payload1),
+				},
 			}
-		}()
-
-		payload1 := "the payload 1"
-		payload2 := "the payload 2"
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if _, err := ca.Write([]byte(payload1)); err != nil {
-				t.Error(err)
+			for _, me := range msgsExpected {
+				sz := make([]byte, 2)
+				if _, err := io.ReadFull(tcb, sz); err != nil {
+					t.Fatal(err)
+				}
+				bSent := make([]byte, int(sz[0])<<8|int(sz[1]))
+				if _, err := io.ReadFull(tcb, bSent); err != nil {
+					t.Fatal(err)
+				}
+				m := &msg.Message{}
+				if err := proto.Unmarshal(bSent, m); err != nil {
+					t.Fatalf("unmarshal failed: %v", err)
+				}
+				if !proto.Equal(me, m) {
+					t.Errorf("message differs, expected: %v, got: %v", me, m)
+				}
 			}
-		}()
 
-		// Check source to destination
-		msgsExpected := []*msg.Message{
-			{
-				Type:     msg.Message_STREAM_START,
-				StreamId: 1,
-			},
-			{
+			// Check destination to source
+			msg := &msg.Message{
 				Type:     msg.Message_DATA,
 				StreamId: 1,
-				Payload:  []byte(payload1),
-			},
-		}
-		for _, me := range msgsExpected {
-			sz := make([]byte, 2)
-			if _, err := io.ReadFull(tcb, sz); err != nil {
+				Payload:  []byte(payload2),
+			}
+			b, err := proto.Marshal(msg)
+			if err != nil {
 				t.Fatal(err)
 			}
-			bSent := make([]byte, int(sz[0])<<8|int(sz[1]))
-			if _, err := io.ReadFull(tcb, bSent); err != nil {
+			l := len(b)
+			_, err = tcb.Write(append(
+				[]byte{byte(l >> 8), byte(l)},
+				b...,
+			))
+			if err != nil {
 				t.Fatal(err)
 			}
-			m := &msg.Message{}
-			if err := proto.Unmarshal(bSent, m); err != nil {
-				t.Fatalf("unmarshal failed: %v", err)
+
+			bRecv := make([]byte, 100)
+			n, err := ca.Read(bRecv)
+			if err != nil {
+				t.Fatal(err)
 			}
-			if !proto.Equal(me, m) {
-				t.Errorf("message differs, expected: %v, got: %v", me, m)
+			if string(bRecv[:n]) != payload2 {
+				t.Errorf("payload differs, expected: %s, got: %s", payload2, string(bRecv[:n]))
+			}
+
+			// Check EOF
+			if err := tcb.Close(); err != nil {
+				t.Fatal(err)
 			}
 		}
+		t.Run("WithoutStat", func(t *testing.T) {
+			test(t, nil)
+		})
+		t.Run("WithStat", func(t *testing.T) {
+			stat := NewStat()
+			test(t, stat)
 
-		// Check destination to source
-		msg := &msg.Message{
-			Type:     msg.Message_DATA,
-			StreamId: 1,
-			Payload:  []byte(payload2),
-		}
-		b, err := proto.Marshal(msg)
-		if err != nil {
-			t.Fatal(err)
-		}
-		l := len(b)
-		_, err = tcb.Write(append(
-			[]byte{byte(l >> 8), byte(l)},
-			b...,
-		))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		bRecv := make([]byte, 100)
-		n, err := ca.Read(bRecv)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if string(bRecv[:n]) != payload2 {
-			t.Errorf("payload differs, expected: %s, got: %s", payload2, string(bRecv[:n]))
-		}
-
-		// Check EOF
-		if err := tcb.Close(); err != nil {
-			t.Fatal(err)
-		}
+			s := stat.Statistics()
+			expected := Statistics{
+				NumConn: 1,
+			}
+			if !reflect.DeepEqual(expected, s) {
+				t.Errorf("Expected stat: %+v, got: %+v", expected, s)
+			}
+		})
 	})
 	t.Run("AcceptError", func(t *testing.T) {
 		tca, tcb := net.Pipe()
@@ -407,6 +445,7 @@ func TestProxySource(t *testing.T) {
 				ErrorHandlerFunc(func(err error) {
 					chErr <- err
 				}),
+				nil,
 			); err != nil {
 				t.Error(err)
 			}
@@ -471,7 +510,7 @@ func TestProxySource(t *testing.T) {
 						wg.Wait()
 						return nil, errConnect
 					}),
-					nil,
+					nil, nil,
 				)
 
 				var ie *ioterr.Error
@@ -500,6 +539,7 @@ func TestProxySource(t *testing.T) {
 					return nil, errConnect
 				}),
 				ErrorHandlerFunc(func(err error) { chErr <- err }),
+				nil,
 			); err != nil {
 				t.Error(err)
 			}
@@ -556,6 +596,7 @@ func TestProxySource(t *testing.T) {
 					return cb, nil
 				}),
 				ErrorHandlerFunc(func(err error) { chErr <- err }),
+				nil,
 			); err != nil {
 				t.Error(err)
 			}
