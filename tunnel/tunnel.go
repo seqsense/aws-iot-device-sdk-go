@@ -47,6 +47,9 @@ type Options struct {
 	EndpointHostFunc func(region string) string
 	// TopicFunc is a function returns MQTT topic for the operation.
 	TopicFunc func(operation string) string
+
+	// ProxyOptions stores slice of ProxyOptions for each service.
+	ProxyOptions map[string][]ProxyOption
 }
 
 // Option is a type of functional options.
@@ -68,6 +71,7 @@ func New(ctx context.Context, cli awsiotdev.Device, dialer map[string]Dialer, op
 	t.opts = &Options{
 		TopicFunc:        t.topic,
 		EndpointHostFunc: endpointHost,
+		ProxyOptions:     make(map[string][]ProxyOption),
 	}
 	for _, o := range opts {
 		if err := o(t.opts); err != nil {
@@ -101,11 +105,15 @@ func (t *tunnel) notify(msg *mqtt.Message) {
 	for _, srv := range n.Services {
 		if d, ok := t.dialerMap[srv]; ok {
 			go func() {
+				opts := append(
+					[]ProxyOption{WithErrorHandler(ErrorHandlerFunc(t.handleError))},
+					t.opts.ProxyOptions[srv]...,
+				)
 				err := ProxyDestination(
 					d,
 					t.opts.EndpointHostFunc(n.Region),
 					n.ClientAccessToken,
-					WithErrorHandler(ErrorHandlerFunc(t.handleError)),
+					opts...,
 				)
 				if err != nil {
 					t.handleError(ioterr.New(err, "creating proxy destination"))

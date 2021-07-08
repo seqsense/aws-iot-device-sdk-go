@@ -25,9 +25,21 @@ import (
 	"github.com/seqsense/aws-iot-device-sdk-go/v6/tunnel/msg"
 )
 
-func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler) error {
+func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler, stat Stat) error {
 	var muConns sync.Mutex
 	conns := make(map[int32]io.ReadWriteCloser)
+
+	updateStat := func() {
+		if stat != nil {
+			muConns.Lock()
+			n := len(conns)
+			muConns.Unlock()
+			stat.Update(func(stat *Statistics) {
+				stat.NumConn = n
+			})
+		}
+	}
+
 	go func() {
 		var streamID int32 = 1
 		for {
@@ -55,7 +67,16 @@ func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler) error
 				continue
 			}
 
-			go readProxy(ws, conn, id, eh)
+			go func() {
+				readProxy(ws, conn, id, eh)
+				muConns.Lock()
+				if conn, ok := conns[id]; ok {
+					_ = conn.Close()
+					delete(conns, id)
+				}
+				muConns.Unlock()
+				updateStat()
+			}()
 		}
 	}()
 
@@ -114,5 +135,6 @@ func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler) error
 				}
 			}
 		}
+		updateStat()
 	}
 }
