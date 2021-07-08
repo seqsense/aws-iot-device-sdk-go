@@ -19,3 +19,5 @@ archives:
       - none*
 checksum:
   name_template: 'checksums.txt'
+release:
+  prerelease: auto
