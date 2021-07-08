@@ -28,6 +28,18 @@ import (
 func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler, stat Stat) error {
 	var muConns sync.Mutex
 	conns := make(map[int32]io.ReadWriteCloser)
+
+	updateStat := func() {
+		if stat != nil {
+			muConns.Lock()
+			n := len(conns)
+			muConns.Unlock()
+			stat.Update(func(stat *Statistics) {
+				stat.NumConn = n
+			})
+		}
+	}
+
 	go func() {
 		var streamID int32 = 1
 		for {
@@ -55,7 +67,16 @@ func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler, stat 
 				continue
 			}
 
-			go readProxy(ws, conn, id, eh)
+			go func() {
+				readProxy(ws, conn, id, eh)
+				muConns.Lock()
+				if conn, ok := conns[id]; ok {
+					_ = conn.Close()
+					delete(conns, id)
+				}
+				muConns.Unlock()
+				updateStat()
+			}()
 		}
 	}()
 
@@ -114,11 +135,6 @@ func proxySource(ws io.ReadWriter, listener net.Listener, eh ErrorHandler, stat 
 				}
 			}
 		}
-
-		if stat != nil {
-			stat.Update(func(stat *Statistics) {
-				stat.NumConn = len(conns)
-			})
-		}
+		updateStat()
 	}
 }

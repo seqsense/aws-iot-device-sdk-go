@@ -16,6 +16,7 @@ package tunnel
 
 import (
 	"io"
+	"sync"
 
 	"google.golang.org/protobuf/proto"
 
@@ -24,9 +25,22 @@ import (
 )
 
 func proxyDestination(ws io.ReadWriter, dialer Dialer, eh ErrorHandler, stat Stat) error {
+	var muConns sync.Mutex
 	conns := make(map[int32]io.ReadWriteCloser)
 	sz := make([]byte, 2)
 	b := make([]byte, 8192)
+
+	updateStat := func() {
+		if stat != nil {
+			muConns.Lock()
+			n := len(conns)
+			muConns.Unlock()
+			stat.Update(func(stat *Statistics) {
+				stat.NumConn = n
+			})
+		}
+	}
+
 	for {
 		if _, err := io.ReadFull(ws, sz); err != nil {
 			if err == io.EOF {
@@ -62,34 +76,47 @@ func proxyDestination(ws io.ReadWriter, dialer Dialer, eh ErrorHandler, stat Sta
 				continue
 			}
 
+			muConns.Lock()
 			conns[m.StreamId] = conn
-			go readProxy(ws, conn, m.StreamId, eh)
+			muConns.Unlock()
+			go func() {
+				readProxy(ws, conn, m.StreamId, eh)
+				muConns.Lock()
+				if conn, ok := conns[m.StreamId]; ok {
+					_ = conn.Close()
+					delete(conns, m.StreamId)
+				}
+				muConns.Unlock()
+				updateStat()
+			}()
 
 		case msg.Message_STREAM_RESET:
+			muConns.Lock()
 			if conn, ok := conns[m.StreamId]; ok {
 				_ = conn.Close()
 				delete(conns, m.StreamId)
 			}
+			muConns.Unlock()
 
 		case msg.Message_SESSION_RESET:
+			muConns.Lock()
 			for id, c := range conns {
 				_ = c.Close()
 				delete(conns, id)
 			}
+			muConns.Unlock()
 			return io.EOF
 
 		case msg.Message_DATA:
-			if conn, ok := conns[m.StreamId]; ok {
+			muConns.Lock()
+			conn, ok := conns[m.StreamId]
+			muConns.Unlock()
+			if ok {
 				if _, err := conn.Write(m.Payload); err != nil {
 					eh.HandleError(ioterr.New(err, "writing message"))
 				}
 			}
 		}
-
-		if stat != nil {
-			stat.Update(func(stat *Statistics) {
-				stat.NumConn = len(conns)
-			})
-		}
+		updateStat()
 	}
 }
