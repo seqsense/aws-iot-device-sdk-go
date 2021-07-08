@@ -18,15 +18,19 @@ import (
 	"sync"
 )
 
+// Stat is an interface to get and update the statistics of the proxy.
+// All methods are thread safe.
 type Stat interface {
 	Statistics() Statistics
 	Update(func(*Statistics))
 }
 
+// Statistics stores proxy statistics data.
 type Statistics struct {
 	NumConn int
 }
 
+// NewStat creates new Stat.
 func NewStat() Stat {
 	return &stat{}
 }
