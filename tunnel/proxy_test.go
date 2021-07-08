@@ -20,6 +20,7 @@ import (
 	"net"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -188,6 +189,9 @@ func TestProxyDestination(t *testing.T) {
 		tca, tcb := net.Pipe()
 		ca, cb := net.Pipe()
 
+		cbWithErr := &errorConn{Conn: cb}
+		cb = cbWithErr
+
 		var wg sync.WaitGroup
 		defer wg.Wait()
 
@@ -217,7 +221,8 @@ func TestProxyDestination(t *testing.T) {
 		if _, err = tcb.Write(append([]byte{byte(l >> 8), byte(l)}, b...)); err != nil {
 			t.Fatal(err)
 		}
-		ca.Close()
+		cbWithErr.err.Store(io.ErrClosedPipe)
+		defer ca.Close()
 
 		b, err = proto.Marshal(&msg.Message{
 			Type:     msg.Message_DATA,
@@ -667,4 +672,16 @@ func TestProxyOption_validate(t *testing.T) {
 			})
 		}
 	})
+}
+
+type errorConn struct {
+	net.Conn
+	err atomic.Value
+}
+
+func (c *errorConn) Write(b []byte) (int, error) {
+	if err, ok := c.err.Load().(error); err != nil && ok {
+		return 0, err
+	}
+	return c.Conn.Write(b)
 }
