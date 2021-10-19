@@ -23,12 +23,12 @@ import (
 
 // Device is an AWS IoT device.
 type Device interface {
-	mqtt.Client
+	mqtt.ReconnectClient
 	ThingName() string
 }
 
 type device struct {
-	mqtt.Client
+	mqtt.ReconnectClient
 	thingName string
 }
 
@@ -39,8 +39,8 @@ func New(thingName string, dialer mqtt.Dialer, opts ...mqtt.ReconnectOption) (De
 		return nil, ioterr.New(err, "creating MQTT connection")
 	}
 	return &device{
-		Client:    cli,
-		thingName: thingName,
+		ReconnectClient: cli,
+		thingName:       thingName,
 	}, nil
 }
 
