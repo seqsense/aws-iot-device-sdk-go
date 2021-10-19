@@ -27,8 +27,14 @@ import (
 	"github.com/seqsense/aws-iot-device-sdk-go/v6/internal/ioterr"
 )
 
+type mockClient interface {
+	mqtt.Client
+	mqtt.Handler
+}
+
 type mockDevice struct {
-	*mockmqtt.Client
+	mockClient
+	mqtt.Retryer
 }
 
 func (d *mockDevice) ThingName() string {
@@ -42,7 +48,7 @@ func TestNew(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		cli := &mockDevice{&mockmqtt.Client{}}
+		cli := &mockDevice{mockClient: &mockmqtt.Client{}}
 		_, err := New(ctx, cli, map[string]Dialer{}, func(opts *Options) error {
 			return errDummy
 		})
@@ -58,7 +64,7 @@ func TestNew(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		cli := &mockDevice{&mockmqtt.Client{
+		cli := &mockDevice{mockClient: &mockmqtt.Client{
 			SubscribeFn: func(ctx context.Context, subs ...mqtt.Subscription) ([]mqtt.Subscription, error) {
 				return nil, errDummy
 			},
@@ -76,7 +82,7 @@ func TestNew(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		cli := &mockDevice{&mockmqtt.Client{}}
+		cli := &mockDevice{mockClient: &mockmqtt.Client{}}
 		_, err := New(ctx, cli, map[string]Dialer{}, func(opts *Options) error {
 			opts.TopicFunc = func(operation string) string {
 				return "##"
@@ -98,7 +104,7 @@ func TestHandlers(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	cli := &mockDevice{&mockmqtt.Client{}}
+	cli := &mockDevice{mockClient: &mockmqtt.Client{}}
 	tu, err := New(ctx, cli, map[string]Dialer{})
 	if err != nil {
 		t.Fatal(err)
@@ -156,7 +162,7 @@ func TestHandlers_InvalidResponse(t *testing.T) {
 	defer cancel()
 
 	var cli *mockDevice
-	cli = &mockDevice{Client: &mockmqtt.Client{}}
+	cli = &mockDevice{mockClient: &mockmqtt.Client{}}
 
 	s, err := New(ctx, cli, map[string]Dialer{})
 	if err != nil {

@@ -30,8 +30,14 @@ import (
 
 var errPublish = errors.New("publish failure")
 
+type mockClient interface {
+	mqtt.Client
+	mqtt.Handler
+}
+
 type mockDevice struct {
-	*mockmqtt.Client
+	mockClient
+	mqtt.Retryer
 }
 
 func (d *mockDevice) ThingName() string {
@@ -45,7 +51,7 @@ func TestNew(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		cli := &mockDevice{&mockmqtt.Client{
+		cli := &mockDevice{mockClient: &mockmqtt.Client{
 			SubscribeFn: func(ctx context.Context, subs ...mqtt.Subscription) ([]mqtt.Subscription, error) {
 				return nil, errDummy
 			},
@@ -65,7 +71,7 @@ func TestNotify(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	cli := &mockDevice{&mockmqtt.Client{}}
+	cli := &mockDevice{mockClient: &mockmqtt.Client{}}
 	j, err := New(ctx, cli)
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +158,7 @@ func TestGetPendingJobs(t *testing.T) {
 
 			var j Jobs
 			cli := &mockDevice{
-				Client: &mockmqtt.Client{
+				mockClient: &mockmqtt.Client{
 					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
 						if testCase.publishFailure {
 							return errPublish
@@ -267,7 +273,7 @@ func TestDescribeJob(t *testing.T) {
 
 			var j Jobs
 			cli := &mockDevice{
-				Client: &mockmqtt.Client{
+				mockClient: &mockmqtt.Client{
 					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
 						if testCase.publishFailure {
 							return errPublish
@@ -458,7 +464,7 @@ func TestUpdateJob(t *testing.T) {
 
 			var j Jobs
 			cli := &mockDevice{
-				Client: &mockmqtt.Client{
+				mockClient: &mockmqtt.Client{
 					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
 						if testCase.publishFailure {
 							return errPublish
@@ -530,7 +536,7 @@ func TestHandlers_InvalidResponse(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
 
-			cli := &mockDevice{Client: &mockmqtt.Client{}}
+			cli := &mockDevice{mockClient: &mockmqtt.Client{}}
 
 			j, err := New(ctx, cli)
 			if err != nil {
