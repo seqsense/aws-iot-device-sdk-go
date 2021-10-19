@@ -29,8 +29,14 @@ import (
 	"github.com/seqsense/aws-iot-device-sdk-go/v6/internal/ioterr"
 )
 
+type mockClient interface {
+	mqtt.Client
+	mqtt.Handler
+}
+
 type mockDevice struct {
-	*mockmqtt.Client
+	mockClient
+	mqtt.Retryer
 }
 
 func (d *mockDevice) ThingName() string {
@@ -44,7 +50,7 @@ func TestNew(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		cli := &mockDevice{&mockmqtt.Client{
+		cli := &mockDevice{mockClient: &mockmqtt.Client{
 			SubscribeFn: func(ctx context.Context, subs ...mqtt.Subscription) ([]mqtt.Subscription, error) {
 				return nil, errDummy
 			},
@@ -64,7 +70,7 @@ func TestNew(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
 
-			cli := &mockDevice{&mockmqtt.Client{}}
+			cli := &mockDevice{mockClient: &mockmqtt.Client{}}
 			operation := "foo/bar"
 
 			testCases := map[string]struct {
@@ -400,7 +406,7 @@ func TestHandlers_InvalidResponse(t *testing.T) {
 			defer cancel()
 
 			var cli *mockDevice
-			cli = &mockDevice{Client: &mockmqtt.Client{}}
+			cli = &mockDevice{mockClient: &mockmqtt.Client{}}
 
 			s, err := New(ctx, cli)
 			if err != nil {
@@ -432,7 +438,7 @@ func TestOnDelta(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	cli := &mockDevice{&mockmqtt.Client{}}
+	cli := &mockDevice{mockClient: &mockmqtt.Client{}}
 	s, err := New(ctx, cli)
 	if err != nil {
 		t.Fatal(err)
@@ -658,7 +664,7 @@ func TestGet(t *testing.T) {
 			var s Shadow
 			var cli *mockDevice
 			cli = &mockDevice{
-				Client: &mockmqtt.Client{
+				mockClient: &mockmqtt.Client{
 					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
 						req := &simpleRequest{}
 						if err := json.Unmarshal(msg.Payload, req); err != nil {
@@ -766,7 +772,7 @@ func TestDesire(t *testing.T) {
 					var s Shadow
 					var cli *mockDevice
 					cli = &mockDevice{
-						Client: &mockmqtt.Client{
+						mockClient: &mockmqtt.Client{
 							PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
 								req := &simpleRequest{}
 								if err := json.Unmarshal(msg.Payload, req); err != nil {
@@ -873,7 +879,7 @@ func TestReport(t *testing.T) {
 					var s Shadow
 					var cli *mockDevice
 					cli = &mockDevice{
-						Client: &mockmqtt.Client{
+						mockClient: &mockmqtt.Client{
 							PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
 								req := &simpleRequest{}
 								if err := json.Unmarshal(msg.Payload, req); err != nil {
@@ -952,7 +958,7 @@ func TestDelete(t *testing.T) {
 			var s Shadow
 			var cli *mockDevice
 			cli = &mockDevice{
-				Client: &mockmqtt.Client{
+				mockClient: &mockmqtt.Client{
 					PublishFn: func(ctx context.Context, msg *mqtt.Message) error {
 						req := &simpleRequest{}
 						if err := json.Unmarshal(msg.Payload, req); err != nil {
