@@ -1,6 +1,7 @@
 # =====================
-FROM golang:1.17-alpine as go-builder
+FROM golang:1.18-alpine as go-builder
 
+RUN apk add --no-cache git
 ENV CGO_ENABLED=0
 
 COPY go.mod go.sum /go/src/github.com/seqsense/aws-iot-device-sdk-go/
