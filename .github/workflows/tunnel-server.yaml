@@ -45,7 +45,6 @@ jobs:
           docker push ${image}:latest
           docker logout ghcr.io
 
-
       - name: Configure AWS credentials from Test account
         if: startsWith(github.ref, 'refs/tags')
         uses: aws-actions/configure-aws-credentials@v1
