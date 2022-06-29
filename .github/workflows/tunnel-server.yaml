@@ -12,6 +12,9 @@ on:
 jobs:
   tunnel-server:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Set image tag
         if: startsWith(github.ref, 'refs/tags/v')
