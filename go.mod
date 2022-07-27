@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.6
 	github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling v1.13.2
 	github.com/google/uuid v1.3.0
-	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4
+	golang.org/x/net v0.0.0-20220726230323-06994584191e
 	google.golang.org/protobuf v1.28.0
 )
 
