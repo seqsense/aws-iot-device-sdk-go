@@ -11,4 +11,4 @@ require (
 	google.golang.org/protobuf v1.28.1
 )
 
-go 1.15
+go 1.19
