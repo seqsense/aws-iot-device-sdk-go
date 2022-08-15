@@ -32,5 +32,8 @@
         }
     ],
     "ignorePaths": [],
+    "ignoreDeps": [
+        "github.com/seqsense/aws-iot-device-sdk-go/v6"
+    ],
     "timezone": "Asia/Tokyo"
 }
