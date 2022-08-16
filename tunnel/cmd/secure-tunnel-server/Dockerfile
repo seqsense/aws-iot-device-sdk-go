@@ -1,5 +1,5 @@
 # =====================
-FROM golang:1.18-alpine as go-builder
+FROM golang:1.19-alpine as go-builder
 
 RUN apk add --no-cache git
 ENV CGO_ENABLED=0
