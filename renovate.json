@@ -29,6 +29,12 @@
             ],
             "matchUpdateTypes": ["patch"],
             "automerge": true
+        },
+        {
+            "matchPackagePatterns": [
+                "^github.com/aws/aws-sdk-go-v2"
+            ],
+            "groupName": "github.com/aws/aws-sdk-go-v2"
         }
     ],
     "ignorePaths": [],
