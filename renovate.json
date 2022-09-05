@@ -1,45 +1,48 @@
 {
-    "extends": [
-        "config:base",
-        "schedule:weekends"
-    ],
-    "postUpdateOptions": [
-        "gomodTidy"
-    ],
-    "packageRules": [
-        {
-            "packagePatterns": [
-                "^golang.org/x/"
-            ],
-            "schedule": [
-                "on the first day of the month"
-            ]
-        },
-        {
-            "packagePatterns": [
-                "^github.com/aws/aws-sdk-go",
-                "^github.com/golang/protobuf"
-            ],
-            "separateMinorPatch": true
-        },
-        {
-            "packagePatterns": [
-                "^github.com/aws/aws-sdk-go",
-                "^github.com/golang/protobuf"
-            ],
-            "matchUpdateTypes": ["patch"],
-            "automerge": true
-        },
-        {
-            "matchPackagePatterns": [
-                "^github.com/aws/aws-sdk-go-v2"
-            ],
-            "groupName": "github.com/aws/aws-sdk-go-v2"
-        }
-    ],
-    "ignorePaths": [],
-    "ignoreDeps": [
-        "github.com/seqsense/aws-iot-device-sdk-go/v6"
-    ],
-    "timezone": "Asia/Tokyo"
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    "schedule:weekends"
+  ],
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
+  "packageRules": [
+    {
+      "packagePatterns": [
+        "^golang.org/x/"
+      ],
+      "schedule": [
+        "on the first day of the month"
+      ]
+    },
+    {
+      "packagePatterns": [
+        "^github.com/aws/aws-sdk-go",
+        "^github.com/golang/protobuf"
+      ],
+      "separateMinorPatch": true
+    },
+    {
+      "packagePatterns": [
+        "^github.com/aws/aws-sdk-go",
+        "^github.com/golang/protobuf"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "automerge": true
+    },
+    {
+      "matchPackagePatterns": [
+        "^github.com/aws/aws-sdk-go-v2"
+      ],
+      "groupName": "github.com/aws/aws-sdk-go-v2"
+    }
+  ],
+  "ignorePaths": [],
+  "ignoreDeps": [
+    "github.com/seqsense/aws-iot-device-sdk-go/v6"
+  ],
+  "timezone": "Asia/Tokyo"
 }
