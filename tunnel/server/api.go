@@ -50,12 +50,12 @@ func (h *apiHandler) openTunnel(in *ist.OpenTunnelInput) (*ist.OpenTunnelOutput,
 		return nil, ioterr.New(errInvalidRequest, "validating destinationConfig.services")
 	}
 	lifetime := 12 * time.Hour
-	if in.TimeoutConfig != nil {
-		if in.TimeoutConfig.MaxLifetimeTimeoutMinutes < 0 ||
-			in.TimeoutConfig.MaxLifetimeTimeoutMinutes > 720 {
+	if in.TimeoutConfig != nil && in.TimeoutConfig.MaxLifetimeTimeoutMinutes != nil {
+		if *in.TimeoutConfig.MaxLifetimeTimeoutMinutes < 0 ||
+			*in.TimeoutConfig.MaxLifetimeTimeoutMinutes > 720 {
 			return nil, ioterr.New(errInvalidRequest, "validating timeoutConfig.maxLifetimeTimeoutMinutes")
 		}
-		lifetime = time.Minute * time.Duration(in.TimeoutConfig.MaxLifetimeTimeoutMinutes)
+		lifetime = time.Minute * time.Duration(*in.TimeoutConfig.MaxLifetimeTimeoutMinutes)
 	}
 
 	r1, err := uuid.NewRandom()
