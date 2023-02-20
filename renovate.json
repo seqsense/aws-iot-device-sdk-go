@@ -10,14 +10,6 @@
   "packageRules": [
     {
       "packagePatterns": [
-        "^golang.org/x/"
-      ],
-      "schedule": [
-        "on the first day of the month"
-      ]
-    },
-    {
-      "packagePatterns": [
         "^github.com/aws/aws-sdk-go",
         "^github.com/golang/protobuf"
       ],
