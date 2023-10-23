@@ -450,7 +450,7 @@ func TestUpdateJob(t *testing.T) {
 				Message: "Reason",
 			},
 		},
-		"ParseError": {
+		"ParseErrorRejected": {
 			execution: &JobExecution{
 				JobID:         "testID",
 				JobDocument:   "doc",
@@ -468,6 +468,42 @@ func TestUpdateJob(t *testing.T) {
 			},
 			responseTopic: "testID/update/rejected",
 			errType:       &ioterr.Error{},
+		},
+		"ParseErrorAccepted": {
+			execution: &JobExecution{
+				JobID:         "testID",
+				JobDocument:   "doc",
+				StatusDetails: map[string]string{},
+				VersionNumber: 6,
+			},
+			status: Queued,
+			expectedRequest: &updateJobExecutionRequest{
+				Status:          Queued,
+				ExpectedVersion: 6,
+				StatusDetails:   map[string]string{},
+			},
+			response: &invalidResponse{
+				ExecutionState: true,
+			},
+			responseTopic: "testID/update/accepted",
+			errType:       &ioterr.Error{},
+		},
+		"NoClientToken": {
+			execution: &JobExecution{
+				JobID:         "testID",
+				JobDocument:   "doc",
+				StatusDetails: map[string]string{},
+				VersionNumber: 6,
+			},
+			status: Queued,
+			expectedRequest: &updateJobExecutionRequest{
+				Status:          Queued,
+				ExpectedVersion: 6,
+				StatusDetails:   map[string]string{},
+			},
+			response:      &struct{}{},
+			responseTopic: "testID/update/accepted",
+			err:           context.DeadlineExceeded,
 		},
 		"PublishError": {
 			publishFailure: true,
