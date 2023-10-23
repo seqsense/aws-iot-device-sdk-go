@@ -66,11 +66,11 @@ type JobExecutionStateDetails struct {
 
 // ErrorResponse represents error message from AWS IoT.
 type ErrorResponse struct {
-	Code           string            `json:"code"`
-	Message        string            `json:"message"`
-	ClientToken    string            `json:"clientToken"`
-	Timestamp      int64             `json:"timestamp"`
-	ExecutionState JobExecutionState `json:"executionState"`
+	Code           string                   `json:"code"`
+	Message        string                   `json:"message"`
+	ClientToken    string                   `json:"clientToken"`
+	Timestamp      int64                    `json:"timestamp"`
+	ExecutionState JobExecutionStateDetails `json:"executionState"`
 }
 
 // Error implements error interface.
