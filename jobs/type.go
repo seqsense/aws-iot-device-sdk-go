@@ -57,6 +57,13 @@ type JobExecution struct {
 	ExecutionNumber int               `json:"executionNumber"`
 }
 
+// JobExecutionStateDetails represents details of JobExecutionState.
+type JobExecutionStateDetails struct {
+	Status        JobExecutionState `json:"status"`
+	StatusDetails map[string]string `json:"statusDetails"`
+	VersionNumber int               `json:"versionNumber"`
+}
+
 // ErrorResponse represents error message from AWS IoT.
 type ErrorResponse struct {
 	Code           string            `json:"code"`
@@ -77,6 +84,10 @@ type jobExecutionsChangedMessage struct {
 }
 
 type simpleRequest struct {
+	ClientToken string `json:"clientToken"`
+}
+
+type simpleResponse struct {
 	ClientToken string `json:"clientToken"`
 }
 
