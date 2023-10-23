@@ -44,6 +44,11 @@ func (d *mockDevice) ThingName() string {
 	return "test"
 }
 
+type invalidResponse struct {
+	ClientToken    string `json:"clientToken"`
+	ExecutionState bool   `json:"executionState"`
+}
+
 func TestNew(t *testing.T) {
 	errDummy := errors.New("dummy error")
 
@@ -344,6 +349,7 @@ func TestUpdateJob(t *testing.T) {
 		response        interface{}
 		responseTopic   string
 		err             error
+		errType         interface{}
 	}{
 		"Success/Queued": {
 			execution: &JobExecution{
@@ -444,6 +450,61 @@ func TestUpdateJob(t *testing.T) {
 				Message: "Reason",
 			},
 		},
+		"ParseErrorRejected": {
+			execution: &JobExecution{
+				JobID:         "testID",
+				JobDocument:   "doc",
+				StatusDetails: map[string]string{},
+				VersionNumber: 6,
+			},
+			status: Queued,
+			expectedRequest: &updateJobExecutionRequest{
+				Status:          Queued,
+				ExpectedVersion: 6,
+				StatusDetails:   map[string]string{},
+			},
+			response: &invalidResponse{
+				ExecutionState: true,
+			},
+			responseTopic: "testID/update/rejected",
+			errType:       &ioterr.Error{},
+		},
+		"ParseErrorAccepted": {
+			execution: &JobExecution{
+				JobID:         "testID",
+				JobDocument:   "doc",
+				StatusDetails: map[string]string{},
+				VersionNumber: 6,
+			},
+			status: Queued,
+			expectedRequest: &updateJobExecutionRequest{
+				Status:          Queued,
+				ExpectedVersion: 6,
+				StatusDetails:   map[string]string{},
+			},
+			response: &invalidResponse{
+				ExecutionState: true,
+			},
+			responseTopic: "testID/update/accepted",
+			errType:       &ioterr.Error{},
+		},
+		"NoClientToken": {
+			execution: &JobExecution{
+				JobID:         "testID",
+				JobDocument:   "doc",
+				StatusDetails: map[string]string{},
+				VersionNumber: 6,
+			},
+			status: Queued,
+			expectedRequest: &updateJobExecutionRequest{
+				Status:          Queued,
+				ExpectedVersion: 6,
+				StatusDetails:   map[string]string{},
+			},
+			response:      &struct{}{},
+			responseTopic: "testID/update/accepted",
+			err:           context.DeadlineExceeded,
+		},
 		"PublishError": {
 			publishFailure: true,
 			execution: &JobExecution{
@@ -507,14 +568,26 @@ func TestUpdateJob(t *testing.T) {
 
 			err = j.UpdateJob(ctx, testCase.execution, testCase.status, testCase.options...)
 			if err != nil {
-				setClientToken(err, "")
-				var er *ErrorResponse
-				if errors.As(err, &er) {
-					if !reflect.DeepEqual(testCase.err, er) {
+				switch {
+				case testCase.err != nil:
+					setClientToken(err, "")
+					var er *ErrorResponse
+					if errors.As(err, &er) {
+						if !reflect.DeepEqual(testCase.err, er) {
+							t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+						}
+					} else if !errors.Is(err, testCase.err) {
 						t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
 					}
-				} else if !errors.Is(err, testCase.err) {
-					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+				case testCase.errType != nil:
+					if !errors.As(err, &testCase.errType) {
+						t.Fatalf("Expected error type: %T, got: %T", testCase.errType, err)
+					}
+					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+						t.Fatalf("Unexpected cancel/timeout")
+					}
+				default:
+					t.Fatalf("Unexpected error: %v", err)
 				}
 			}
 		})

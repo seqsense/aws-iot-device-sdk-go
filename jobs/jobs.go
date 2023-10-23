@@ -247,6 +247,8 @@ func (j *jobs) UpdateJob(ctx context.Context, je *JobExecution, s JobExecutionSt
 			return nil
 		case *ErrorResponse:
 			return r
+		case error:
+			return r
 		default:
 			return ioterr.New(ErrInvalidResponse, "updating job")
 		}
@@ -270,10 +272,31 @@ func (j *jobs) handleResponse(r interface{}) {
 	}
 }
 
+func (j *jobs) handleErrorResponse(payload []byte, err error) bool {
+	res := &simpleResponse{}
+	if err := json.Unmarshal(payload, res); err != nil {
+		return false
+	}
+	j.mu.Lock()
+	ch, ok := j.chResps[res.ClientToken]
+	j.mu.Unlock()
+	if !ok {
+		return false
+	}
+	select {
+	case ch <- err:
+	default:
+	}
+	return true
+}
+
 func (j *jobs) getAccepted(msg *mqtt.Message) {
 	res := &getPendingJobExecutionsResponse{}
 	if err := json.Unmarshal(msg.Payload, res); err != nil {
-		j.handleError(ioterr.New(err, "unmarshaling pending job executions response"))
+		err := ioterr.Newf(err, "unmarshaling pending job executions response: %s", string(msg.Payload))
+		if !j.handleErrorResponse(msg.Payload, err) {
+			j.handleError(err)
+		}
 		return
 	}
 	j.handleResponse(res)
@@ -282,7 +305,10 @@ func (j *jobs) getAccepted(msg *mqtt.Message) {
 func (j *jobs) getJobAccepted(msg *mqtt.Message) {
 	res := &describeJobExecutionResponse{}
 	if err := json.Unmarshal(msg.Payload, res); err != nil {
-		j.handleError(ioterr.New(err, "unmarshaling describe job execution response"))
+		err := ioterr.Newf(err, "unmarshaling describe job execution response: %s", string(msg.Payload))
+		if !j.handleErrorResponse(msg.Payload, err) {
+			j.handleError(err)
+		}
 		return
 	}
 	j.handleResponse(res)
@@ -291,7 +317,10 @@ func (j *jobs) getJobAccepted(msg *mqtt.Message) {
 func (j *jobs) updateJobAccepted(msg *mqtt.Message) {
 	res := &updateJobExecutionResponse{}
 	if err := json.Unmarshal(msg.Payload, res); err != nil {
-		j.handleError(ioterr.New(err, "unmarshaling update job execution response"))
+		err := ioterr.Newf(err, "unmarshaling update job execution response: %s", string(msg.Payload))
+		if !j.handleErrorResponse(msg.Payload, err) {
+			j.handleError(err)
+		}
 		return
 	}
 	j.handleResponse(res)
@@ -300,7 +329,10 @@ func (j *jobs) updateJobAccepted(msg *mqtt.Message) {
 func (j *jobs) rejected(msg *mqtt.Message) {
 	e := &ErrorResponse{}
 	if err := json.Unmarshal(msg.Payload, e); err != nil {
-		j.handleError(ioterr.New(err, "unmarshaling error response"))
+		err := ioterr.Newf(err, "unmarshaling error response: %s", string(msg.Payload))
+		if !j.handleErrorResponse(msg.Payload, err) {
+			j.handleError(err)
+		}
 		return
 	}
 	j.handleResponse(e)
