@@ -13,6 +13,10 @@ Implemented features:
 
 - [v6](MIGRATION.md#v6)
 
+## News
+
+- v6.2.0: Go <1.18 support is dropped as aws/aws-sdk-go-v2 dropped them
+
 ## Contributing
 
 Your contributions like bug reports, bug fixes, feature requests and implementing new features are welcome.
