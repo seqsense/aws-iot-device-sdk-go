@@ -20,6 +20,8 @@ jobs:
           - "1.17"
           - "1.18"
           - "1.19"
+          - "1.20"
+          - "1.21"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
