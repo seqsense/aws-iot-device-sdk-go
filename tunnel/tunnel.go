@@ -103,6 +103,7 @@ func (t *tunnel) notify(msg *mqtt.Message) {
 		return
 	}
 	for _, srv := range n.Services {
+		srv := srv
 		if d, ok := t.dialerMap[srv]; ok {
 			go func() {
 				opts := append(
