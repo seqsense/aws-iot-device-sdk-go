@@ -13,7 +13,7 @@ jobs:
       - name: Unshallow
         run: git fetch --prune --unshallow
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
