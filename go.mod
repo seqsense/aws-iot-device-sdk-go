@@ -1,7 +1,7 @@
 module github.com/seqsense/aws-iot-device-sdk-go/v6
 
 require (
-	github.com/at-wat/mqtt-go v0.18.1
+	github.com/at-wat/mqtt-go v0.19.0
 	github.com/aws/aws-sdk-go-v2 v1.23.0
 	github.com/aws/aws-sdk-go-v2/config v1.25.3
 	github.com/aws/aws-sdk-go-v2/credentials v1.16.2
