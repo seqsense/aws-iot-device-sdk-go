@@ -35,4 +35,4 @@ jobs:
             -coverprofile=coverage.txt -covermode=atomic -coverpkg=all \
             $(go list ./... | grep -v "/examples/")
       - name: Upload coverage report
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
