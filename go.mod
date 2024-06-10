@@ -1,5 +1,7 @@
 module github.com/seqsense/aws-iot-device-sdk-go/v6
 
+go 1.19
+
 require (
 	github.com/at-wat/mqtt-go v0.19.3
 	github.com/aws/aws-sdk-go-v2 v1.27.0
@@ -23,5 +25,3 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.10 // indirect
 	github.com/aws/smithy-go v1.20.2 // indirect
 )
-
-go 1.18
