@@ -18,8 +18,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.5 h1:QFASJGf
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.5/go.mod h1:QdZ3OmoIjSX+8D1OPAzPxDfjXASbBMDsz9qvtyIhtik=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.20 h1:Xbwbmk44URTiHNx6PNo0ujDE6ERlsCKJD3u1zfnzAPg=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.20/go.mod h1:oAfOFzUB14ltPZj1rWwRc3d/6OgD76R8KlvU3EqM9Fg=
-github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling v1.23.11 h1:tp8l1D6Z4qwsLsv4mYkQ+8mQL8bGn/6jMqRTR8BW25Y=
-github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling v1.23.11/go.mod h1:hNXSBwS92HTG0V90/4kNv15lJ9Oy0qY2lNU7jqRlYPY=
+github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling v1.26.4 h1:CaR/s/voBtztcwYe28ViUAa8F/+Xlvlxy2IQIKD+2Zo=
+github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling v1.26.4/go.mod h1:mY+SyxtqOiF5l7vpy58e4h5s5qOoyJCrP8H4RziEfTY=
 github.com/aws/aws-sdk-go-v2/service/sso v1.23.4 h1:ck/Y8XWNR1gHa4BFkwE3oSu7XDJGwl+8TI7E/RB2EcQ=
 github.com/aws/aws-sdk-go-v2/service/sso v1.23.4/go.mod h1:XRlMvmad0ZNL+75C5FYdMvbbLkd6qiqz6foR1nA1PXY=
 github.com/aws/aws-sdk-go-v2/service/ssooidc v1.27.4 h1:4f2/JKYZHAZbQ7koBpZ012bKi32NHPY0m7TDuJgsbug=
