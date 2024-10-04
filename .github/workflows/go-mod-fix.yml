@@ -20,5 +20,6 @@ jobs:
           github_token: ${{ secrets.SQBOT_GITHUB_TOKEN }}
           commit_style: squash
           push: force
+          check_no_indirect_diffs: false
           monorepos: |
             github.com/aws/aws-sdk-go-v2
