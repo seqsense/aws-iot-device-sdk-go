@@ -5,9 +5,9 @@ go 1.21
 require (
 	github.com/at-wat/mqtt-go v0.19.4
 	github.com/aws/aws-sdk-go-v2 v1.32.7
-	github.com/aws/aws-sdk-go-v2/config v1.27.43
+	github.com/aws/aws-sdk-go-v2/config v1.28.7
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.48
-	github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling v1.26.4
+	github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling v1.27.9
 	github.com/google/uuid v1.6.0
 	golang.org/x/net v0.29.0
 	google.golang.org/protobuf v1.34.2
