@@ -16,10 +16,10 @@ jobs:
         uses: at-wat/go-sum-fix-action@v0
         with:
           git_user: sqbot
-          git_email: bot@seqsense.com
+          git_email: 30003564+sqbot@users.noreply.github.com
           github_token: ${{ secrets.SQBOT_GITHUB_TOKEN }}
-          commit_style: squash
-          push: force
+          commit_style: add
+          push: yes
           check_no_indirect_diffs: false
           monorepos: |
             github.com/aws/aws-sdk-go-v2
