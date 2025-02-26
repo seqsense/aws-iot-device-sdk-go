@@ -1,6 +1,8 @@
 module github.com/seqsense/aws-iot-device-sdk-go/v6/examples
 
-go 1.21
+go 1.22
+
+toolchain go1.24.0
 
 replace github.com/seqsense/aws-iot-device-sdk-go/v6 => ../
 
@@ -11,7 +13,7 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.36.1 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.36.2 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
