@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base",
+    "config:recommended",
     "schedule:weekends"
   ],
   "postUpdateOptions": [
@@ -9,33 +9,35 @@
   ],
   "packageRules": [
     {
-      "packagePatterns": [
-        "^github.com/aws/aws-sdk-go",
-        "^github.com/golang/protobuf"
-      ],
-      "separateMinorPatch": true
+      "separateMinorPatch": true,
+      "matchPackageNames": [
+        "/^github.com/aws/aws-sdk-go/",
+        "/^github.com/golang/protobuf/"
+      ]
     },
     {
-      "packagePatterns": [
-        "^github.com/aws/aws-sdk-go",
-        "^github.com/golang/protobuf"
-      ],
       "matchUpdateTypes": [
         "patch"
       ],
-      "automerge": true
+      "automerge": true,
+      "matchPackageNames": [
+        "/^github.com/aws/aws-sdk-go/",
+        "/^github.com/golang/protobuf/"
+      ]
     },
     {
-      "matchPackagePatterns": [
-        "^github.com/aws/aws-sdk-go-v2"
-      ],
-      "groupName": "github.com/aws/aws-sdk-go-v2"
+      "groupName": "github.com/aws/aws-sdk-go-v2",
+      "matchPackageNames": [
+        "/^github.com/aws/aws-sdk-go-v2/"
+      ]
     }
   ],
   "ignorePaths": [],
   "ignoreDeps": [
     "github.com/seqsense/aws-iot-device-sdk-go/v6"
   ],
-  "gitIgnoredAuthors": ["30003564+sqbot@users.noreply.github.com"],
+  "gitIgnoredAuthors": [
+    "30003564+sqbot@users.noreply.github.com"
+  ],
   "timezone": "Asia/Tokyo"
 }
