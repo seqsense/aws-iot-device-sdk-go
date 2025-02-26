@@ -36,5 +36,6 @@
   "ignoreDeps": [
     "github.com/seqsense/aws-iot-device-sdk-go/v6"
   ],
+  "gitIgnoredAuthors": ["30003564+sqbot@users.noreply.github.com"],
   "timezone": "Asia/Tokyo"
 }
