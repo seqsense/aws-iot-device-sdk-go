@@ -2,8 +2,6 @@ module github.com/seqsense/aws-iot-device-sdk-go/v6/examples
 
 go 1.22
 
-toolchain go1.24.0
-
 replace github.com/seqsense/aws-iot-device-sdk-go/v6 => ../
 
 require (
