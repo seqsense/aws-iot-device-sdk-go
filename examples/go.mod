@@ -11,8 +11,8 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.36.6 // indirect
-	github.com/aws/smithy-go v1.22.4 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.38.3 // indirect
+	github.com/aws/smithy-go v1.23.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
