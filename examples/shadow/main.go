@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/at-wat/mqtt-go"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	awsiotdev "github.com/seqsense/aws-iot-device-sdk-go/v6"
 	"github.com/seqsense/aws-iot-device-sdk-go/v6/shadow"
 )
@@ -129,7 +129,7 @@ func main() {
 	fmt.Printf("document:%s", prettyDump(doc))
 
 	// Document stores thing state as map[string]interface{}.
-	// You may want to use github.com/mitchellh/mapstructure to
+	// You may want to use github.com/go-viper/mapstructure/v2 to
 	// converts state to the given struct.
 	var typedState sampleState
 	if err := mapstructure.Decode(doc.State.Desired, &typedState); err != nil {
