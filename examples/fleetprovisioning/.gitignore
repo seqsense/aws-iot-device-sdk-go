@@ -1,0 +1,6 @@
+fleetprovisioning
+root-CA.crt
+certificate.pem.crt
+certificate-run.pem.crt
+private.pem.key
+private-run.pem.key
