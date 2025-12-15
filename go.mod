@@ -1,6 +1,6 @@
 module github.com/seqsense/aws-iot-device-sdk-go/v6
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/at-wat/mqtt-go v0.19.6
@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.5
 	github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling v1.33.16
 	github.com/google/uuid v1.6.0
-	golang.org/x/net v0.43.0
+	golang.org/x/net v0.48.0
 	google.golang.org/protobuf v1.36.10
 )
 
