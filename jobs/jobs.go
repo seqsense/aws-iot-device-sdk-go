@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sync"
 
 	"github.com/at-wat/mqtt-go"
@@ -51,6 +52,7 @@ type jobs struct {
 	onError     func(err error)
 	onJobChange func(map[JobExecutionState][]JobExecutionSummary)
 	msgToken    int
+	opts        Options
 }
 
 func (j *jobs) token() string {
@@ -64,11 +66,21 @@ func (j *jobs) topic(operation string) string {
 
 // New creates IoT Jobs interface.
 func New(ctx context.Context, cli awsiotdev.Device) (Jobs, error) {
+	return NewWithOptions(ctx, cli)
+}
+
+// NewWithOptions creates IoT Jobs interface with options.
+// This will replace New on the next major version bump.
+func NewWithOptions(ctx context.Context, cli awsiotdev.Device, opts ...Option) (Jobs, error) {
 	j := &jobs{
 		cli:       cli,
 		thingName: cli.ThingName(),
 		chResps:   make(map[string]chan interface{}),
 	}
+	for _, o := range opts {
+		o(&j.opts)
+	}
+
 	for _, sub := range []struct {
 		topic   string
 		handler mqtt.Handler
@@ -304,6 +316,9 @@ func (j *jobs) getAccepted(msg *mqtt.Message) {
 
 func (j *jobs) getJobAccepted(msg *mqtt.Message) {
 	res := &describeJobExecutionResponse{}
+	if j.opts.JobDocumentType != nil {
+		res.Execution.JobDocument = reflect.New(reflect.TypeOf(j.opts.JobDocumentType)).Interface()
+	}
 	if err := json.Unmarshal(msg.Payload, res); err != nil {
 		err := ioterr.Newf(err, "unmarshaling describe job execution response: %s", string(msg.Payload))
 		if !j.handleErrorResponse(msg.Payload, err) {

@@ -218,6 +218,11 @@ func TestGetPendingJobs(t *testing.T) {
 }
 
 func TestDescribeJob(t *testing.T) {
+	type jobDoc struct {
+		Hoge string
+		Val  int
+	}
+
 	testCases := map[string]struct {
 		id              string
 		publishFailure  bool
@@ -225,6 +230,7 @@ func TestDescribeJob(t *testing.T) {
 		response        interface{}
 		responseTopic   string
 		expected        interface{}
+		options         []Option
 		err             error
 	}{
 		"Success": {
@@ -244,6 +250,31 @@ func TestDescribeJob(t *testing.T) {
 				JobID:         "testID",
 				JobDocument:   "doc",
 				StatusDetails: map[string]string{},
+			},
+		},
+		"SuccessWithJobDocumentType": {
+			id: "testID",
+			expectedRequest: &describeJobExecutionRequest{
+				IncludeJobDocument: true,
+			},
+			response: &describeJobExecutionResponse{
+				Execution: JobExecution{
+					JobID:         "testID",
+					JobDocument:   json.RawMessage(`{"Hoge":"foo","Val":1}`),
+					StatusDetails: map[string]string{},
+				},
+			},
+			responseTopic: "testID/get/accepted",
+			expected: &JobExecution{
+				JobID: "testID",
+				JobDocument: &jobDoc{
+					Hoge: "foo",
+					Val:  1,
+				},
+				StatusDetails: map[string]string{},
+			},
+			options: []Option{
+				WithJobDocumentType(jobDoc{}),
 			},
 		},
 		"Error": {
@@ -313,7 +344,11 @@ func TestDescribeJob(t *testing.T) {
 				},
 			}
 			var err error
-			j, err = New(ctx, cli)
+			if len(testCase.options) != 0 {
+				j, err = NewWithOptions(ctx, cli, testCase.options...)
+			} else {
+				j, err = New(ctx, cli)
+			}
 			if err != nil {
 				t.Fatal(err)
 			}

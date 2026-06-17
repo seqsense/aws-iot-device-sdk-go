@@ -14,6 +14,24 @@
 
 package jobs
 
+// Options stores Jobs options.
+type Options struct {
+	JobDocumentType interface{}
+}
+
+// Option is a functional option of Jobs.
+type Option func(*Options)
+
+// WithJobDocumentType sets type of IoT Job document.
+// Specify non-pointer struct of the desired type like:
+//
+//	NewWithOptions(ctx, cli, WithJobDocumentType(DocumentStruct{}))
+func WithJobDocumentType(t interface{}) Option {
+	return func(o *Options) {
+		o.JobDocumentType = t
+	}
+}
+
 // UpdateJobOptions stores UpdateJob options.
 type UpdateJobOptions struct {
 	TimeoutMinutes int
