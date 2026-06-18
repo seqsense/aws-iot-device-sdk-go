@@ -1,6 +1,6 @@
 module github.com/seqsense/aws-iot-device-sdk-go/v6/examples
 
-go 1.23.0
+go 1.24.0
 
 replace github.com/seqsense/aws-iot-device-sdk-go/v6 => ../
 
