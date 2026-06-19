@@ -22,7 +22,7 @@ jobs:
         run: echo "IMAGE_TAG=${GITHUB_REF#refs/tags/v}" | tee -a ${GITHUB_ENV}
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Docker build
         run: |
           docker build \
