@@ -23,9 +23,13 @@ type Options struct {
 type Option func(*Options)
 
 // WithJobDocumentType sets type of IoT Job document.
-// Specify non-pointer struct of the desired type like:
+// JobExecution.JobDocument will be a pointer of the specified type.
+// e.g. to receive job document as *DocumentStruct:
 //
 //	NewWithOptions(ctx, cli, WithJobDocumentType(DocumentStruct{}))
+//
+// Note that DescribeJob may fail if received job document is
+// incompatible with the specified type.
 func WithJobDocumentType(t interface{}) Option {
 	return func(o *Options) {
 		o.JobDocumentType = t
