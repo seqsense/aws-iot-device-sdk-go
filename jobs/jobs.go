@@ -70,7 +70,7 @@ func New(ctx context.Context, cli awsiotdev.Device) (Jobs, error) {
 }
 
 // NewWithOptions creates IoT Jobs interface with options.
-// This will replace New on the next major version bump.
+// The New() syntax will change to this in the next major version bump.
 func NewWithOptions(ctx context.Context, cli awsiotdev.Device, opts ...Option) (Jobs, error) {
 	j := &jobs{
 		cli:       cli,
