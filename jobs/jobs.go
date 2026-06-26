@@ -206,6 +206,8 @@ func (j *jobs) DescribeJob(ctx context.Context, id string) (*JobExecution, error
 			return &r.Execution, nil
 		case *ErrorResponse:
 			return nil, r
+		case error:
+			return nil, ioterr.New(r, "describing job")
 		default:
 			return nil, ioterr.New(ErrInvalidResponse, "describing job")
 		}
