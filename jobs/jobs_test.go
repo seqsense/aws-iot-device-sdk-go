@@ -231,7 +231,9 @@ func TestDescribeJob(t *testing.T) {
 		responseTopic   string
 		expected        interface{}
 		options         []Option
-		err             error
+		errIs           error
+		errType         error
+		errResponse     *ErrorResponse
 	}{
 		"Success": {
 			id: "testID",
@@ -287,7 +289,7 @@ func TestDescribeJob(t *testing.T) {
 				Message: "Reason",
 			},
 			responseTopic: "testID/get/rejected",
-			err: &ErrorResponse{
+			errResponse: &ErrorResponse{
 				Code:    "Failed",
 				Message: "Reason",
 			},
@@ -298,7 +300,25 @@ func TestDescribeJob(t *testing.T) {
 			expectedRequest: &describeJobExecutionRequest{
 				IncludeJobDocument: true,
 			},
-			err: errPublish,
+			errIs: errPublish,
+		},
+		"IncompatibleJobDocumentType": {
+			id: "testID",
+			expectedRequest: &describeJobExecutionRequest{
+				IncludeJobDocument: true,
+			},
+			response: &describeJobExecutionResponse{
+				Execution: JobExecution{
+					JobID:         "testID",
+					JobDocument:   json.RawMessage(`1`),
+					StatusDetails: map[string]string{},
+				},
+			},
+			responseTopic: "testID/get/accepted",
+			options: []Option{
+				WithJobDocumentType(jobDoc{}),
+			},
+			errType: &ioterr.Error{},
 		},
 	}
 
@@ -355,17 +375,27 @@ func TestDescribeJob(t *testing.T) {
 			cli.Handle(j)
 
 			jb, err := j.DescribeJob(ctx, testCase.id)
-			if err != nil {
+			switch {
+			case testCase.errResponse != nil:
 				setClientToken(err, "")
 				var er *ErrorResponse
-				if errors.As(err, &er) {
-					if !reflect.DeepEqual(testCase.err, er) {
-						t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
-					}
-				} else if !errors.Is(err, testCase.err) {
-					t.Fatalf("Expected error: %v, got: %v", testCase.err, err)
+				if !errors.As(err, &er) || !reflect.DeepEqual(testCase.errResponse, er) {
+					t.Fatalf("Expected error: %v, got: %v", testCase.errResponse, err)
 				}
-			} else {
+			case testCase.errIs != nil:
+				if !errors.Is(err, testCase.errIs) {
+					t.Fatalf("Expected error: %v, got: %v", testCase.errIs, err)
+				}
+			case testCase.errType != nil:
+				if reflect.TypeOf(err) != reflect.TypeOf(testCase.errType) {
+					t.Fatalf("Expected error type: %T, got: %T", testCase.errType, err)
+				}
+			default:
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+			}
+			if err == nil {
 				if !reflect.DeepEqual(testCase.expected, jb) {
 					t.Errorf("Expected job detail: %v, got: %v", testCase.expected, jb)
 				}
