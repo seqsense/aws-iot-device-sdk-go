@@ -22,7 +22,7 @@ jobs:
         run: echo "IMAGE_TAG=${GITHUB_REF#refs/tags/v}" | tee -a ${GITHUB_ENV}
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Docker build
         run: |
           docker build \
@@ -31,7 +31,7 @@ jobs:
 
       - name: Login to GitHub Container Registry
         if: startsWith(github.ref, 'refs/tags')
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -48,7 +48,7 @@ jobs:
 
       - name: Configure AWS credentials
         if: startsWith(github.ref, 'refs/tags')
-        uses: aws-actions/configure-aws-credentials@v5
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::610248501808:role/ci/GitHubActions-aws-iot-device-sdk-go
           aws-region: us-east-1

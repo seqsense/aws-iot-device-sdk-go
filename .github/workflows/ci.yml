@@ -18,7 +18,7 @@ jobs:
           - "1.25"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
@@ -33,6 +33,6 @@ jobs:
             -coverprofile=coverage.txt -covermode=atomic -coverpkg=all \
             $(go list ./... | grep -v "/examples/")
       - name: Upload coverage report
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
